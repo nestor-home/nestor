@@ -87,7 +87,6 @@ class TelegramChannel(MessagingChannel):
 
     async def _next_updates(self, offset: int | None) -> list[Update] | None:
         """The next batch of updates, retrying transient failures with backoff; `None` once closed."""
-        failures = 0
         payload: dict[str, object] = {"timeout": self._poll_timeout_s, "allowed_updates": ["message"]}
         if offset is not None:
             payload["offset"] = offset
@@ -96,11 +95,11 @@ class TelegramChannel(MessagingChannel):
             try:
                 result = await self.unless_closed(poll)
             except ProviderError as error:
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
                 continue
             if self.closed:
                 break
+            self.reached()
             try:
                 return UPDATES.validate_python(result)
             except ValidationError:

@@ -12,6 +12,7 @@ from nestor.modules.conversation import (
     Agent,
     AssistantTurn,
     Attachments,
+    ChannelProfile,
     ModelChoice,
     Notification,
     NotificationTurn,
@@ -32,7 +33,7 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.initiative.delivery.courier import FILES_NOTICE
 from nestor.modules.journal import FileRef, Journal
-from nestor.testing.channels import InMemoryChannel
+from nestor.testing.channels import OGG, InMemoryChannel, ScriptedSpeech
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
 from nestor.testing.i18n import EchoLocalizer
@@ -66,10 +67,12 @@ def courier(
     follow_up_after_s: float = 0.02,
     model: ScriptedModel | None = None,
     blobs: MemoryBlobStore | None = None,
+    speech: ScriptedSpeech | None = None,
 ) -> tuple[Courier, Journal, Satellite, InMemoryChannel]:
     journal = Journal(MemoryEventLog())
     agent = Agent(
-        attachments=Attachments(blobs or MemoryBlobStore()),
+        attachments=Attachments(blobs or MemoryBlobStore(), speech=speech),
+        channels={"telegram": ChannelProfile(sends=Messaging.sends)},
         models=ModelChoice.single(model or ScriptedModel(*["Ton colis est arrivé."] * 4)),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
@@ -288,3 +291,25 @@ async def test_a_model_down_fails_the_delivery_instead_of_sending_an_excuse() ->
 
     assert telegram.sent == []
     assert [f.about for f in await journal.history(DeliveryFailed)] == [PARCEL]
+
+
+async def test_a_result_for_someone_speaking_by_voice_message_goes_back_as_one() -> None:
+    """They asked by voice message and are still talking that way (driving, say): what comes back while the
+    conversation is open is heard too, written as well; asked in writing, it stays written."""
+    for kind, voiced in ((AttachmentKind.VOICE, True), (AttachmentKind.FILE, False)):
+        model = ScriptedModel("C'est lancé.", "La mise à jour est finie.")
+        sender, _, _, telegram = courier(
+            StaticPresence().set("mathis", home=False), model=model, speech=ScriptedSpeech()
+        )
+        asked = Attachment(kind=kind, data=b"lance la mise a jour", media_type="audio/ogg", name="demande")
+        async with sender:
+            await sender.agent.respond(
+                InboundMessage(address=TELEGRAM, sender=Sender("42"), text="", attachments=(asked,))
+            ).collect()
+            done = Notification("The update is finished.", About(Source.TASK, "t1", "completed"))
+            assert await sender.deliver(MATHIS, done) == TELEGRAM
+        assert telegram.sent[-1] == (TELEGRAM, "La mise à jour est finie.")
+        recorded = [(f.kind, f.data) for f in telegram.files[-1]]
+        assert recorded == ([(AttachmentKind.VOICE, OGG + "La mise à jour est finie.".encode())] if voiced else []), (
+            kind
+        )

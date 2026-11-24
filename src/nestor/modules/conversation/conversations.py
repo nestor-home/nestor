@@ -51,6 +51,7 @@ from nestor.modules.journal import Journal
 
 SOURCE = "agent"
 TOLD = 3  # the last answers of a thread read back before its next notification is answered
+SAID_LOOKBACK = 20  # the latest turns of a session looked through for what one person said last
 IMAGES = 4  # the last images of a conversation a model that sees them looks at again, every turn
 DOCUMENT_BYTES = 10_000_000  # a document larger than this is read as text, never sent whole
 DOCUMENTS = 2  # the last documents of a conversation a model that reads them whole reads again, every turn
@@ -241,6 +242,18 @@ class Conversations:
         wanted = to_show(sent, sees, reads, document_pages)
         shown = await look(wanted) if look is not None and wanted else {}
         return to_messages(events, names=names, shown=shown, sees=sees)
+
+    async def last_said(self, address: Address, conversation: str | None, person: PersonId) -> UserTurn | None:
+        """What `person` said last in `conversation`, if anything: how they speak there now (others may share it)."""
+        if conversation is None:
+            return None
+        latest = await self.journal.history(UserTurn, session=address.session, newest_first=True, limit=SAID_LOOKBACK)
+        for said in latest:
+            if said.exchange is None or said.exchange.conversation_id != conversation:
+                return None  # an earlier conversation: nothing said in this one
+            if said.person == person:
+                return said
+        return None
 
     async def told(self, thread: str, *, limit: int = TOLD) -> list[AssistantTurn]:
         """What was answered to the last `limit` notifications of `thread`, oldest first, wherever they went: what the

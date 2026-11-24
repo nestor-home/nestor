@@ -447,8 +447,9 @@ async def test_a_malformed_event_is_skipped_without_losing_the_connection(
 
 
 async def test_a_lost_connection_makes_everyone_unknown_until_home_assistant_is_back(
-    home: FakeHomeAssistant, started: Any
+    home: FakeHomeAssistant, started: Any, caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level(logging.INFO)
     home.state("person.alice", "home")
     home.sensor("binary_sensor.kitchen_motion", "on", area_id="kitchen")
     source = await started(home.source(PresenceMapping(people={ALICE: "person.alice"})))
@@ -465,6 +466,9 @@ async def test_a_lost_connection_makes_everyone_unknown_until_home_assistant_is_
     await settle(lambda: source.presence().of(ALICE) == Whereabouts(home=False))
     assert source.presence().occupied_rooms == {"kitchen"}
     assert source.health() is Health.STARTED
+    gone = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING and "unavailable" in r.getMessage()]
+    assert len(gone) == 1, "said once, not at each of the attempts"
+    assert any("back after" in r.getMessage() and r.levelno == logging.INFO for r in caplog.records)
 
 
 async def test_a_refused_token_fails_start_clearly_without_revealing_it(

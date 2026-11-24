@@ -25,10 +25,10 @@ def test_clips_are_loaded_by_outage_and_a_missing_one_is_reported(
     assert "stt outage" in caplog.text
 
 
-def test_without_a_folder_every_clip_is_reported_missing(caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level(logging.WARNING):
+def test_without_a_folder_there_is_no_clip_and_nothing_to_say(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.INFO):
         assert load_clips(None) == {}
-    assert "stt outage" in caplog.text and "tts outage" in caplog.text
+    assert not caplog.records, "a choice, not a fault"
 
 
 def test_a_clip_that_is_not_16_bit_is_refused(tmp_path: Path) -> None:

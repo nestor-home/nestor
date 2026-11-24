@@ -41,7 +41,7 @@ from nestor.modules.cognition.model import (
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import IMAGES, SHOWN_BYTES, Conversations, Turn, to_show
-from nestor.modules.conversation.events import AssistantTurn
+from nestor.modules.conversation.events import AssistantTurn, UserTurn
 from nestor.modules.conversation.history import Shown, notification_message, seen_attached, tool_message
 from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import (
@@ -71,10 +71,12 @@ from nestor.modules.usage import CallPurpose, attribute, attributed
 
 @dataclass(frozen=True, slots=True)
 class Draft:
-    """An answer to a notification, to deliver: its words, and the files that go with it (kept)."""
+    """An answer to a notification, to deliver: its words, the files that go with it (kept), and whether it goes as a
+    voice message, the person speaking by voice message in that conversation."""
 
     text: str
     files: tuple[FileRef, ...] = ()
+    voiced: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,7 +234,7 @@ class Agent(Assistant):
             final = final[: -len(SILENT)].strip()
         if not final:
             raise ProviderError("model", "wrote nothing for a notification", transient=True)
-        return Draft(final, (*notification.files, *reply._made))
+        return Draft(final, (*notification.files, *reply._made), voiced=reply._voiced)
 
     async def delivered(
         self,
@@ -312,13 +314,7 @@ class AgentReply(Reply):
         self._opening = opening
         self._final = ""  # what the model wrote in its last round, once it asked for no more tools
         self._mentions: tuple[Mentioned, ...] = ()  # what the person's message names, once it is read
-        # the answer goes back as voice messages: to a voice message, on a channel that sends them, with a voice
-        self._voiced = (
-            isinstance(opening, InboundMessage)
-            and any(a.kind is AttachmentKind.VOICE for a in opening.attachments)
-            and AttachmentKind.VOICE in agent.channel(address).sends
-            and agent.attachments.speaks
-        )
+        self._voiced = False  # the answer goes back as voice messages (`_by_voice`), once the turn starts
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -366,6 +362,7 @@ class AgentReply(Reply):
                     await self._reply_to(opening)
             else:  # a notification's draft belongs to the conversation open there, if any
                 conversation = await agent.conversations.current(self._address, self._medium)
+                self._voiced = await self._by_voice(conversation)
                 self._attribute(conversation)
                 await self._answer(conversation)
                 await self._end_message()
@@ -373,6 +370,22 @@ class AgentReply(Reply):
         finally:
             self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
+
+    async def _by_voice(self, conversation: str | None) -> bool:
+        """Whether the answer goes back as voice messages: the person's latest words here were one (the message
+        answered, or what they said last in `conversation` for what Nestor brings by itself meanwhile, a task's result
+        or a question), on a channel that sends them, with a voice to record it."""
+        agent = self._agent
+        if AttachmentKind.VOICE not in agent.channel(self._address).sends or not agent.attachments.speaks:
+            return False
+        opening = self._opening
+        if isinstance(opening, InboundMessage):
+            said: InboundMessage | UserTurn | None = opening
+        elif self._person is None:  # for no one in particular: nobody's way of speaking to follow
+            return False
+        else:  # theirs only: others may speak in the same conversation
+            said = await agent.conversations.last_said(self._address, conversation, self._person.id)
+        return said is not None and any(a.kind is AttachmentKind.VOICE for a in said.attachments)
 
     def _context(self) -> ToolContext:
         """The answer as its tools see it: where, who asked, the turn it belongs to, what it continues."""
@@ -405,6 +418,7 @@ class AgentReply(Reply):
     async def _reply_to(self, message: InboundMessage) -> None:
         agent = self._agent
         conversation = await agent.conversations.current(self._address, self._medium)
+        self._voiced = await self._by_voice(conversation)
         self._speaker = await agent.speakers.of(message, conversation)
         self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
         self._attribute(conversation)  # who spoke, before their voice message is transcribed
@@ -565,8 +579,8 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        # a draft (no turn) takes its files along once delivered (`Agent.compose`)
-        attaching = self._voiced or (last and bool(self._made) and self._turn is not None)
+        # a draft (no turn) takes its files and its recording along once delivered (`Agent.compose`)
+        attaching = self._turn is not None and (self._voiced or (last and bool(self._made)))
         if not attaching:
             self._chunks.put_nowait(MessageEnd(last=last))
         answer = await self._turn.answered(text) if self._turn else None
@@ -580,12 +594,9 @@ class AgentReply(Reply):
     async def _files(self, text: str, *, last: bool) -> Outgoing:
         """What goes with a message: its recording, when the answer goes back in voice, and on the last one the files
         the tools made that the channel can send."""
-        attachments = self._agent.attachments
-        files = await attachments.voice(text) if self._voiced else Outgoing()
-        if last:
-            made, self._made = self._made, []
-            files += await attachments.sent(made, self._agent.channel(self._address).sends)
-        return files
+        made, self._made = (self._made, []) if last else ([], self._made)
+        sends = self._agent.channel(self._address).sends
+        return await self._agent.attachments.outgoing(text, made, sends, voiced=self._voiced)
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""

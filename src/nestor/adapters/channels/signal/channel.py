@@ -43,18 +43,16 @@ class SignalChannel(MessagingChannel):
     async def receive(self) -> AsyncIterator[Incoming]:
         """Polls `/v1/receive`, which waits up to `wait_s` for messages; raises `ProviderError` when the number is
         unknown to signal-cli, and retries other failures."""
-        failures = 0
         params = {"timeout": str(self._wait_s)}
         while not self.closed:
             try:
                 found = await self.unless_closed(self._api.request("GET", f"/v1/receive/{self._number}", params=params))
             except ProviderError as error:
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
                 continue
             if found is None:
                 return
-            failures = 0
+            self.reached()
             for envelope in _envelopes(found):
                 if (incoming := self._incoming(envelope)) is not None:
                     yield incoming

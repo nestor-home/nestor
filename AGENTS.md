@@ -160,6 +160,11 @@ for executors, `adapters/executors/common.py`, `process.py` and `jsonrpc.py`).
 - **Errors** derive from `NestorError`. Adapters translate vendor exceptions into `ProviderError`
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.
+- **Logs** are for whoever runs the instance: WARNING for a fault, INFO for a change of state that matters to
+  them (started, connected, a service back), DEBUG for the rest. Nothing is logged again and again while nothing
+  changes: an outside service that stops answering is told once and its return once, with how long it was gone
+  (`Availability`, in `adapters/common/availability.py`); the retries in between are DEBUG. Libraries chatty at
+  INFO (`httpx`, `mcp`) are set to WARNING by the command line unless `--verbose`.
 - **Helpers**: a generic helper (encoding, HTTP, text, files) lives in a module of its own, shared by what
   needs it (`adapters/models/common.py`, `adapters/common/text.py`, `http/files.py`), never as a
   private function at the bottom of a business file. Look for an existing one before writing it, and prefer

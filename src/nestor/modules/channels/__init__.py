@@ -12,6 +12,7 @@ from nestor.modules.channels.types import (
     Medium,
     Sender,
     base_type,
+    identified,
     plain_name,
 )
 
@@ -40,5 +41,6 @@ __all__ = [
     "TranscriptionModel",
     "Written",
     "base_type",
+    "identified",
     "plain_name",
 ]

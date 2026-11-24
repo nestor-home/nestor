@@ -289,19 +289,27 @@ async def test_chats_are_answered_concurrently_and_each_chat_in_order(api: FakeB
     assert [text.split()[0] for text in api.texts(ADA)] == ["slow", "next"]
 
 
-async def test_transient_polling_failures_are_retried(api: FakeBotApi, caplog: pytest.LogCaptureFixture) -> None:
+async def test_transient_polling_failures_are_retried_and_told_once(
+    api: FakeBotApi, caplog: pytest.LogCaptureFixture
+) -> None:
     api.fail(
         "getUpdates",
         httpx.ConnectError("connection refused"),
         httpx.Response(502, text="<html>Bad Gateway</html>"),
         error(429, "Too Many Requests: retry after 1", parameters={"retry_after": 0.01}),
     )
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.INFO):
         async with serving(api, ScriptedAssistant(echo)):
             api.say("are you up?")
             await eventually(lambda: bool(api.sent))
     assert api.sent == [(ADA, "echo: are you up?")]
-    assert caplog.text.count("retrying") == 3
+    said = [
+        (r.levelno, r.getMessage())
+        for r in caplog.records
+        if "unavailable" in r.getMessage() or "back" in r.getMessage()
+    ]
+    assert [level for level, _ in said] == [logging.WARNING, logging.INFO], "down once, back once: not each attempt"
+    assert "next attempt in" in said[0][1] and "back after" in said[1][1]
 
 
 async def test_another_instance_polling_is_waited_out_without_leaving_serve(
@@ -315,7 +323,7 @@ async def test_another_instance_polling_is_waited_out_without_leaving_serve(
             await eventually(lambda: bool(api.sent))
             assert not task.done()
     assert api.sent == [(ADA, "echo: still there?")]
-    assert caplog.text.count("409 Conflict") == 2
+    assert caplog.text.count("409 Conflict") == 1, "the other instance is told once, not at each poll it takes"
     assert "Traceback" not in caplog.text
 
 

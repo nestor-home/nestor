@@ -23,7 +23,7 @@ from nestor.core.contracts import (
 )
 from nestor.core.events import Event, Record
 from nestor.core.exceptions import CapabilityMissing, ContractError, NestorError, ProviderError
-from nestor.core.shared import PersonId, SessionId, new_id, shorten, utc_now
+from nestor.core.shared import PersonId, SessionId, byte_size, new_id, shorten, utc_now
 
 __all__ = [
     "Capabilities",
@@ -44,6 +44,7 @@ __all__ = [
     "Tally",
     "Unit",
     "Usage",
+    "byte_size",
     "counted",
     "counting",
     "new_id",

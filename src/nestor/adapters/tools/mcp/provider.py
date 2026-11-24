@@ -51,6 +51,7 @@ from mcp.types import Tool as RemoteTool
 from mcp.types.version import MODERN_PROTOCOL_VERSIONS
 
 from nestor import __version__
+from nestor.adapters.common.availability import Availability
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition.model import ToolSpec
@@ -186,6 +187,7 @@ class McpToolProvider(ToolProvider):
         self._closed = False
         self._next_retry = 0.0
         self._retry: asyncio.Task[None] | None = None
+        self._availability = Availability(logger, lambda: self.name, "its tools are missing until it answers")
 
     async def start(self) -> None:
         """Opens the session now. Refused credentials fail loudly: only a person can fix them. A server that is down,
@@ -195,7 +197,7 @@ class McpToolProvider(ToolProvider):
         except ProviderError as error:
             if not error.transient:
                 raise
-            logger.warning("%s: MCP server unavailable, its tools are missing until it answers (%s)", self.name, error)
+            self._availability.lost(error)
 
     async def connect(self) -> None:
         """Opens the session now, or says why not (`ProviderError`, transient when trying again may help)."""
@@ -253,6 +255,7 @@ class McpToolProvider(ToolProvider):
             if session is not None:
                 await session.close()
             self._session = await self._connect()
+            self._availability.back(f"{len(self._session.tools)} tools")
             return self._session
 
     async def _connect(self) -> _Session:
@@ -306,7 +309,7 @@ class McpToolProvider(ToolProvider):
                     group.cancel_scope.cancel()
         except Exception as error:
             if ready.done():
-                logger.warning("%s: MCP session lost (%s)", self.name, _reason(error))
+                self._availability.lost(_reason(error))
             else:
                 ready.set_exception(error)
         finally:
@@ -334,7 +337,7 @@ class McpToolProvider(ToolProvider):
         try:
             await self._open()
         except _Unreachable as error:
-            logger.info("%s: still unavailable (%s)", self.name, error)
+            self._availability.lost(error)
 
     def _transport_streams(self, url: str, auth: httpx2.Auth | None, errors: _HttpErrors) -> Any:
         hooks: dict[str, list[Callable[..., Any]]] = {"response": [errors]}

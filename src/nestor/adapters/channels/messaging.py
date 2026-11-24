@@ -19,6 +19,7 @@ from typing import Any
 
 from pydantic import Field
 
+from nestor.adapters.common.availability import Availability
 from nestor.core import ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import (
@@ -142,6 +143,7 @@ class MessagingChannel(Channel, ABC):
         super().__init__(channel_id, conversation_ends_after_s=conversation_ends_after_s)
         self._apology = apology
         self._retry_delay_s, self._max_retry_delay_s = retry_delay_s, max_retry_delay_s
+        self._availability = Availability(logger, lambda: self.brand or self.name, "retrying until it answers")
         self._closing = asyncio.Event()
         self._conversations: _Conversations | None = None
 
@@ -191,16 +193,20 @@ class MessagingChannel(Channel, ABC):
             await self._conversations.aclose()
         await self.disconnect()
 
-    async def retry_later(self, error: Exception, failures: int) -> None:
-        """After the `failures`-th failure in a row to reach the platform: raises `error` when nothing will get past
-        it (a `ProviderError` that is not transient), otherwise waits (as long as the platform asked, when it said),
-        or less when the channel closes meanwhile."""
+    async def retry_later(self, error: Exception) -> None:
+        """After a failure to reach the platform: raises `error` when nothing will get past it (a `ProviderError` that
+        is not transient), otherwise waits (as long as the platform asked, when it said, else longer at each failure in
+        a row), or less when the channel closes meanwhile."""
         if isinstance(error, ProviderError) and not error.transient:
             raise error
         asked = error.retry_after_s if isinstance(error, ProviderError) else None
-        delay = asked or min(self._retry_delay_s * 2**failures, self._max_retry_delay_s)
-        logger.warning("%s: %s, retrying in %.1f s", self.brand, error, delay)
+        delay = asked or min(self._retry_delay_s * 2**self._availability.failures, self._max_retry_delay_s)
+        self._availability.lost(f"{error} (next attempt in {delay:.1f} s)")
         await self.unless_closed(asyncio.sleep(delay))
+
+    def reached(self) -> None:
+        """The platform answered: if it had been lost, it is back, and the next failure waits the shortest delay."""
+        self._availability.back()
 
     async def unless_closed[T](self, work: Awaitable[T]) -> T | None:
         """`work`'s result, or `None` when the channel is closed first (`work` is then cancelled)."""

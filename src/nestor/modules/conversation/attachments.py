@@ -4,9 +4,10 @@ transcribed, documents read, answers recorded in the assistant's voice. Channels
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Collection, Iterable, Mapping, Sequence
+from dataclasses import replace
 
 from nestor.core import ProviderError
-from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel
+from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel, identified
 from nestor.modules.cognition.model import Document, Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
@@ -74,6 +75,14 @@ class Attachments:
             tuple(Attached(kind=kind, blob=blob, name=named[blob.digest]) for kind, blob, _ in found),
         )
 
+    async def outgoing(
+        self, text: str, made: Sequence[FileRef], sends: Collection[AttachmentKind], *, voiced: bool
+    ) -> Outgoing:
+        """What goes with a message: its recording when it goes as a voice message, then the files tools `made` that
+        a channel which `sends` these kinds can send."""
+        recorded = await self.voice(text) if voiced else Outgoing()
+        return recorded + await self.sent(made, sends)
+
     async def shown(self, attached: Sequence[Attached]) -> Mapping[str, Image | Document]:
         """`attached` as the model looks at them, by digest: pictures, and other files as documents. The same files
         come back turn after turn: the last ones are kept rather than read again."""
@@ -103,6 +112,9 @@ class Attachments:
                 continue
 
     async def _keep(self, attachment: Attachment, context: ToolContext) -> Attached:
+        reads = self._documents[0].reads if self._documents else (lambda _: False)
+        found = identified(attachment.media_type, attachment.name, attachment.data, reads=reads)
+        attachment = replace(attachment, media_type=found)
         blob = await self._blobs.put(attachment.data, attachment.media_type)
         transcript = await self._transcribe(attachment) if attachment.kind in HEARD else None
         read = await self._read(attachment, context) if attachment.kind is AttachmentKind.FILE else None
