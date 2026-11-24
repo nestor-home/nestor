@@ -431,7 +431,7 @@ async def test_an_unreachable_server_at_start_leaves_its_tools_missing(caplog: L
         assert provider.tools() == ()
         assert provider.health() is Health.UNAVAILABLE and provider.brand == "mcp"
 
-    assert "home: MCP server unavailable" in caplog.text and "unreachable" in caplog.text
+    assert "home: unavailable, its tools are missing until it answers" in caplog.text and "unreachable" in caplog.text
 
 
 async def test_a_dropped_server_empties_the_list_and_calls_fail_clearly(served_home: Served) -> None:
@@ -460,7 +460,8 @@ async def test_a_call_reconnects_once_the_server_is_back(served_home: Served) ->
         assert provider.tools()
 
 
-async def test_the_tools_come_back_on_their_own_once_the_server_is_back() -> None:
+async def test_the_tools_come_back_on_their_own_once_the_server_is_back(caplog: LogCapture) -> None:
+    caplog.set_level(logging.INFO)
     served = Served(lambda: bearer(home_server().streamable_http_app(), TOKEN))
     served.port = free_port()
     provider = provider_for(served, retry_after_s=0.05)
@@ -473,6 +474,9 @@ async def test_the_tools_come_back_on_their_own_once_the_server_is_back() -> Non
     finally:
         await provider.close()
         await served.stop()
+    told = [r for r in caplog.records if r.name.startswith("nestor") and r.levelno >= logging.INFO]
+    assert [r.levelno for r in told] == [logging.WARNING, logging.INFO], "down once, back once, whatever the attempts"
+    assert "back after" in told[1].getMessage()
 
 
 async def test_a_lost_sse_stream_ends_the_session() -> None:

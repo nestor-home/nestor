@@ -113,7 +113,7 @@ def _note(attached: Attached, shown: Shown, sees: bool) -> str:
         case AttachmentKind.FILE if attached.read:
             return f"[A document{named} with no text to read, maybe a scan]"
         case _:
-            return f"[A file{named}, {attached.blob.media_type}, that you cannot open]"
+            return f"[A file{named}, {attached.blob.media_type}, {_size(attached.blob.size)}, that you cannot open]"
 
 
 def to_messages(
@@ -149,3 +149,9 @@ def to_messages(
             seen = result.seen if isinstance(result, ToolCompleted) else ()
             messages.append(tool_message(event.call_id, result.output, seen, shown, sees))
     return tuple(messages)
+
+
+def _size(size: int) -> str:
+    if size < 1024:
+        return f"{size} bytes"
+    return f"{size / 1024:.0f} KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f} MB"

@@ -63,6 +63,7 @@ class EmailChannel(MessagingChannel):
                         # mail there before Nestor started, or before the folder was rebuilt, is not answered
                         cursor = self._cursor = await folder_end(client, selected)
                     failures = 0
+                    self.reached()
                     while not self.closed:
                         for uid in await newer(client, cursor):
                             fetched = await client.fetch([uid], f"BODY.PEEK[]<0.{self._timing.fetch_bytes}>")

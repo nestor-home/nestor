@@ -135,10 +135,13 @@ class MatrixChannel(MessagingChannel):
         params = {"timeout": str(timeout_ms), "filter": FILTER} | ({"since": since} if since else {})
         while True:
             try:
-                return await self._json("GET", f"{CLIENT}/sync", params=params)
+                batch = await self._json("GET", f"{CLIENT}/sync", params=params)
             except ProviderError as error:
                 await self.retry_later(error, failures)
                 failures += 1
+                continue
+            self.reached()
+            return batch
 
     async def _join(self, room: str) -> None:
         try:

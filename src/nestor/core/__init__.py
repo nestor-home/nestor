@@ -2,7 +2,7 @@
 
 - `contracts`: `Component` lifecycle and capabilities, model types, and what a call consumes (`report`)
 - `events`: versioned events and their log records
-- `shared`: identifiers and time helpers
+- `shared`: identifiers, time helpers, how an adapter tells a service is gone and back
 - `exceptions`: the error hierarchy
 """
 
@@ -23,9 +23,10 @@ from nestor.core.contracts import (
 )
 from nestor.core.events import Event, Record
 from nestor.core.exceptions import CapabilityMissing, ContractError, NestorError, ProviderError
-from nestor.core.shared import PersonId, SessionId, new_id, shorten, utc_now
+from nestor.core.shared import Availability, PersonId, SessionId, new_id, shorten, utc_now
 
 __all__ = [
+    "Availability",
     "Capabilities",
     "Capability",
     "CapabilityMissing",

@@ -17,6 +17,7 @@ from nestor.core.i18n import Localizer
 from nestor.modules.channels import (
     Address,
     Assistant,
+    Attachment,
     AttachmentKind,
     Exchange,
     InboundMessage,
@@ -71,10 +72,12 @@ from nestor.modules.usage import CallPurpose, attribute, attributed
 
 @dataclass(frozen=True, slots=True)
 class Draft:
-    """An answer to a notification, to deliver: its words, and the files that go with it (kept)."""
+    """An answer to a notification, to deliver: its words, the files that go with it (kept), and whether it goes as a
+    voice message, the person speaking by voice message in that conversation."""
 
     text: str
     files: tuple[FileRef, ...] = ()
+    voiced: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,7 +235,7 @@ class Agent(Assistant):
             final = final[: -len(SILENT)].strip()
         if not final:
             raise ProviderError("model", "wrote nothing for a notification", transient=True)
-        return Draft(final, (*notification.files, *reply._made))
+        return Draft(final, (*notification.files, *reply._made), voiced=reply._voiced)
 
     async def delivered(
         self,
@@ -312,13 +315,8 @@ class AgentReply(Reply):
         self._opening = opening
         self._final = ""  # what the model wrote in its last round, once it asked for no more tools
         self._mentions: tuple[Mentioned, ...] = ()  # what the person's message names, once it is read
-        # the answer goes back as voice messages: to a voice message, on a channel that sends them, with a voice
-        self._voiced = (
-            isinstance(opening, InboundMessage)
-            and any(a.kind is AttachmentKind.VOICE for a in opening.attachments)
-            and AttachmentKind.VOICE in agent.channel(address).sends
-            and agent.attachments.speaks
-        )
+        # the answer goes back as voice messages when the person speaks by voice message here (`_speaking`)
+        self._voiced = isinstance(opening, InboundMessage) and self._speaking(opening.attachments)
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -366,6 +364,8 @@ class AgentReply(Reply):
                     await self._reply_to(opening)
             else:  # a notification's draft belongs to the conversation open there, if any
                 conversation = await agent.conversations.current(self._address, self._medium)
+                said = await agent.conversations.last_said(self._address, conversation)
+                self._voiced = said is not None and self._speaking(said.attachments)
                 self._attribute(conversation)
                 await self._answer(conversation)
                 await self._end_message()
@@ -373,6 +373,17 @@ class AgentReply(Reply):
         finally:
             self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
+
+    def _speaking(self, said: Sequence[Attachment | Attached]) -> bool:
+        """Whether an answer to what the person `said` goes back as a voice message: they sent one, on a channel that
+        sends them, with a voice to record it. What Nestor brings by itself while they talk this way does too (a
+        task's result, a question)."""
+        agent = self._agent
+        return (
+            any(a.kind is AttachmentKind.VOICE for a in said)
+            and AttachmentKind.VOICE in agent.channel(self._address).sends
+            and agent.attachments.speaks
+        )
 
     def _context(self) -> ToolContext:
         """The answer as its tools see it: where, who asked, the turn it belongs to, what it continues."""
@@ -565,8 +576,8 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        # a draft (no turn) takes its files along once delivered (`Agent.compose`)
-        attaching = self._voiced or (last and bool(self._made) and self._turn is not None)
+        # a draft (no turn) takes its files and its recording along once delivered (`Agent.compose`)
+        attaching = self._turn is not None and (self._voiced or (last and bool(self._made)))
         if not attaching:
             self._chunks.put_nowait(MessageEnd(last=last))
         answer = await self._turn.answered(text) if self._turn else None

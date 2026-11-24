@@ -242,6 +242,14 @@ class Conversations:
         shown = await look(wanted) if look is not None and wanted else {}
         return to_messages(events, names=names, shown=shown, sees=sees)
 
+    async def last_said(self, address: Address, conversation: str | None) -> UserTurn | None:
+        """What the person said last in `conversation`, if anything: how they speak there now."""
+        if conversation is None:
+            return None
+        latest = await self.journal.history(UserTurn, session=address.session, newest_first=True, limit=1)
+        said = latest[0] if latest else None
+        return said if said and said.exchange and said.exchange.conversation_id == conversation else None
+
     async def told(self, thread: str, *, limit: int = TOLD) -> list[AssistantTurn]:
         """What was answered to the last `limit` notifications of `thread`, oldest first, wherever they went: what the
         person already knows of it. A notification withheld left no answer."""

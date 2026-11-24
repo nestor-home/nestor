@@ -59,6 +59,7 @@ class DiscordChannel(MessagingChannel):
                     self._socket, beat = socket, Beat()
                     async for incoming in self._session(socket, beat):
                         failures = 0
+                        self.reached()
                         yield incoming
                 if beat.asked_to_reconnect:
                     continue

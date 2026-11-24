@@ -101,6 +101,7 @@ class TelegramChannel(MessagingChannel):
                 continue
             if self.closed:
                 break
+            self.reached()
             try:
                 return UPDATES.validate_python(result)
             except ValidationError:

@@ -55,6 +55,7 @@ class SignalChannel(MessagingChannel):
             if found is None:
                 return
             failures = 0
+            self.reached()
             for envelope in _envelopes(found):
                 if (incoming := self._incoming(envelope)) is not None:
                     yield incoming

@@ -123,8 +123,8 @@ def main(argv: list[str] | None = None) -> int:
     checking = args.command == "bench" or (args.command == "satellites" and args.action == "conformance")
     level = logging.DEBUG if args.verbose else logging.WARNING if checking else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    if not args.verbose:  # every HTTP request in INFO, a Telegram long poll every 30 s: noise, unless asked for
-        for client in ("httpx", "httpx2"):
+    if not args.verbose:  # every HTTP request, a long poll every 30 s, each MCP request: noise, unless asked for
+        for client in ("httpx", "httpx2", "mcp"):
             logging.getLogger(client).setLevel(logging.WARNING)
     environ = environment(args.config)  # the shell's variables, completed by the `.env` next to the configuration
     try:

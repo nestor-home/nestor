@@ -128,8 +128,35 @@ async def test_a_file_the_model_cannot_open_is_named_to_it(make_agent: MakeAgent
     await agent.respond(sent("tu peux lire ?", pdf)).collect()
     assert (
         last_user(model.requests[0]).content
-        == "[A file (devis.pdf), application/pdf, that you cannot open]\ntu peux lire ?"
+        == "[A file (devis.pdf), application/pdf, 4 bytes, that you cannot open]\ntu peux lire ?"
     )
+
+
+@pytest.mark.parametrize(
+    ("name", "data", "read"),
+    [
+        ("diagnostics.json", b'{"program": "eco", "minutes_left": 39}', True),
+        ("app.ts", b"export const left = 39;\n", True),  # a source file, whatever its extension says elsewhere
+        ("notes", "Fin du cycle à 23 h 31".encode(), True),  # no extension: its content shows it is text
+        ("export.zip", b"PK\x03\x04\x00\x00binary", False),
+    ],
+    ids=["json", "typescript", "no-extension", "zip"],
+)
+async def test_a_file_sent_with_a_type_that_says_nothing_is_known_by_its_name_and_content(
+    make_agent: MakeAgent, journal: Journal, name: str, data: bytes, read: bool
+) -> None:
+    """Channels may announce `application/octet-stream` for anything: what can be read is read all the same."""
+    blobs = MemoryBlobStore()
+    results = Results(journal, blobs)
+    model = ScriptedModel("Reçu.")
+    agent = make_agent(model=model, attachments=Attachments(blobs, documents=(FileReader(), results)), results=results)
+    sent_file = Attachment(kind=AttachmentKind.FILE, data=data, media_type="application/binary", name=name)
+    await agent.respond(sent("regarde", sent_file)).collect()
+    note = last_user(model.requests[0]).content
+    if read:
+        assert note.startswith(f"[A document ({name}): read its text with read_result"), note
+    else:
+        assert note.startswith(f"[A file ({name}), application/zip, 12 bytes, that you cannot open]"), note
 
 
 async def test_a_document_is_read_by_the_model_where_it_was_sent_and_nowhere_else(

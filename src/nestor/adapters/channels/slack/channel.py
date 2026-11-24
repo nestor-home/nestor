@@ -55,6 +55,7 @@ class SlackChannel(MessagingChannel):
                 url = (await self._call(self._app, "apps.connections.open"))["url"]
                 async with connect(url, max_size=2**24) as socket:
                     self._socket, failures = socket, 0
+                    self.reached()
                     async for raw in socket:
                         envelope = json.loads(raw)
                         if envelope.get("envelope_id"):
