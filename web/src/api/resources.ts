@@ -267,9 +267,15 @@ export const api = {
   usagePrices: () => unwrap(client.GET("/api/v1/usage/prices")),
 
   // tasks, watches, memories
-  tasks: () => unwrap(client.GET("/api/v1/tasks")),
+  tasks: (archived = false) => unwrap(client.GET("/api/v1/tasks", { params: { query: { archived } } })),
   task: (id: Id) => unwrap(client.GET("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } } })),
-  cancelTask: (id: Id) => done(client.POST("/api/v1/tasks/{task_id}/cancel", { params: { path: { task_id: id } } })),
+  directTask: (id: Id, text: string) =>
+    unwrap(client.POST("/api/v1/tasks/{task_id}/instructions", { params: { path: { task_id: id } }, body: { text } })),
+  stopTask: (id: Id) => unwrap(client.POST("/api/v1/tasks/{task_id}/stop", { params: { path: { task_id: id } } })),
+  renameTask: (id: Id, title: string) =>
+    unwrap(client.PATCH("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } }, body: { title } })),
+  archiveTask: (id: Id) =>
+    unwrap(client.POST("/api/v1/tasks/{task_id}/archive", { params: { path: { task_id: id } } })),
   watches: () => unwrap(client.GET("/api/v1/watches")),
   watch: (id: Id) => unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
   cancelWatch: (id: Id) =>

@@ -63,6 +63,16 @@ describe("the catalogues", () => {
     }
   });
 
+  it("never define a message the server's catalogue defines: the two would fight for the id", () => {
+    for (const locale of LOCALES) {
+      const server = new Set(parse(coreOf(locale), {}).body.flatMap((e) => (e.type === "Message" ? [e.id.name] : [])));
+      const clashes = [...ids(locale)].flatMap(([file, set]) =>
+        [...set].filter((id) => server.has(id)).map((id) => `${locale}/${file}: ${id}`),
+      );
+      expect(clashes).toEqual([]);
+    }
+  });
+
   it("define every id the code asks for", () => {
     const server = parse(coreOf("en"), {}).body.flatMap((e) => (e.type === "Message" ? [e.id.name] : []));
     const known = new Set([...[...ids("en").values()].flatMap((s) => [...s]), ...server]);

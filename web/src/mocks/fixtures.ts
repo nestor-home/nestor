@@ -26,7 +26,8 @@ import type {
   Scope,
   Service,
   SystemInfo,
-  Task,
+  TaskThread,
+  TaskTurn,
   Tool,
   Updates,
   Voice,
@@ -835,8 +836,16 @@ export const CLAIM = fr(
 );
 export const CLAIM_STEPS = [
   fr("Insurance claim form downloaded.", "Formulaire de la mutuelle téléchargé."),
-  fr("Waiting for the invoice: Gmail needs reconnecting.", "En attente de la facture : Gmail est à reconnecter."),
+  fr("Prescription found in Mathis's mail.", "Ordonnance trouvée dans les mails de Mathis."),
 ];
+export const CLAIM_QUESTION = fr(
+  "I can't find the optician's invoice. Can you send me a photo of it, or tell me which mailbox it went to?",
+  "Je ne trouve pas la facture de l'opticien. Pouvez-vous m'en envoyer une photo, ou me dire dans quelle boîte elle est arrivée ?",
+);
+export const CLAIM_NOTE = fr(
+  "Jules's insurance number is on the September statement.",
+  "Le numéro d'adhérent de Jules est sur le relevé de septembre.",
+);
 export const SHOPPING_TITLE = fr("Week's shopping list", "Liste de courses de la semaine");
 export const SHOPPING = fr(
   "Make the week's shopping list from Léa's menus.",
@@ -846,6 +855,7 @@ export const SHOPPING_STEP = fr(
   "Reading the “Léa's recipes” MCP server.",
   "Lecture du serveur MCP « Recettes de Léa ».",
 );
+export const SHOPPING_STEER = fr("Group it by aisle, please.", "Regroupe-la par rayon, s'il te plaît.");
 export const ENERGY_TITLE = fr("Green electricity offers", "Offres d'électricité verte");
 export const ENERGY = fr(
   "Compare three green electricity offers and sum up the yearly price gaps.",
@@ -859,6 +869,25 @@ export const ENERGY_STEPS = [
 export const ENERGY_RESULT = fr(
   "The second offer is the cheapest over a year, standing charge included; the third, the most expensive.",
   "La deuxième offre est la moins chère sur un an, abonnement compris ; la troisième, la plus chère.",
+);
+export const ENERGY_FOLLOW_UP = fr(
+  "And with off-peak hours? The washing machine and the dishwasher run at night.",
+  "Et avec les heures creuses ? Le lave-linge et le lave-vaisselle tournent la nuit.",
+);
+export const ENERGY_OFF_PEAK = fr(
+  "With off-peak hours, the second offer is still the cheapest: about €64 less a year than today. The first one comes close only if more than half of the use is at night.",
+  "Avec les heures creuses, la deuxième offre reste la moins chère : environ 64 € de moins par an qu'aujourd'hui. La première ne s'en approche que si plus de la moitié de la consommation a lieu la nuit.",
+);
+export const ENERGY_NOTES = [
+  fr("Current contract: 9 kVA, base option.", "Contrat actuel : 9 kVA, option base."),
+  fr(
+    "Yearly use: 4,820 kWh, from the last twelve bills.",
+    "Consommation annuelle : 4 820 kWh, d'après les douze dernières factures.",
+  ),
+];
+export const ENERGY_OFF_PEAK_STEP = fr(
+  "Off-peak prices of the three suppliers fetched.",
+  "Prix en heures creuses des trois fournisseurs récupérés.",
 );
 export const GYM_ERROR = fr(
   "The site asks for a sign-in by text message: impossible without Léa.",
@@ -874,117 +903,220 @@ export const DEPENDENCIES_RESULT = fr(
   "12 dependencies updated, tests green. The report and a capture of the dashboard are attached.",
   "12 dépendances mises à jour, tests au vert. Le rapport et une capture du tableau de bord sont joints.",
 );
-/** What the tasks handed back, as the task API lists them (the journal's `task.ended` carries the same). */
-export const ENERGY_FILES: Task["files"] = [
-  { index: 0, name: "energy-offers.pdf", kind: "file", media_type: "application/pdf", size: 48_200 },
-];
-export const DEPENDENCIES_FILES: Task["files"] = [
-  { index: 0, name: "report.md", kind: "file", media_type: "text/markdown", size: 3_412 },
-  { index: 1, name: "dashboard.png", kind: "image", media_type: "image/png", size: 182_400 },
-];
 
-export function tasks(): Task[] {
-  return [
-    {
-      id: "t-4410aa",
-      title: CLAIM_TITLE,
-      objective: CLAIM,
-      executor: "hermes",
-      status: "running",
-      requested_by: ref("mathis"),
-      started_at: minutes(30.9),
-      ended_at: null,
-      steps: CLAIM_STEPS,
-      result: null,
-      error: null,
-      origin: { session: "s-mutuelle", channel: "telegram" },
-      delivered: null,
-      files: [],
-    },
-    {
-      id: "t-88b07e",
-      title: SHOPPING_TITLE,
-      objective: SHOPPING,
-      executor: "codex",
-      status: "running",
-      requested_by: ref("lea"),
-      started_at: minutes(11.9),
-      ended_at: null,
-      steps: [SHOPPING_STEP],
-      result: null,
-      error: null,
-      origin: { session: "s-courses", channel: "web" },
-      delivered: null,
-      files: [],
-    },
-    {
-      id: "t-3f2a1c",
-      title: ENERGY_TITLE,
-      objective: ENERGY,
-      executor: "hermes",
-      status: "completed",
-      requested_by: ref("mathis"),
-      started_at: minutes(351.6),
-      ended_at: minutes(251),
-      steps: ENERGY_STEPS,
-      result: ENERGY_RESULT,
-      error: null,
-      origin: { session: "s-elec", channel: "telegram" },
-      delivered: { at: minutes(250.4), channel: "voice", room: OFFICE },
-      files: ENERGY_FILES,
-    },
-    {
-      id: "t-a04f12",
-      title: fr("Gym membership cancellation", "Résiliation de la salle de sport"),
-      objective: fr("Cancel the gym membership.", "Résilier l'abonnement à la salle de sport."),
-      executor: "hermes",
-      status: "failed",
-      requested_by: ref("lea"),
-      started_at: minutes(60 * 26),
-      ended_at: minutes(60 * 26 - 9),
-      steps: [],
-      result: null,
-      error: GYM_ERROR,
-      origin: { session: "telegram:@lea_martin", channel: "telegram" },
-      delivered: null,
-      files: [],
-    },
-    {
-      id: "t-5e6b70",
-      title: fr("Jules's homework", "Devoirs de Jules"),
-      objective: fr("Sum up Jules's homework for the week.", "Récapituler les devoirs de Jules pour la semaine."),
-      executor: "codex",
-      status: "cancelled",
-      requested_by: ref("jules"),
-      started_at: minutes(60 * 30),
-      ended_at: minutes(60 * 30 - 1),
-      steps: [],
-      result: null,
-      error: null,
-      origin: { session: "voice:pi-bedroom", channel: "voice" },
-      delivered: null,
-      files: [],
-    },
-    {
-      id: "t-c1a9de",
-      title: DEPENDENCIES_TITLE,
-      objective: DEPENDENCIES,
-      executor: "claude-code",
-      status: "completed",
-      requested_by: ref("mathis"),
-      started_at: minutes(539.5),
-      ended_at: minutes(521),
-      steps: [fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions.")],
-      result: DEPENDENCIES_RESULT,
-      error: null,
-      origin: { session: "s-slack", channel: "slack" },
-      delivered: { at: minutes(520.8), channel: "slack", room: null },
-      files: DEPENDENCIES_FILES,
-    },
-  ];
+type TurnFile = TaskTurn["files"][number];
+const handed = (index: number, name: string, media_type: string, size: number, kind: TurnFile["kind"] = "file") =>
+  ({ index, name, kind, media_type, size, given: false }) satisfies TurnFile;
+const given = (file: TurnFile): TurnFile => ({ ...file, given: true });
+
+/** What the tasks were sent and handed back, as a turn lists them (the journal's lines carry the same files). */
+export const ENERGY_BILLS: TaskTurn["files"] = [
+  given(handed(0, "bill-september.pdf", "application/pdf", 61_400)),
+  given(handed(1, "bill-august.pdf", "application/pdf", 59_800)),
+];
+export const ENERGY_FILES: TaskTurn["files"] = [handed(2, "energy-offers.pdf", "application/pdf", 48_200)];
+export const ENERGY_OFF_PEAK_FILES: TaskTurn["files"] = [
+  handed(0, "energy-offers-off-peak.pdf", "application/pdf", 51_900),
+];
+export const DEPENDENCIES_FILES: TaskTurn["files"] = [
+  handed(0, "report.md", "text/markdown", 3_412),
+  handed(1, "dashboard.png", "image/png", 182_400, "image"),
+];
+export const CLAIM_FILES: TaskTurn["files"] = [handed(0, "claim-form.pdf", "application/pdf", 88_300)];
+
+/** A turn as the task API sends it: what is not said did not happen. */
+function turn(
+  draft: Pick<TaskTurn, "id" | "instruction" | "by" | "status" | "started_at"> & Partial<TaskTurn>,
+): TaskTurn {
+  return {
+    ended_at: null,
+    steps: [],
+    result: null,
+    question: null,
+    error: null,
+    files: [],
+    delivered: null,
+    steered: [],
+    ...draft,
+  };
 }
 
-/** A task's label once cancelled (the admin can cancel one). */
+/** A task with its thread: its counts and what it waits on are read from the thread, as the server does. */
+function thread(
+  draft: Pick<TaskThread, "id" | "title" | "executor" | "owner" | "origin"> & {
+    archived?: boolean;
+    thread: TaskTurn[];
+    notes?: string[];
+  },
+): TaskThread {
+  const { archived = false, notes = [], ...rest } = draft;
+  const first = rest.thread[0];
+  if (!first) throw new Error("a task has at least one turn");
+  return reread(
+    {
+      ...rest,
+      notes,
+      state: archived ? "archived" : "ready",
+      created_at: first.started_at,
+      last_activity: first.started_at,
+      turns: 0,
+      last_status: first.status,
+      question: null,
+      now: null,
+    },
+    archived,
+  );
+}
+
+/** A task's state, counts and what it waits on, read again from its thread after a change; `archived` keeps it
+ * put away unless a turn works. */
+export function reread(task: TaskThread, archived = task.state === "archived"): TaskThread {
+  const last = task.thread.at(-1);
+  task.state =
+    last?.status === "running" ? "working" : archived ? "archived" : last?.status === "asked" ? "waiting" : "ready";
+  task.turns = task.thread.length;
+  if (last) task.last_status = last.status;
+  task.last_activity = last ? (last.ended_at ?? last.started_at) : task.created_at;
+  task.question = last?.status === "asked" ? last.question : null;
+  task.now = last?.status === "running" ? (last.steps.at(-1) ?? null) : null;
+  return task;
+}
+
+export function tasks(): TaskThread[] {
+  return [
+    thread({
+      id: "t-4410aa",
+      title: CLAIM_TITLE,
+      executor: "hermes",
+      owner: ref("mathis"),
+      origin: { session: "s-mutuelle", channel: "telegram" },
+      thread: [
+        turn({
+          id: "u-4410-1",
+          instruction: CLAIM,
+          by: ref("mathis"),
+          status: "asked",
+          started_at: minutes(30.9),
+          ended_at: minutes(9),
+          steps: CLAIM_STEPS,
+          question: CLAIM_QUESTION,
+          files: CLAIM_FILES,
+          delivered: { at: minutes(8.8), channel: "telegram", room: null },
+        }),
+      ],
+      notes: [CLAIM_NOTE],
+    }),
+    thread({
+      id: "t-88b07e",
+      title: SHOPPING_TITLE,
+      executor: "codex",
+      owner: ref("lea"),
+      origin: { session: "s-courses", channel: "web" },
+      thread: [
+        turn({
+          id: "u-88b0-1",
+          instruction: SHOPPING,
+          by: ref("lea"),
+          status: "running",
+          started_at: minutes(11.9),
+          steps: [SHOPPING_STEP],
+          steered: [{ instruction: SHOPPING_STEER, by: ref("lea"), at: minutes(5.5) }],
+        }),
+      ],
+    }),
+    thread({
+      id: "t-3f2a1c",
+      title: ENERGY_TITLE,
+      executor: "hermes",
+      owner: ref("mathis"),
+      origin: { session: "s-elec", channel: "telegram" },
+      thread: [
+        turn({
+          id: "u-3f2a-1",
+          instruction: ENERGY,
+          by: ref("mathis"),
+          status: "completed",
+          started_at: minutes(351.6),
+          ended_at: minutes(251),
+          steps: ENERGY_STEPS,
+          result: ENERGY_RESULT,
+          files: [...ENERGY_BILLS, ...ENERGY_FILES],
+          delivered: { at: minutes(250.4), channel: "voice", room: OFFICE },
+        }),
+        turn({
+          id: "u-3f2a-2",
+          instruction: ENERGY_FOLLOW_UP,
+          by: ref("mathis"),
+          status: "completed",
+          started_at: minutes(212),
+          ended_at: minutes(196),
+          steps: [ENERGY_OFF_PEAK_STEP],
+          result: ENERGY_OFF_PEAK,
+          files: ENERGY_OFF_PEAK_FILES,
+          delivered: { at: minutes(195.8), channel: "telegram", room: null },
+        }),
+      ],
+      notes: ENERGY_NOTES,
+    }),
+    thread({
+      id: "t-c1a9de",
+      title: DEPENDENCIES_TITLE,
+      executor: "claude-code",
+      owner: ref("mathis"),
+      origin: { session: "s-slack", channel: "slack" },
+      thread: [
+        turn({
+          id: "u-c1a9-1",
+          instruction: DEPENDENCIES,
+          by: ref("mathis"),
+          status: "completed",
+          started_at: minutes(539.5),
+          ended_at: minutes(521),
+          steps: [fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions.")],
+          result: DEPENDENCIES_RESULT,
+          files: DEPENDENCIES_FILES,
+          delivered: { at: minutes(520.8), channel: "slack", room: null },
+        }),
+      ],
+    }),
+    thread({
+      id: "t-a04f12",
+      title: fr("Gym membership cancellation", "Résiliation de la salle de sport"),
+      executor: "hermes",
+      owner: ref("lea"),
+      origin: { session: "telegram:@lea_martin", channel: "telegram" },
+      thread: [
+        turn({
+          id: "u-a04f-1",
+          instruction: fr("Cancel the gym membership.", "Résilier l'abonnement à la salle de sport."),
+          by: ref("lea"),
+          status: "failed",
+          started_at: minutes(60 * 26),
+          ended_at: minutes(60 * 26 - 9),
+          error: GYM_ERROR,
+        }),
+      ],
+    }),
+    thread({
+      id: "t-5e6b70",
+      title: fr("Jules's homework", "Devoirs de Jules"),
+      executor: "codex",
+      owner: ref("jules"),
+      origin: { session: "voice:pi-bedroom", channel: "voice" },
+      archived: true,
+      thread: [
+        turn({
+          id: "u-5e6b-1",
+          instruction: fr("Sum up Jules's homework for the week.", "Récapituler les devoirs de Jules pour la semaine."),
+          by: ref("jules"),
+          status: "stopped",
+          started_at: minutes(60 * 30),
+          ended_at: minutes(60 * 30 - 1),
+        }),
+      ],
+    }),
+  ];
+}
 
 /** The watch on the school's reply: its name and what it watches for, as its creation reads in the journal. */
 export const SCHOOL_TRIP_WATCH = fr("School trip reply", "Réponse pour la sortie scolaire");
@@ -1395,7 +1527,7 @@ const OBSERVED: Record<string, Observed> = {
 export interface Running {
   satellites: readonly Satellite[];
   connections: readonly Connection[];
-  tasks: readonly Task[];
+  tasks: readonly TaskThread[];
 }
 
 const hostOf = (url: unknown) => (typeof url === "string" && URL.canParse(url) ? new URL(url).host : String(url));
@@ -1405,7 +1537,7 @@ const count = (value: unknown) => (Array.isArray(value) ? value.length : 0);
 function told(p: Plugged, health: Component["health"], running: Running): string | null {
   const { entry } = p;
   if (p.slot === "executor") {
-    const busy = running.tasks.filter((t) => t.executor === p.name && t.status === "running").length;
+    const busy = running.tasks.filter((t) => t.executor === p.name && t.state === "working").length;
     if (!busy) return null;
     return busy === 1
       ? fr("1 task running", "1 tâche en cours")

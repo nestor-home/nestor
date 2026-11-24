@@ -15,7 +15,7 @@ describe("today: the household as one picture, then what it asks, does and plans
     // a room where someone is names them; who is out is said apart
     expect(await screen.findByRole("button", { name: "Living room · Mathis, Jules" })).toBeInTheDocument();
     expect(screen.getByText("Out").parentElement).toHaveTextContent("Léa");
-    expect(await within(await part(/^Right now/)).findByText("Glasses insurance claim")).toBeInTheDocument();
+    expect(await within(await part(/^Right now/)).findByText("Week's shopping list")).toBeInTheDocument();
     expect(
       within(await part("Coming up")).getByText(/Quiet hours from 22:30 to 07:30|Silence until 07:30/),
     ).toBeInTheDocument();
@@ -52,7 +52,10 @@ describe("today: the household as one picture, then what it asks, does and plans
     for (const c of db.connections) c.status = "connected";
     db.pairing = [];
     for (const s of db.satellites) s.connected = true;
-    for (const t of db.tasks) if (t.status === "running" || t.status === "failed") t.status = "completed";
+    for (const t of db.tasks) {
+      if (t.state === "working" || t.state === "waiting") t.state = "ready";
+      t.last_status = "completed";
+    }
     db.journal = db.journal.filter((e) => !e.item.type.endsWith("delivery_failed"));
     for (const c of db.system.components) c.health = "started";
     (db.config.document.initiative as Record<string, unknown>).quiet_hours = null;

@@ -425,7 +425,7 @@ function useChainHead(chain: Chain): { title: string; link: ReactNode; icon: Luc
   const task = useQuery({ ...taskQuery(id), enabled: type === "task", refetchInterval: false, retry: false });
   const watch = useQuery({ ...watchQuery(id), enabled: type === "watch", retry: false }).data;
   if (type === "task") {
-    const name = task.data?.title ?? chain.items.find((i) => is(i, "taskStarted"))?.detail;
+    const name = task.data?.title ?? chain.items.find((i) => is(i, "taskStarted"))?.message.args.title;
     return {
       icon: Workflow,
       tone: "task",

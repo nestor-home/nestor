@@ -19,6 +19,7 @@ import {
   type MockPerson,
   NO_RULE,
   PROTOCOL,
+  reread,
   SCOPES,
   services as servicesOf,
   tools as toolsOf,
@@ -257,6 +258,31 @@ const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(sequen
 const refOf = (id: string): In<"PersonRef"> => ({ id, name: db.people.find((p) => p.id === id)?.name ?? id });
 
 const itemOut = (item: In<"JournalItem">) => localize(item, lang);
+
+/** The tasks the signed-in account reaches: all of them with `tasks.manage`, else its person's. */
+function reachableTasks(): In<"TaskThreadOut">[] {
+  if (scopes().includes("tasks.manage")) return db.tasks;
+  const person = signedIn()?.person?.id;
+  return db.tasks.filter((t) => person && t.owner?.id === person);
+}
+
+const reachableTask = (id: unknown) => reachableTasks().find((t) => t.id === id);
+
+/** Stop the turn that works, as the executor confirms it: whether there was one. */
+function stopWorking(task: In<"TaskThreadOut">): boolean {
+  const working = task.thread.at(-1);
+  if (working?.status !== "running") return false;
+  working.status = "stopped";
+  working.ended_at = new Date().toISOString();
+  reread(task, false);
+  journalize({
+    type: "task.turn.ended",
+    title: `Task ${task.id.slice(2)} stopped (${Math.round((Date.now() - Date.parse(working.started_at)) / 60_000)} min)`,
+    brand: task.executor,
+    links: { task: task.id },
+  });
+  return true;
+}
 
 /** A new journal entry at the next position, as the stream and the list will send it. */
 function journalize(draft: Draft): In<"JournalItem"> {
@@ -1288,38 +1314,120 @@ export const handlers = [
   http.get(`${API}/tasks`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    return json({
-      running: db.tasks.filter((t) => t.status === "running"),
-      recent: db.tasks.filter((t) => t.status !== "running"),
-    } satisfies In<"TasksOut">);
+    const archived = new URL(request.url).searchParams.get("archived") === "true";
+    const order = { waiting: 0, working: 1, ready: 2, archived: 2 } as const;
+    const tasks = reachableTasks()
+      .filter((t) => (t.state === "archived") === archived)
+      .sort((a, b) => order[a.state] - order[b.state] || b.last_activity.localeCompare(a.last_activity))
+      .map(({ thread: _thread, notes: _notes, ...task }) => task);
+    return json({ tasks } satisfies In<"TasksOut">);
   }),
 
   http.get(`${API}/tasks/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const task = db.tasks.find((t) => t.id === params.id);
+    const task = reachableTask(params.id);
     return task ? json(task) : notFound("task");
   }),
 
-  http.get(`${API}/tasks/:id/files/:index`, ({ request, params }) => {
+  http.patch(`${API}/tasks/:id`, async ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const task = db.tasks.find((t) => t.id === params.id);
+    const task = reachableTask(params.id);
     if (!task) return notFound("task");
-    const made = task.files.find((f) => f.index === Number(params.index));
-    return made ? file(made.kind) : notFound("attachment");
+    const body = (await request.json()) as In<"TaskEditIn">;
+    task.title = body.title.trim() || task.title;
+    journalize({
+      type: "task.renamed",
+      title: `Task ${task.id.slice(2)} renamed: ${task.title}`,
+      people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
+      links: { task: task.id },
+    });
+    return json(task satisfies In<"TaskThreadOut">);
   }),
 
-  http.post(`${API}/tasks/:id/cancel`, async ({ request, params }) => {
+  http.post(`${API}/tasks/:id/instructions`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const task = reachableTask(params.id);
+    if (!task) return notFound("task");
+    const person = signedIn()?.person;
+    if (!person) return fail(403, "person_required");
+    const { text } = (await request.json()) as In<"InstructionIn">;
+    await delay(300);
+    const working = task.thread.at(-1);
+    if (working?.status === "running") {
+      // the executor takes it into the turn that works
+      working.steered.push({ instruction: text, by: person, at: new Date().toISOString() });
+      journalize({
+        type: "task.steered",
+        title: `Task ${task.id.slice(2)} reoriented while it worked`,
+        detail: text,
+        people: [person],
+        links: { task: task.id },
+      });
+      return json({ task, steered: true } satisfies In<"DirectedOut">);
+    }
+    task.thread.push({
+      id: newId("u"),
+      instruction: text,
+      by: person,
+      status: "running",
+      started_at: new Date().toISOString(),
+      ended_at: null,
+      steps: [],
+      result: null,
+      question: null,
+      error: null,
+      files: [],
+      delivered: null,
+      steered: [],
+    });
+    reread(task, false);
+    journalize({
+      type: "task.turn.started",
+      title: `Task ${task.id.slice(2)}: new instruction`,
+      detail: text,
+      people: [person],
+      brand: task.executor,
+      links: { task: task.id },
+    });
+    return json({ task, steered: false } satisfies In<"DirectedOut">);
+  }),
+
+  http.post(`${API}/tasks/:id/stop`, async ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     await delay(300);
-    const task = db.tasks.find((t) => t.id === params.id);
+    const task = reachableTask(params.id);
     if (!task) return notFound("task");
-    task.status = "cancelled";
-    task.ended_at = new Date().toISOString();
-    save();
-    return json({ task, confirmed: true } satisfies In<"CancelOut">);
+    const stopped = stopWorking(task);
+    return json({ task, confirmed: stopped } satisfies In<"StopOut">);
+  }),
+
+  http.post(`${API}/tasks/:id/archive`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const task = reachableTask(params.id);
+    if (!task) return notFound("task");
+    stopWorking(task);
+    reread(task, true);
+    journalize({
+      type: "task.archived",
+      title: `Task ${task.id.slice(2)} archived`,
+      people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
+      links: { task: task.id },
+    });
+    return json(task satisfies In<"TaskThreadOut">);
+  }),
+
+  http.get(`${API}/tasks/:id/turns/:turn/files/:index`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const task = reachableTask(params.id);
+    if (!task) return notFound("task");
+    const found = task.thread.find((t) => t.id === params.turn)?.files.find((f) => f.index === Number(params.index));
+    return found ? file(found.kind) : notFound("attachment");
   }),
 
   http.get(`${API}/watches`, ({ request }) => {
@@ -1784,7 +1892,7 @@ function quietOf(): In<"QuietHoursOut"> | null {
 
 /** What the agent is doing, from the mock state: working while a task runs, asleep in the quiet hours. */
 export function activityOut(): In<"AgentActivityOut"> {
-  const tasks = db.tasks.filter((t) => t.status === "running").length;
+  const tasks = db.tasks.filter((t) => t.state === "working").length;
   const quiet = quietOf()?.active ?? false;
   return {
     state: tasks ? "working" : quiet ? "sleeping" : "idle",

@@ -44,7 +44,7 @@ import { EventSheet } from "@/features/journal/event-sheet";
 import { merge } from "@/features/journal/merge";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
-import { RunningTask } from "@/features/tasks/parts";
+import { TaskCardBody } from "@/features/tasks/parts";
 import { elsewhere, lineOf, type Mark, marksOf, nodeOf, type RoomNode, roomsOf } from "@/features/today/mind";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
@@ -99,7 +99,7 @@ export function TodayView() {
       ),
     [day.data, live, from],
   );
-  const running = tasks.data?.running ?? [];
+  const running = (tasks.data?.tasks ?? []).filter((task) => task.state === "working");
   const rooms = useMemo(
     () =>
       canPeople
@@ -238,7 +238,7 @@ function Now({ running, items, lastLive }: { running: Task[]; items: JournalItem
           {running.map((task) => (
             <li key={task.id}>
               <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="surface block p-4">
-                <RunningTask task={task} />
+                <TaskCardBody task={task} />
               </Link>
             </li>
           ))}

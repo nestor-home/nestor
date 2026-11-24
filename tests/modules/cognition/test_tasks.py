@@ -451,6 +451,7 @@ async def test_an_executor_with_real_power_is_sensitive_for_the_toolbox_to_confi
         tools = tools_of(tasks)
         start, cont = tools["start_task"], tools["continue_task"]
         assert start.account_vouches and cont.account_vouches, "their own account in conversation is enough"
+        assert "executor" in start.spec.parameters["required"], "with two, the model names the one it means"
         assert start.risk_of({"executor": "scripted-executor"}) is Risk.SENSITIVE
         assert start.risk_of({"executor": "forgetful"}) is Risk.WRITE
         task = await started(tasks, executor="forgetful")

@@ -4,7 +4,7 @@
  */
 import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
 import { find, NAMED } from "@/features/chat/mentions";
-import { connections, minutes, ROOMS, ref, services } from "./fixtures";
+import { connections, minutes, ROOMS, ref, services, tasks } from "./fixtures";
 import { fr } from "./french";
 import { document, household, plugged } from "./instance";
 
@@ -118,9 +118,9 @@ export function chats(): MockChat[] {
         message("tool", "", minutes(550), "t6", {
           tool: {
             ...tool(
-              "delegate_task",
-              { title: "Dashboard dependencies", executor: "claude-code", objective: "Update the dependencies" },
-              "Task c1a9 started.",
+              "start_task",
+              { executor: "claude-code", title: "Dashboard dependencies", instruction: "Update the dependencies" },
+              "Task c1a9de started.",
               0.6,
             ),
             state: "background",
@@ -221,7 +221,12 @@ export function chats(): MockChat[] {
         ),
         message("tool", "", insurance, "t4", {
           tool: {
-            ...tool("delegate", { executor: "hermes", task: "Read the contract" }, "Task 3f2a started.", 1.2),
+            ...tool(
+              "start_task",
+              { executor: "hermes", title: "Home insurance", instruction: "Read the contract" },
+              "Task 3f2a1c started.",
+              1.2,
+            ),
             state: "background",
           },
         }),
@@ -259,9 +264,19 @@ const mention = (
 
 const ME = "mathis";
 
+/** A title as a handle: `Green electricity offers` → `green-electricity-offers`. */
+const slug = (title: string) =>
+  (
+    title
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .match(/[a-z0-9]+/g) ?? []
+  ).join("-");
+
 /**
  * What Mathis, who is signed in, may name in a message, as the server lists it from the instance: the people of the
- * household, the rooms of the home, the executors of the file with what each is for, and the services of the
+ * household, the rooms of the home, his tasks, the executors of the file with what each is for, and the services of the
  * accounts he may use (his own and the household's, while connected), by the handle a message names them with.
  */
 function mentions(): Mention[] {
@@ -270,6 +285,10 @@ function mentions(): Mention[] {
   return [
     ...household(doc).map((p) => mention("person", p.id, p.name)),
     ...ROOMS.map(([id, name]) => mention("room", id.replaceAll(" ", "-"), name)),
+    // his own tasks, those not put away, by their title
+    ...tasks()
+      .filter((task) => task.owner?.id === ME && task.state !== "archived")
+      .map((task) => mention("task", slug(task.title), task.title, { detail: task.executor })),
     ...plugged(doc)
       .filter((p) => p.slot === "executor")
       .map((p) =>
@@ -307,8 +326,8 @@ export function answerTo(text: string, files: number): { tool: ChatTool | null; 
     return {
       tool: {
         ...tool(
-          "delegate_task",
-          { title: fr("Asked in the chat", "Demandé dans le chat"), executor: named.handle, objective: text },
+          "start_task",
+          { executor: named.handle, title: fr("Asked in the chat", "Demandé dans le chat"), instruction: text },
           "Task 7c1e started.",
           0.6,
         ),

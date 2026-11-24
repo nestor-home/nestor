@@ -211,6 +211,19 @@ async def test_parallel_tool_calls_split_across_deltas_are_reassembled_in_order(
     ]
 
 
+async def test_a_reply_that_asks_for_tools_ends_on_them_whatever_reason_the_provider_gives(
+    api: respx.MockRouter,
+) -> None:
+    """Claude on Vertex through OpenRouter may close a reply that calls a tool with "stop": the agent would drop it."""
+    fragment = call_fragment(0, id="c1", name="start_task", arguments='{"title": "Script"}')
+    api.post(COMPLETIONS).mock(return_value=streamed(chunk({"tool_calls": [fragment]}), chunk(finish="stop")))
+
+    assert await collect() == [
+        ToolCallRequested(ToolCall("c1", "start_task", {"title": "Script"})),
+        Finished(FinishReason.TOOL_CALLS),
+    ]
+
+
 async def test_a_tool_call_without_arguments_or_id_still_reaches_the_agent(api: respx.MockRouter) -> None:
     fragment = {"type": "function", "function": {"name": "set_light"}}  # no index, id nor arguments
     api.post(COMPLETIONS).mock(return_value=streamed(chunk({"tool_calls": [fragment]}), chunk(finish="tool_calls")))

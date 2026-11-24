@@ -149,10 +149,7 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
     else if (is(item, "taskStarted")) marks.push(mark("task", item));
     else if (is(item, "watchTriggered")) marks.push(mark("watch", item));
     else if (is(item, "memory")) marks.push(mark("memory", item));
-    else if (
-      is(item, "deliveryFailed") ||
-      (is(item, "taskEnded") && (item.tone === "warning" || item.outcome?.ok === false))
-    )
+    else if (is(item, "deliveryFailed") || (is(item, "taskEnded") && item.message.args.status === "failed"))
       marks.push(mark("problem", item));
   }
   return marks;

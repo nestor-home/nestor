@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
+  Archive,
   ArrowUpRight,
   Check,
   CircleHelp,
@@ -17,12 +18,12 @@ import {
   Send,
   ShieldQuestion,
   Trash2,
-  Workflow,
   X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
   api,
+  archivedTasksQuery,
   type Confirmation,
   confirmationsQuery,
   keys,
@@ -48,13 +49,14 @@ import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { CancelTask, RunningTask, Steps, TaskStatusMark } from "@/features/tasks/parts";
+import { TaskCardBody, TaskStateMark } from "@/features/tasks/parts";
+import { TaskSheet } from "@/features/tasks/tasks";
 import { CancelWatch, WatchKind, watchBrand } from "@/features/watches/parts";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { KindName } from "@/lib/brands";
 import { agendaDay, hourMinute, moment } from "@/lib/dates";
-import { weekdayLabel } from "@/lib/labels";
+import { turnStatusLabel, weekdayLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 
@@ -81,29 +83,36 @@ export function ActivityView() {
   const canConfigure = useCan("config:manage");
   const [lane, setLane] = useState<Lane>("all");
   const [opened, setOpened] = useState<Opened | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const archived = useQuery({ ...archivedTasksQuery, enabled: can.running && showArchived });
 
   const asks = confirmations.data ?? [];
   const questions = messages.data?.questions ?? [];
   const pending = messages.data?.pending ?? [];
-  const running = tasks.data?.running ?? [];
-  const recent = tasks.data?.recent ?? [];
+  const listed = tasks.data?.tasks ?? [];
+  const asking = listed.filter((x) => x.state === "waiting");
+  const running = listed.filter((x) => x.state === "working");
+  const ready = listed.filter((x) => x.state === "ready");
+  const put = archived.data?.tasks ?? [];
   const planned = [...(schedules.data?.schedules ?? [])].sort((a, b) =>
     (a.next_due ?? "9").localeCompare(b.next_due ?? "9"),
   );
   const watching = watches.data?.watches ?? [];
-  const waiting = asks.length + questions.length + pending.length;
+  const others = lane === "running" ? 0 : asks.length + questions.length + pending.length;
+  const waiting = asks.length + questions.length + pending.length + asking.length;
   const lanes = (
     [
       { id: "all", label: t("act-all"), count: 0 },
       { id: "you", label: t("act-you"), count: waiting },
-      { id: "running", label: t("act-running"), count: running.length },
+      { id: "running", label: t("act-running"), count: asking.length + running.length },
       { id: "planned", label: t("act-planned"), count: planned.length },
       { id: "watching", label: t("act-watching"), count: watching.length },
     ] satisfies { id: Lane; label: string; count: number }[]
   ).filter((l) => can[l.id]);
   const shows = (id: Lane) => can[id] && (lane === "all" || lane === id);
-  const asking = confirmations.isError ? confirmations : messages.isError ? messages : null;
-  const openTask = opened?.kind === "task" ? [...running, ...recent].find((x) => x.id === opened.id) : undefined;
+  const failed = confirmations.isError ? confirmations : messages.isError ? messages : null;
+  const openTask = opened?.kind === "task" ? [...listed, ...put].find((x) => x.id === opened.id) : undefined;
+  const openOne = (task: Task) => setOpened({ kind: "task", id: task.id });
   const openWatch = opened?.kind === "watch" ? watching.find((x) => x.id === opened.id) : undefined;
   const openSchedule = opened?.kind === "schedule" ? planned.find((x) => x.id === opened.id) : undefined;
   const close = () => setOpened(null);
@@ -115,16 +124,19 @@ export function ActivityView() {
         <Chips label={t("act-title")} items={lanes} value={lane} onChange={setLane} />
       </div>
 
-      {shows("you") && (waiting || asking || lane === "you") ? (
-        <Section title={t("act-you-title")} count={waiting}>
-          {asking ? (
-            <Failure error={asking.error} retry={() => void asking.refetch()} />
-          ) : waiting ? (
+      {(shows("you") && (waiting || failed || lane === "you")) || (lane === "running" && asking.length) ? (
+        <Section title={t("act-you-title")} count={others + asking.length}>
+          {failed && lane !== "running" ? (
+            <Failure error={failed.error} retry={() => void failed.refetch()} />
+          ) : others + asking.length ? (
             <ul className="grid gap-3 lg:grid-cols-2">
-              {asks.map((c) => (
+              {asking.map((task) => (
+                <TaskItem key={task.id} task={task} onOpen={openOne} />
+              ))}
+              {(lane === "running" ? [] : asks).map((c) => (
                 <ConfirmationCard key={c.id} confirmation={c} />
               ))}
-              {questions.map((m) => (
+              {(lane === "running" ? [] : questions).map((m) => (
                 <MessageCard
                   key={m.id}
                   message={m}
@@ -133,7 +145,7 @@ export function ActivityView() {
                   state={<Status tone="pending">{t("act-awaits-reply")}</Status>}
                 />
               ))}
-              {pending.map((m) => (
+              {(lane === "running" ? [] : pending).map((m) => (
                 <MessageCard
                   key={m.id}
                   message={m}
@@ -158,15 +170,7 @@ export function ActivityView() {
           ) : running.length ? (
             <ul className="grid gap-3 lg:grid-cols-2">
               {running.map((task) => (
-                <li key={task.id}>
-                  <button
-                    type="button"
-                    className="surface block w-full p-4 text-left"
-                    onClick={() => setOpened({ kind: "task", id: task.id })}
-                  >
-                    <RunningTask task={task} />
-                  </button>
-                </li>
+                <TaskItem key={task.id} task={task} onOpen={openOne} />
               ))}
             </ul>
           ) : (
@@ -275,38 +279,92 @@ export function ActivityView() {
         </Section>
       ) : null}
 
-      {shows("running") && recent.length ? (
-        <Section title={t("act-ended-title")}>
-          <RowList>
-            {recent.slice(0, lane === "running" ? 20 : 5).map((task) => (
-              <li key={task.id}>
-                <button
-                  type="button"
-                  className="grid w-full grid-cols-[1fr_auto] items-center gap-x-4 px-4 py-3 text-left hover:bg-paper-sunken/60"
-                  onClick={() => setOpened({ kind: "task", id: task.id })}
-                >
-                  <span className="min-w-0">
-                    <span className="line-clamp-1 block text-ink">{task.title}</span>
-                    <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
-                      <KindName kind={task.executor} />
-                      {task.ended_at ? <Ago iso={task.ended_at} /> : null}
-                    </span>
-                  </span>
-                  <TaskStatusMark status={task.status} />
-                </button>
-              </li>
-            ))}
-          </RowList>
+      {shows("running") && (ready.length || lane === "running" || showArchived) ? (
+        <Section
+          title={t("act-ready-title")}
+          count={ready.length}
+          aside={
+            <Button variant="ghost" size="sm" aria-pressed={showArchived} onClick={() => setShowArchived((x) => !x)}>
+              <Archive /> {t(showArchived ? "act-archived-hide" : "act-archived-show")}
+            </Button>
+          }
+        >
+          {ready.length ? (
+            <TaskRows tasks={lane === "running" ? ready : ready.slice(0, 6)} onOpen={openOne} />
+          ) : (
+            <Empty>{t("act-ready-empty")}</Empty>
+          )}
+          {showArchived ? (
+            <div className="mt-6 grid gap-3">
+              <h3 className="title-sub text-ink">{t("act-archived-title")}</h3>
+              {archived.isError ? (
+                <Failure error={archived.error} retry={() => void archived.refetch()} />
+              ) : archived.isPending ? (
+                <Loading lines={2} />
+              ) : put.length ? (
+                <TaskRows tasks={put} onOpen={openOne} />
+              ) : (
+                <Empty>{t("act-archived-empty")}</Empty>
+              )}
+            </div>
+          ) : null}
         </Section>
       ) : null}
 
       <SideSheet open={Boolean(openTask ?? openWatch ?? openSchedule)} onOpenChange={(open) => !open && close()}>
-        {openTask ? <TaskPanel task={openTask} onDone={close} /> : null}
+        {openTask ? <TaskSheet listed={openTask} onArchived={close} /> : null}
         {openWatch ? <WatchPanel watch={openWatch} onDone={close} /> : null}
         {openSchedule ? <SchedulePanel schedule={openSchedule} onDone={close} /> : null}
       </SideSheet>
     </div>
   );
+}
+
+/** A task as a card that opens it: its question when it waits, its latest step when it works. */
+function TaskItem({ task, onOpen }: { task: Task; onOpen: (task: Task) => void }) {
+  return (
+    <li>
+      <button type="button" className="surface block h-full w-full p-4 text-left" onClick={() => onOpen(task)}>
+        <TaskCardBody task={task} />
+      </button>
+    </li>
+  );
+}
+
+/** Tasks that wait for nothing, as rows: their title, who does them, when they last moved, their state. */
+function TaskRows({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: Task) => void }) {
+  const t = useT();
+  return (
+    <RowList>
+      {tasks.map((task) => (
+        <li key={task.id}>
+          <button
+            type="button"
+            className="grid w-full grid-cols-[1fr_auto] items-center gap-x-4 px-4 py-3 text-left hover:bg-paper-sunken/60"
+            onClick={() => onOpen(task)}
+          >
+            <span className="min-w-0">
+              <span className="line-clamp-1 block text-ink">{task.title}</span>
+              <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
+                <KindName kind={task.executor} />
+                <Ago iso={task.last_activity} />
+                {task.turns > 1 ? <span>{t("task-turns", { count: task.turns })}</span> : null}
+                <LastTurn task={task} />
+              </span>
+            </span>
+            {task.owner ? <Avatar name={task.owner.name} /> : <TaskStateMark state={task.state} />}
+          </button>
+        </li>
+      ))}
+    </RowList>
+  );
+}
+
+/** How the last turn of a task that waits for nothing ended, when it did not come back: failed, or stopped. */
+function LastTurn({ task }: { task: Task }) {
+  if (task.last_status === "failed") return <Status tone="error">{turnStatusLabel(task.last_status)}</Status>;
+  if (task.last_status === "stopped") return <Status tone="idle">{turnStatusLabel(task.last_status)}</Status>;
+  return null;
 }
 
 /** Reminders, watches and tasks are made by asking: the way to the agent, from where one looks at them. */
@@ -428,53 +486,6 @@ function MessageCard({
 }
 
 // -- the drawers ----------------------------------------------------------------------------------
-
-function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
-  const t = useT();
-  return (
-    <SheetPanel
-      icon={Workflow}
-      tone="task"
-      kind={t("act-kind-task")}
-      title={task.title}
-      description={task.objective}
-      actions={
-        <>
-          <Link to="/tasks/$taskId" params={{ taskId: task.id }} className={buttonVariants({ variant: "outline" })}>
-            {t("act-open-page")} <ArrowUpRight />
-          </Link>
-          <CancelTask task={task} onDone={onDone} />
-        </>
-      }
-    >
-      <Facts narrow className="text-body">
-        <Fact term={t("act-state")}>
-          <TaskStatusMark status={task.status} />
-        </Fact>
-        <Fact term={t("act-by")}>
-          <KindName kind={task.executor} />
-        </Fact>
-        {task.requested_by ? <Fact term={t("act-for")}>{task.requested_by.name}</Fact> : null}
-        <Fact term={t("act-started")}>{moment(task.started_at)}</Fact>
-      </Facts>
-      {task.steps.length ? (
-        <Section level={3} title={t("task-story")}>
-          <Steps task={task} />
-        </Section>
-      ) : null}
-      {task.result ? (
-        <Section level={3} title={t("task-result")}>
-          <p className="rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-body whitespace-pre-line text-ink">
-            {task.result}
-          </p>
-        </Section>
-      ) : null}
-      {task.error ? (
-        <p className="rounded-(--radius-surface) bg-brick-soft px-4 py-3 text-body text-brick">{task.error}</p>
-      ) : null}
-    </SheetPanel>
-  );
-}
 
 function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) {
   const t = useT();

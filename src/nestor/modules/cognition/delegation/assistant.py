@@ -25,19 +25,17 @@ from nestor.modules.household import Person
 from nestor.modules.journal import FileRef
 
 HOW_TO_DELEGATE = """You never do long work yourself: you talk, and you hand over to an executor anything that needs \
-acting, searching or computing beyond your own tools. A task is a thread with its executor that lasts: it keeps what \
-was done, and the person can come back to it any day.
-- start_task opens a task with a precise, verifiable instruction; then say in a very short sentence that it started.
-- continue_task gives one of their tasks an instruction: while it works, it reorients it at once; once its turn ended, \
-it goes on in the same thread (a follow-up, a correction, a retry). "Continue the website update" continues that task: \
-never start a new task for something an existing one is about.
-- A task that needs them ends its turn with a question: ask them, and pass their answer with continue_task, with the \
-files they sent for it.
-- A task receives the files you name in `files` from this conversation (voice messages aside), by default those of \
-the message you answer: a file you cannot open yourself, an executor can.
-- list_tasks says how their tasks stand, read_task what one did; stop_task stops the turn that works (the task stays); \
-rename_task and archive_task put them in order.
-- If they want the result in writing (they are leaving, "write me when it's done"), set notify to "message"."""
+acting, searching or computing beyond your own tools. What your own tools do (a web search, a page, the weather), you \
+do yourself, at once. To hand over, call start_task with a precise, verifiable instruction, then say in a very short \
+sentence that it is started. It works in the background: keep talking meanwhile; what it comes back with will be told \
+when it arrives. If the person wants it in writing (they are leaving, "write me when it's done"), set notify to \
+"message".
+A task lasts: its executor keeps what it did. To go on with one of their tasks (the answer to its question, a \
+follow-up, a correction, "continue the website update"), call continue_task on it rather than start a new one: while \
+it works, the instruction reorients it at once. When asked how their tasks are going, call list_tasks; read_task says \
+what one did. stop_task stops the turn that works, and only say it stopped if the stop is confirmed. A task receives \
+the files you name in `files` from this conversation, voice messages aside, by default those of the message you \
+answer: a file you cannot open yourself, an executor can."""
 
 NO_EXECUTOR = """No executor is plugged in: you cannot carry out long tasks, search or act beyond your own tools. \
 If asked, say so simply."""
@@ -55,6 +53,7 @@ NOTIFY = {
 }
 INSTRUCTION = {"type": "string", "description": "precise and verifiable: what to do, and what to report"}
 READ_TURNS = 10  # the latest turns read_task gives
+RECENT = 5  # the latest ready tasks each turn names, besides those working or waiting
 READ_CHARS = 2000  # of each instruction and report it gives
 
 
@@ -72,17 +71,22 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         if not self.tasks.executors:
             return ()
         start: dict[str, object] = {"title": TITLE, "instruction": INSTRUCTION, "files": FILES, "notify": NOTIFY}
+        chosen: tuple[
+            str, ...
+        ] = ()  # with several, the model names the one: "to claude-code" without it went elsewhere
         if len(self.tasks.executors) > 1:
             start["executor"] = {"type": "string", "enum": list(self.tasks.executors)}
+            chosen = ("executor",)
         directed = {"task": TASK, "instruction": INSTRUCTION, "files": FILES, "notify": NOTIFY}
         return (
             Tool(
                 spec=_spec(
                     "start_task",
-                    "Open a task with an executor: it works in the background.",
+                    "Hand a long task over to an executor; it works on it in the background.",
                     start,
                     "title",
                     "instruction",
+                    *chosen,
                 ),
                 run=self._start,
                 risk=Risk.WRITE,
@@ -156,7 +160,8 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         executors = "\n".join(f"- {e.name}: {e.description}" for e in self.tasks.executors.values())
         return (
             f"{HOW_TO_DELEGATE}\n\nYour executors and what they can really do:\n{executors}\n"
-            "Nothing else: for any other request, say right away that you cannot, without starting a task."
+            "Nothing else: hand a request over only to an executor whose description covers it; for any other, say "
+            "right away that you cannot, without starting a task."
         )
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
@@ -188,9 +193,12 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         return f"the executor {mentioned.id}: hand that part of the work to it with start_task{which}"
 
     async def context(self, turn: TurnContext) -> Sections:
-        """Their tasks that work or wait on them: what a follow-up may be about."""
+        """Their tasks that work or wait on them, and the latest they could take up again: what a follow-up may be
+        about, without looking them up first."""
         person = turn.person
-        current = [t for t in self.tasks.of(person.id) if t.state is not TaskState.READY] if person else []
+        theirs = self.tasks.of(person.id) if person else []
+        current = [t for t in theirs if t.state is not TaskState.READY]
+        current += [t for t in theirs if t.state is TaskState.READY][:RECENT]
         if not current:
             return {}
         lines = []

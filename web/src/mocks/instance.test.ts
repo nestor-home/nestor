@@ -38,7 +38,7 @@ describe("the mock instance", () => {
     const named = [
       ...db.people.flatMap((p) => [...p.channel_accounts, ...(p.reach ? [p.reach] : [])]),
       ...[...db.tasks, ...db.watches, ...db.schedules, ...db.confirmations].flatMap((x) => x.origin?.channel ?? []),
-      ...db.tasks.flatMap((t) => t.delivered?.channel ?? []),
+      ...db.tasks.flatMap((t) => t.thread.flatMap((turn) => turn.delivered?.channel ?? [])),
       ...[...db.messages.questions, ...db.messages.pending].flatMap((m) => m.channel ?? []),
       ...db.journal.flatMap((e) => e.item.channels),
       ...db.memories.flatMap((m) => m.learnt_in ?? []),
