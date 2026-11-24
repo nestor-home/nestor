@@ -21,13 +21,22 @@ from nestor.modules.cognition.delegation.events import (
     TurnDelivered,
     TurnEnded,
     TurnFileAdded,
+    TurnRetried,
     TurnStarted,
     TurnStepped,
     TurnStopRequested,
 )
 from nestor.modules.cognition.delegation.keys import ExecutorKeys
-from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
-from nestor.modules.cognition.delegation.service import Delivery, Directed, Steer, Task, TaskManager, Turn
+from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor, SessionLost
+from nestor.modules.cognition.delegation.service import (
+    Delivery,
+    Directed,
+    ExecutorUnavailable,
+    Steer,
+    Task,
+    TaskManager,
+    Turn,
+)
 from nestor.modules.cognition.delegation.types import (
     CONTINUE,
     READ_TURNS,
@@ -62,6 +71,7 @@ __all__ = [
     "ExecutorKeyIssued",
     "ExecutorKeyRevoked",
     "ExecutorKeys",
+    "ExecutorUnavailable",
     "Handle",
     "NestorAccess",
     "NestorTools",
@@ -69,6 +79,7 @@ __all__ = [
     "Outcome",
     "Progress",
     "RemoteExecutor",
+    "SessionLost",
     "Steer",
     "Task",
     "TaskArchived",
@@ -84,6 +95,7 @@ __all__ = [
     "TurnDelivered",
     "TurnEnded",
     "TurnFileAdded",
+    "TurnRetried",
     "TurnStarted",
     "TurnStatus",
     "TurnStepped",

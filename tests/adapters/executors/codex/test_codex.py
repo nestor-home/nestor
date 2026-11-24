@@ -387,12 +387,14 @@ async def test_stopping_a_turn_that_already_finished_returns_false() -> None:
 
 
 async def test_stopping_or_following_an_unknown_task_fails_without_raising() -> None:
+    """A thread Codex no longer has is lost with its turn: the task's next turn must not go on in it."""
     async with FakeCodex() as codex, codex.executor() as executor:
         assert await executor.stop("thread-9:turn-9:task-x") is False
         unknown = await executor.follow("thread-9:turn-9:task-x", Progress())
         garbled = await executor.follow("no-separator", Progress())
-    assert unknown.status is TurnStatus.FAILED and "invalid thread id" in (unknown.error or "")
-    assert garbled.status is TurnStatus.FAILED
+    assert unknown.status is TurnStatus.FAILED and unknown.session_lost
+    assert "no rollout found for thread id thread-9" in (unknown.error or "")
+    assert garbled.status is TurnStatus.FAILED and not garbled.session_lost
 
 
 async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:

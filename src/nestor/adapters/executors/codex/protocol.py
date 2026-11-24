@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from enum import StrEnum
 
-from nestor.adapters.executors.jsonrpc import Message
+from nestor.adapters.executors.jsonrpc import Message, RpcError
 
 COMMAND = ("codex", "app-server")
 
@@ -17,6 +17,12 @@ DECLINED: Mapping[str, Message] = {  # every request Codex may send for a person
 }
 
 ENDED = ("completed", "failed", "interrupted")
+UNKNOWN_THREAD = "no rollout found for thread id"  # how `thread/resume` refuses a thread it has no record of (0.160)
+
+
+def unknown_thread(error: RpcError) -> bool:
+    """Whether Codex refused to resume a thread because it no longer has it (its records deleted, another home)."""
+    return error.message.startswith(UNKNOWN_THREAD)
 
 
 class Sandbox(StrEnum):

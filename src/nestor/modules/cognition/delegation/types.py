@@ -121,7 +121,8 @@ class Notify(StrEnum):
 class Outcome:
     """How a turn ended: its report, the question it asks its owner, or why it failed. `files` are what the executor
     made for them (a document, a picture): they go with the answer that brings the outcome. `session` is what the
-    next turn continues, when the executor names it only as the turn ends (it attaches it when it knows it sooner)."""
+    next turn continues, when the executor names it only as the turn ends (it attaches it when it knows it sooner).
+    `session_lost`: it failed because the executor no longer knows the session it was given (deleted, expired)."""
 
     status: TurnStatus
     result: str | None = None
@@ -129,6 +130,7 @@ class Outcome:
     error: str | None = None
     files: tuple[Attachment, ...] = ()
     session: str | None = None
+    session_lost: bool = False
 
     @classmethod
     def completed(cls, result: str, files: tuple[Attachment, ...] = (), *, session: str | None = None) -> "Outcome":
@@ -143,6 +145,11 @@ class Outcome:
     @classmethod
     def failed(cls, error: str, *, session: str | None = None) -> "Outcome":
         return cls(TurnStatus.FAILED, error=error, session=session)
+
+    @classmethod
+    def lost(cls, error: str) -> "Outcome":
+        """The turn could not go on in the session it was given: the executor no longer knows it."""
+        return cls(TurnStatus.FAILED, error=error, session_lost=True)
 
     @classmethod
     def stopped(cls, *, session: str | None = None) -> "Outcome":

@@ -75,10 +75,7 @@ class Returns(Component):
             if isinstance(event, TaskReminded):
                 self._reminded[event.turn_id] = max(self._reminded.get(event.turn_id, 0), event.count)
         for ended in (e for e in past if isinstance(e, TurnEnded)):
-            task = self.tasks.tasks.get(ended.task_id)
-            turn = task.turn_of(ended.turn_id) if task else None
-            if turn is not None and turn.delivered is None and not _withheld(withheld, _about(ended)):
-                await self.turn_ended(ended)
+            await self.turn_ended(ended)
         returned = {e.call_id: e for e in past if isinstance(e, ToolReturned)}
         told = {e.call_id for e in past if isinstance(e, ToolResultDelivered)}
         for deferred in (e for e in past if isinstance(e, ToolDeferred)):
@@ -117,14 +114,18 @@ class Returns(Component):
             self._worker = None
 
     async def turn_ended(self, ended: TurnEnded) -> None:
-        """Tell the task's owner what its turn came back with: its report, its question, its failure. A stopped turn
-        is not told: whoever stopped it was told so."""
+        """Tell the task's owner what its turn came back with (its report, its question, its failure) in the
+        conversation the turn's instruction was given in. Once: never a turn already told or with nothing to tell (the
+        same end may be read from the journal on start and heard live). A stopped turn is not told: whoever stopped it
+        was told so."""
         task = self.tasks.tasks.get(ended.task_id)
         turn = task.turn_of(ended.turn_id) if task else None
-        if ended.status is TurnStatus.STOPPED or task is None or turn is None:
+        if ended.status is TurnStatus.STOPPED or task is None or turn is None or turn.delivered is not None:
+            return
+        about = _about(ended)
+        if _withheld(await self.journal.history(DeliveryWithheld), about):
             return
         written = turn.notify is Notify.MESSAGE
-        about = _about(ended)
         address = await self.courier.deliver(
             self._person(task.owner),
             Notification(
@@ -134,7 +135,7 @@ class Returns(Component):
                 files=ended.files,
                 thread=task.thread,
             ),
-            origin=task.origin,
+            origin=turn.origin,
             written=written,
         )
         if address is not None and not await self._withheld(about, address):
@@ -159,7 +160,7 @@ class Returns(Component):
                     must_tell=True,
                     thread=task.thread,
                 ),
-                origin=task.origin,
+                origin=turn.origin,  # where the question was given
             )
             if address is not None:
                 await self.journal.publish(

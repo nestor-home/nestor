@@ -34,7 +34,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             await transcript(
                 nestor.journal,
                 nestor.household,
-                address=found.origin,
+                address=turn.origin,
                 conversation=turn.exchange.conversation_id,
                 since=await access.since(found),
                 assistant=persona.name,
@@ -56,7 +56,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             "instruction": turn.instruction,
             "for": owner.name if owner else None,
             "asked_at": f"{asked_at:%A %d %B %Y %H:%M} ({persona.timezone})",
-            "channel": found.origin.channel,
+            "channel": turn.origin.channel,
             "conversation": conversation[-BRIEF_LINES:],
             "earlier_turns": earlier,
             "notes": found.notes,

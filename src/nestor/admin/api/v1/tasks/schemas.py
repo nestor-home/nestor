@@ -2,9 +2,9 @@
 
 from collections.abc import Collection
 from datetime import datetime
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from nestor.admin.api.v1.shared import Input, OriginOut, People, PersonRef
 from nestor.modules.channels import AttachmentKind
@@ -160,7 +160,7 @@ class TasksOut(BaseModel):
 class InstructionIn(Input):
     """An instruction for a task: steers the turn that works, else opens the next (an answer to its question)."""
 
-    text: str = Field(min_length=1, max_length=INSTRUCTION_CHARS)
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=INSTRUCTION_CHARS)]
 
 
 class TaskEditIn(Input):

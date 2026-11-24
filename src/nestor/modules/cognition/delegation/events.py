@@ -9,7 +9,8 @@ from nestor.modules.journal import FileRef
 class TaskCreated(Event, event_type="task.created"):
     """A task, handed to `executor` for `owner` (`None`: for nobody in particular, a wake-up's), from `origin`, where
     what it comes back with is told; `thread`, what that continues (a recurring wake-up: `Notification.thread`). It
-    starts its first turn: the fields after `thread` are that turn's, as `TurnStarted` gives a later one."""
+    starts its first turn, given in `origin`: the fields after `thread` are that turn's, as `TurnStarted` gives a later
+    one."""
 
     task_id: str
     title: str  # the short name the household knows it by
@@ -42,14 +43,16 @@ class TaskArchived(Event, event_type="task.archived"):
 
 
 class TurnStarted(Event, event_type="task.turn.started"):
-    """An instruction that opens a later turn, from `by`, with the files sent with it (`given`). `exchange` is the
-    conversation and turn that gave it, when one did; `capability`, the digest of the value its executor calls
-    Nestor's MCP server with for it (never the value); `asked`, whether a person asked for it in their own turn,
-    rather than Nestor (a wake-up)."""
+    """An instruction that opens a later turn, from `by`, with the files sent with it (`given`). `origin` is the
+    channel conversation it was given in, where what the turn comes back with is told (`None`: given outside any, from
+    the admin; the task's own origin then), and `exchange` the conversation and turn of it that gave it, when one did;
+    `capability`, the digest of the value its executor calls Nestor's MCP server with for it (never the value);
+    `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
 
     task_id: str
     turn_id: str
     instruction: str
+    origin: Address | None = None
     by: PersonId | None = None
     given: tuple[FileRef, ...] = ()
     notify: Notify = Notify.AUTO
@@ -68,6 +71,16 @@ class TurnAttached(Event, event_type="task.turn.attached"):
     executor_session: str | None = None
 
 
+class TurnRetried(Event, event_type="task.turn.retried"):
+    """The executor no longer knew the session the turn was given (`error`, as it said it): the turn runs again at
+    once, once, in a new session, told the turns before; `capability`, the digest of its new value."""
+
+    task_id: str
+    turn_id: str
+    error: str
+    capability: str | None = None
+
+
 class TurnStepped(Event, event_type="task.turn.step"):
     """What the executor says it does (`report_progress`, or the step it streams)."""
 
@@ -78,7 +91,7 @@ class TurnStepped(Event, event_type="task.turn.step"):
 
 class TaskSteered(Event, event_type="task.steered"):
     """An instruction given while a turn worked: `taken` when the executor brought it into the turn; otherwise the
-    turn was stopped and the instruction opens the next."""
+    turn ended (stopped for it, or on its own meanwhile) and the instruction opens the next."""
 
     task_id: str
     turn_id: str

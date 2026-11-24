@@ -46,6 +46,7 @@ journal-task-archived = Task { $task } archived
 journal-task-turn-started = Task { $task }: new instruction
 journal-task-turn-attached = Task { $task } picked up by the executor
 journal-task-turn-step = Task { $task }: new step
+journal-task-turn-retried = Task { $task } started again in a new session: its executor had lost the previous one
 journal-task-steered = Task { $task } { $taken ->
     [yes] reoriented while it worked
    *[no] stopped for a new instruction

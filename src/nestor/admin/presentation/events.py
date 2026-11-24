@@ -44,6 +44,7 @@ from nestor.modules.cognition.delegation import (
     TurnDelivered,
     TurnEnded,
     TurnFileAdded,
+    TurnRetried,
     TurnStarted,
     TurnStatus,
     TurnStepped,
@@ -180,6 +181,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         TaskArchived,
         TurnStarted,
         TurnAttached,
+        TurnRetried,
         TurnStepped,
         TaskSteered,
         TurnFileAdded,
@@ -378,6 +380,9 @@ class EventDescriber:
                 attachments=_made(e.given),
             ),
             TurnAttached: lambda e: self._line(e, Message.of("journal-task-turn-attached", task=e.task_id)),
+            TurnRetried: lambda e: self._line(
+                e, Message.of("journal-task-turn-retried", task=e.task_id), detail=e.error, tone=Tone.WARNING
+            ),
             TurnStepped: lambda e: self._line(e, Message.of("journal-task-turn-step", task=e.task_id), detail=e.step),
             TaskSteered: lambda e: self._line(
                 e,

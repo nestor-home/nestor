@@ -7504,7 +7504,7 @@
           "tasks"
         ],
         "summary": "Direct Task",
-        "description": "Give a task an instruction in the name of the account's person: taken into the turn that works when its\nexecutor can, else it opens the next turn, in the same thread (the answer to its question).",
+        "description": "Give a task an instruction in the name of the account's person: taken into the turn that works when its\nexecutor can, else it opens the next turn, in the same thread (the answer to its question). 409 when the turn that\nworks could not be stopped for it, or when the task's executor is no longer plugged in: nothing was given.",
         "operationId": "directTask",
         "parameters": [
           {
@@ -16046,6 +16046,7 @@
               "cross_origin",
               "csrf_failed",
               "empty_memory",
+              "executor_unavailable",
               "executor_unknown",
               "executors_unreachable",
               "fields_missing",
@@ -16090,6 +16091,7 @@
               "satellite_unknown",
               "secret_in_use",
               "secret_unknown",
+              "task_not_stopped",
               "task_unknown",
               "throttled",
               "too_many_additions",

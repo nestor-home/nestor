@@ -149,6 +149,10 @@ class TestHermesExecutor(RemoteExecutorContract):
     def asking_executor(self) -> HermesExecutor:
         return FakeHermes(asks="Quel budget ?").executor()
 
+    def lost_session(self) -> None:
+        """Hermes starts a session it has no record of anew, empty: it cannot be told lost."""
+        return None
+
 
 async def test_a_new_executor_follows_a_run_still_going_to_its_end() -> None:
     server = FakeHermes(holds=True)

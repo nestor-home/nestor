@@ -15,14 +15,15 @@ from nestor.modules.cognition.delegation import (
     Outcome,
     Progress,
     RemoteExecutor,
+    SessionLost,
     TurnStatus,
 )
 
 
 class ScriptedExecutor(Executor):
     """Ends each turn after `duration_s` with a report, an error, or a question (`asks`, once per session); keeps a
-    session per task, takes instructions while a turn works, confirms a stop unless told otherwise. What it was given
-    and steered with is kept to look at."""
+    session per task (`forget` plays one deleted on its side), takes instructions while a turn works, confirms a stop
+    unless told otherwise. What it was given and steered with is kept to look at."""
 
     name = "scripted-executor"
     description = "carry out scripted test tasks"
@@ -46,6 +47,10 @@ class ScriptedExecutor(Executor):
         self.stopped = 0
         self._working: dict[str, asyncio.Event] = {}  # by session: set to end the turn now
         self._asked: set[str] = set()  # sessions it asked its question in
+        self.sessions: set[str] = set()  # those it has
+
+    def forget(self, session: str) -> None:
+        self.sessions.discard(session)
 
     @property
     def instructions(self) -> list[str]:
@@ -58,7 +63,10 @@ class ScriptedExecutor(Executor):
 
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         self.assignments.append(assignment)
+        if assignment.session is not None and assignment.session not in self.sessions:
+            return Outcome.lost(f"no session {assignment.session}")
         session = assignment.session or new_id()[:8]
+        self.sessions.add(session)
         done = self._working[session] = asyncio.Event()
         progress.attach(session, session=session)
         progress("started")
@@ -109,6 +117,11 @@ class ExecutorContract:
     def instruction(self) -> str:
         return "Dis bonjour."
 
+    def lost_session(self) -> str | None:
+        """A session the executor has no record of; `None` for one that cannot tell (it starts such a session anew,
+        empty)."""
+        return "00000000-0000-4000-8000-000000000000"
+
     async def test_completes_with_a_report(self) -> None:
         async with self.executor() as executor:
             outcome = await executor.run(Assignment(self.instruction()), Progress())
@@ -133,6 +146,13 @@ class ExecutorContract:
             assert named, f"an executor that continues names its session: {first}"
             then, again = await _run(executor, Assignment("Et ensuite ?", session=named))
         assert then.status is TurnStatus.COMPLETED and again == named, (first, then)
+
+    async def test_a_turn_given_a_session_it_no_longer_has_says_it_is_lost(self) -> None:
+        async with self.executor() as executor:
+            if CONTINUE not in executor.capabilities or (session := self.lost_session()) is None:
+                return
+            outcome = await executor.run(Assignment(self.instruction(), session=session), Progress())
+        assert outcome.status is TurnStatus.FAILED and outcome.session_lost and outcome.error, outcome
 
     async def test_an_instruction_reaches_the_turn_while_it_works(self) -> None:
         async with self.slow_executor() as executor:
@@ -176,10 +196,14 @@ class RemoteRun:
 
 class FakeRemote:
     """The remote service behind `ScriptedRemoteExecutor`. Share one between executor instances to play a Nestor
-    restart: the turns live on."""
+    restart: the turns and sessions live on; `forget` plays a session deleted on its side."""
 
     def __init__(self) -> None:
         self.runs: dict[str, RemoteRun] = {}
+        self.sessions: set[str] = set()
+
+    def forget(self, session: str) -> None:
+        self.sessions.discard(session)
 
     def finish(self, ref: str, outcome: Outcome) -> None:
         run = self.runs[ref]
@@ -214,8 +238,11 @@ class ScriptedRemoteExecutor(RemoteExecutor):
     async def submit(self, assignment: Assignment) -> Handle:
         if self._refuses:
             raise ProviderError(self.name, "instruction refused", transient=False)
+        if assignment.session is not None and assignment.session not in self.remote.sessions:
+            raise SessionLost(self.name, f"no session {assignment.session}", transient=False)
         ref = new_id()[:8]
         run = self.remote.runs[ref] = RemoteRun(assignment, assignment.session or new_id()[:8])
+        self.remote.sessions.add(run.session)
         if self._duration_s is not None:
             timer = asyncio.create_task(self._complete(ref, self._duration_s))
             self._timers.add(timer)

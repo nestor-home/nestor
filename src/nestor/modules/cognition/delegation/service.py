@@ -16,7 +16,7 @@ from enum import StrEnum
 from functools import partial
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, shorten, utc_now
-from nestor.modules.channels import Address, Attachment, Exchange
+from nestor.modules.channels import Address, Attachment, Exchange, unique_name
 from nestor.modules.cognition.delegation.events import (
     ExecutorCalled,
     TaskArchived,
@@ -28,6 +28,7 @@ from nestor.modules.cognition.delegation.events import (
     TurnDelivered,
     TurnEnded,
     TurnFileAdded,
+    TurnRetried,
     TurnStarted,
     TurnStepped,
     TurnStopRequested,
@@ -67,6 +68,11 @@ class Directed(StrEnum):
 
     STEERED = "steered"  # brought into the turn that works
     STARTED = "started"  # opened a new turn
+    BUSY = "busy"  # not given: the turn that works could not be stopped for it
+
+
+class ExecutorUnavailable(ContractError):
+    """The task's executor is no longer plugged in: it cannot be given an instruction."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,6 +97,7 @@ class Turn:
     id: str
     instruction: str
     by: PersonId | None
+    origin: Address  # the conversation its instruction was given in: where what it comes back with is told
     started_at: datetime
     given: tuple[FileRef, ...] = ()
     notify: Notify = Notify.AUTO
@@ -98,6 +105,7 @@ class Turn:
     capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     asked: bool = False
     ref: str | None = None  # the executor's handle on it
+    retried: bool = False  # in a new session, once, its own lost (`TurnRetried`)
     steps: list[str] = field(default_factory=list)  # the latest `STEPS` (the journal keeps them all)
     files: list[FileRef] = field(default_factory=list)  # handed back while it worked (`attach_file`)
     steered: list[Steer] = field(default_factory=list)  # what it took while it worked
@@ -124,7 +132,7 @@ class Task:
     title: str  # the short name the household knows it by
     executor: str
     owner: PersonId | None
-    origin: Address  # where what it comes back with is told
+    origin: Address  # where it was asked: its first turn, and every turn given outside a conversation, come back there
     created_at: datetime
     last_activity: datetime
     thread: str | None = None
@@ -141,6 +149,14 @@ class Task:
 
     def turn_of(self, turn_id: str) -> Turn | None:
         return next((t for t in self.turns if t.id == turn_id), None)
+
+    def before(self, turn: Turn) -> list[Turn]:
+        """Its turns before `turn`."""
+        return self.turns[: self.turns.index(turn)]
+
+    def named(self, given: Sequence[FileRef]) -> tuple[FileRef, ...]:
+        """`given`, each named apart from every other file of the task (sent or made: they share its folder)."""
+        return _named(given, (f for turn in self.turns for f in (*turn.given, *turn.files)))
 
     @property
     def state(self) -> TaskState:
@@ -220,6 +236,7 @@ class TaskManager(Component):
             TaskArchived,
             TurnStarted,
             TurnAttached,
+            TurnRetried,
             TaskSteered,
             TurnFileAdded,
             TaskNoted,
@@ -283,7 +300,8 @@ class TaskManager(Component):
         if chosen is None:
             raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
         task_id = new_id()[:8]
-        assignment = await self._assignment(chosen, task_id, instruction, tuple(given))
+        named = _named(given, ())
+        assignment = await self._assignment(chosen, task_id, instruction, named)
         created = TaskCreated(
             source=self.name,
             session=origin.session,
@@ -296,7 +314,7 @@ class TaskManager(Component):
             turn_id=new_id()[:8],
             instruction=instruction,
             by=owner,
-            given=tuple(given),
+            given=named,
             notify=notify,
             exchange=exchange,
             capability=digest(assignment.task) if assignment.task else None,
@@ -313,45 +331,45 @@ class TaskManager(Component):
         instruction: str,
         *,
         by: PersonId | None,
+        origin: Address | None = None,
         given: Sequence[FileRef] = (),
         notify: Notify = Notify.AUTO,
         exchange: Exchange | None = None,
         asked: bool = False,
     ) -> Directed:
-        """Give a task an instruction: brought into the turn that works when its executor can take it (`STEER`), else
-        that turn is stopped and the instruction opens the next; with no turn working, it opens the next, in the
-        session of the turns before (an answer to its question, a follow-up days later). An archived task opens
-        again."""
+        """Give a task an instruction, from the conversation at `origin` (`None`: from none, the admin): brought into
+        the turn that works when its executor takes it (`STEER`), else that turn is stopped and the instruction opens
+        the next once the stop is confirmed (`BUSY` when it is not: nothing is given); with no turn working, it opens
+        the next, in the session of the turns before (an answer to its question, a follow-up days later). An archived
+        task opens again."""
         task = self._task(task_id)
         executor = self.executors.get(task.executor)
         if executor is None:
-            raise ContractError(f"the executor {task.executor!r} of this task is no longer plugged in")
+            raise ExecutorUnavailable(f"the executor {task.executor!r} of this task is no longer plugged in")
         async with task.lock:
             turn = task.turn
             interrupts = False
             if turn.status is TurnStatus.RUNNING:
                 # files cannot join a turn that works: the instruction then opens the next one
                 steerable = STEER in executor.capabilities and turn.ref is not None and not given
-                taken = steerable and await executor.steer(turn.ref or "", instruction)
-                taken = taken and turn.status is TurnStatus.RUNNING
-                steered = TaskSteered(
-                    source=self.name,
-                    session=task.origin.session,
-                    task_id=task.id,
-                    turn_id=turn.id,
-                    instruction=instruction,
-                    by=by,
-                    taken=taken,
-                )
-                await self.journal.publish(steered)
-                self._replay(steered)
-                if taken:
+                if steerable and await executor.steer(turn.ref or "", instruction):  # taken, whatever came after
+                    await self._steered(task, turn, instruction, by, taken=True)
                     return Directed.STEERED
                 if turn.status is TurnStatus.RUNNING:
                     await self._stop(task, turn, by=by)
-                interrupts = turn.status is TurnStatus.STOPPED
+                    if turn.status in (TurnStatus.RUNNING, TurnStatus.FAILED):  # still working, or not confirmed
+                        return Directed.BUSY
+                    interrupts = turn.status is TurnStatus.STOPPED
+                await self._steered(task, turn, instruction, by, taken=False)
+            named = task.named(given)
             assignment = await self._assignment(
-                executor, task.id, instruction, tuple(given), task=task, interrupts=interrupts
+                executor,
+                task.id,
+                instruction,
+                named,
+                before=task.turns,
+                session=task.session,
+                interrupts=interrupts,
             )
             started = TurnStarted(
                 source=self.name,
@@ -359,8 +377,9 @@ class TaskManager(Component):
                 task_id=task.id,
                 turn_id=new_id()[:8],
                 instruction=instruction,
+                origin=origin,
                 by=by,
-                given=tuple(given),
+                given=named,
                 notify=notify,
                 exchange=exchange,
                 capability=digest(assignment.task) if assignment.task else None,
@@ -432,13 +451,16 @@ class TaskManager(Component):
         self._replay(noted)
         return kept
 
-    async def add_file(self, task: Task, file: Attachment) -> FileRef:
-        """A file `task`'s executor hands back while its turn works: kept, journaled, and sent with what it brings."""
+    async def add_file(self, task: Task, turn_id: str, file: Attachment) -> FileRef:
+        """A file `task`'s executor hands back while its turn `turn_id` works: kept, journaled, and sent with what it
+        brings. Refused once that turn ended."""
         if self._blobs is None:
             raise ContractError("files cannot be kept here")
         kept = FileRef(await self._blobs.put(file.data, file.media_type), file.file_name)
+        if task.turn.id != turn_id or task.turn.status is not TurnStatus.RUNNING:  # as it is journaled
+            raise ContractError(f"the turn {turn_id!r} of task {task.id!r} no longer works")
         added = TurnFileAdded(
-            source=self.name, session=task.origin.session, task_id=task.id, turn_id=task.turn.id, file=kept
+            source=self.name, session=task.origin.session, task_id=task.id, turn_id=turn_id, file=kept
         )
         await self.journal.publish(added)
         self._replay(added)
@@ -486,16 +508,16 @@ class TaskManager(Component):
         instruction: str,
         given: tuple[FileRef, ...],
         *,
-        task: Task | None = None,
+        before: Sequence[Turn] = (),
+        session: str | None = None,
         interrupts: bool = False,
     ) -> Assignment:
-        """What `executor` is given for a turn of `task` (its first, without one): the session to go on in, or what
-        the turns before were when it keeps none; the task's folder and the files sent with the instruction, read
-        only by an executor that places them; and with Nestor's MCP server when it reaches it, a capability for the
-        turn."""
+        """What `executor` is given for a turn of a task: the `session` to go on in, or what the turns `before` were
+        when it keeps none; the task's folder and the files sent with the instruction, read only by an executor that
+        places them; and with Nestor's MCP server when it reaches it, a capability for the turn."""
         reader = self._blobs.get if self._blobs else None
-        session = task.session if task and CONTINUE in executor.capabilities else None
-        earlier = _earlier(task.turns) if task and not session else ""
+        session = session if CONTINUE in executor.capabilities else None
+        earlier = _earlier(before) if before and not session else ""
         token, access = None, None
         if self._keys is not None and executor.nestor_tools is NestorTools.CONFIGURED:
             token = capability()  # its own configuration holds the server and its key
@@ -513,9 +535,12 @@ class TaskManager(Component):
     async def _run(
         self, task: Task, turn: Turn, work: Callable[[Progress], Awaitable[Outcome]], progress: Progress
     ) -> None:
-        """The turn's work to its end, journaled; cancelled while Nestor closes on remote work, left going."""
+        """The turn's work to its end, journaled; cancelled while Nestor closes on remote work, left going. A turn
+        whose session the executor no longer knows runs again at once, once, in a new session."""
         try:
             outcome = await work(progress)
+            if outcome.session_lost and not turn.retried and (again := await self._anew(task, turn, outcome)):
+                outcome = await again(progress)
         except asyncio.CancelledError:
             if progress.detached:
                 raise
@@ -523,6 +548,42 @@ class TaskManager(Component):
         except Exception as error:  # a broken executor must not take the assistant down
             outcome = Outcome.failed(f"{type(error).__name__}: {error}")
         await self._end(task, turn, outcome)
+
+    async def _anew(self, task: Task, turn: Turn, lost: Outcome) -> Callable[[Progress], Awaitable[Outcome]] | None:
+        """The work of `turn` again, in a new session, told the turns before it; journaled. `None` without its
+        executor."""
+        executor = self.executors.get(task.executor)
+        if executor is None:
+            return None
+        assignment = await self._assignment(executor, task.id, turn.instruction, turn.given, before=task.before(turn))
+        await self._writes.join()  # what it said before, first
+        retried = TurnRetried(
+            source=self.name,
+            session=task.origin.session,
+            task_id=task.id,
+            turn_id=turn.id,
+            error=lost.error or "session lost",
+            capability=digest(assignment.task) if assignment.task else None,
+        )
+        await self.journal.publish(retried)
+        self._replay(retried)
+        logger.warning(
+            "task %s: its executor lost its session (%s), the turn runs again in a new one", task.id, lost.error
+        )
+        return partial(executor.run, assignment)
+
+    async def _steered(self, task: Task, turn: Turn, instruction: str, by: PersonId | None, *, taken: bool) -> None:
+        steered = TaskSteered(
+            source=self.name,
+            session=task.origin.session,
+            task_id=task.id,
+            turn_id=turn.id,
+            instruction=instruction,
+            by=by,
+            taken=taken,
+        )
+        await self.journal.publish(steered)
+        self._replay(steered)
 
     async def _stop(self, task: Task, turn: Turn, *, by: PersonId | None) -> Outcome:
         assert turn.job is not None  # a working turn always has its job
@@ -578,7 +639,7 @@ class TaskManager(Component):
             error=outcome.error,
             duration_s=round((utc_now() - turn.started_at).total_seconds(), 1),
             files=(*turn.files, *made),
-            executor_session=outcome.session or task.session,
+            executor_session=None if outcome.session_lost else outcome.session or task.session,
         )
         await self.journal.publish(ended)
         self._replay(ended)
@@ -600,7 +661,8 @@ class TaskManager(Component):
         return tuple(kept), lost
 
     def _replay(self, event: Event) -> Task:
-        """Apply one of the task's events to its state: when it happens, and when the journal is read on start."""
+        """Apply one of the task's events to its state: when it happens, and when the journal is read on start. An
+        event of one turn changes that turn, never another; one of a turn the task does not have is ignored."""
         match event:
             case TaskCreated():
                 task = self.tasks[event.task_id] = Task(
@@ -612,7 +674,7 @@ class TaskManager(Component):
                     created_at=event.at,
                     last_activity=event.at,
                     thread=event.thread,
-                    turns=[_opened(event)],
+                    turns=[_opened(event, event.origin)],
                 )
             case TaskRenamed():
                 task = self.tasks[event.task_id]
@@ -622,37 +684,24 @@ class TaskManager(Component):
                 task.archived = True
             case TurnStarted():
                 task = self.tasks[event.task_id]
-                task.turns.append(_opened(event))
+                task.turns.append(_opened(event, event.origin or task.origin))
                 task.archived = False  # an instruction opens it again
-            case TurnAttached():
-                task = self.tasks[event.task_id]
-                task.turn.ref = event.ref
-                task.session = event.executor_session or task.session
-            case TaskSteered():
-                task = self.tasks[event.task_id]
-                if event.taken:
-                    task.turn.steered.append(Steer(event.instruction, event.by, event.at))
-            case TurnFileAdded():
-                task = self.tasks[event.task_id]
-                task.turn.files.append(event.file)
             case TaskNoted():
                 task = self.tasks[event.task_id]
                 task.notes.append(event.text)
                 del task.notes[:-NOTES]
-            case TurnEnded():
+            case TurnAttached() | TurnRetried() | TaskSteered() | TurnFileAdded() | TurnEnded() | TurnDelivered():
                 task = self.tasks[event.task_id]
-                turn = task.turn
-                turn.outcome = Outcome(
-                    event.status, event.result, event.question, event.error, session=event.executor_session
-                )
-                turn.ended_at = event.at
-                turn.files = list(event.files)
-                task.session = event.executor_session
-            case TurnDelivered():  # not an activity of the task
-                task = self.tasks[event.task_id]
-                if (turn := task.turn_of(event.turn_id)) is not None:
+                turn = task.turn_of(event.turn_id)
+                if turn is None:
+                    logger.warning(
+                        "task %s: %s of a turn it does not have (%s)", task.id, event.event_type, event.turn_id
+                    )
+                    return task
+                if isinstance(event, TurnDelivered):  # not an activity of the task
                     turn.delivered = Delivery(event.at, event.address)
-                return task
+                    return task
+                _apply(task, turn, event)
             case _:
                 raise ContractError(f"not an event of a task: {type(event).__name__}")
         task.last_activity = event.at
@@ -680,12 +729,52 @@ class TaskManager(Component):
                 self._writes.task_done()
 
 
-def _opened(event: TaskCreated | TurnStarted) -> Turn:
-    """The turn an instruction opens."""
+def _apply(task: Task, turn: Turn, event: TurnAttached | TurnRetried | TaskSteered | TurnFileAdded | TurnEnded) -> None:
+    """What an event of `turn` changes; the session the next turn continues only from the latest."""
+    latest = turn is task.turn
+    match event:
+        case TurnAttached():
+            turn.ref = event.ref
+            if latest:
+                task.session = event.executor_session or task.session
+        case TurnRetried():
+            turn.retried, turn.ref, turn.capability = True, None, event.capability
+            if latest:
+                task.session = None
+        case TaskSteered():
+            if event.taken:
+                turn.steered.append(Steer(event.instruction, event.by, event.at))
+        case TurnFileAdded():
+            turn.files.append(event.file)
+        case TurnEnded():
+            turn.outcome = Outcome(
+                event.status, event.result, event.question, event.error, session=event.executor_session
+            )
+            turn.ended_at = event.at
+            turn.files = list(event.files)
+            if latest:
+                task.session = event.executor_session
+
+
+def _named(given: Iterable[FileRef], files: Iterable[FileRef]) -> tuple[FileRef, ...]:
+    """`given`, each named apart from `files` and from one another; a file sent again under the name it already has
+    keeps it."""
+    kept = {f.name: f.blob.digest for f in files}
+    named: list[FileRef] = []
+    for file in given:
+        name = file.name if kept.get(file.name) == file.blob.digest else unique_name(file.name, kept)
+        kept[name] = file.blob.digest
+        named.append(FileRef(file.blob, name))
+    return tuple(named)
+
+
+def _opened(event: TaskCreated | TurnStarted, origin: Address) -> Turn:
+    """The turn an instruction opens, given in the conversation at `origin`."""
     return Turn(
         id=event.turn_id,
         instruction=event.instruction,
         by=event.by,
+        origin=origin,
         started_at=event.at,
         given=event.given,
         notify=event.notify,

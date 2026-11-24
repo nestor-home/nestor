@@ -1,11 +1,10 @@
 """What the central agent sees of delegation: its tools to start, direct, stop, read and put away tasks, and a section
 of its instructions. A person reaches only their own tasks."""
 
-import posixpath
 from collections.abc import Iterable, Mapping, Sequence
 
 from nestor.core import ContractError, shorten
-from nestor.modules.channels import AttachmentKind, plain_name
+from nestor.modules.channels import AttachmentKind, plain_name, unique_name
 from nestor.modules.cognition.delegation.service import Directed, Task, TaskManager
 from nestor.modules.cognition.delegation.types import READ_TURNS, TURN_CHARS, Notify, TaskState, TurnStatus
 from nestor.modules.cognition.model import ToolSpec
@@ -53,6 +52,12 @@ NOTIFY = {
 }
 INSTRUCTION = {"type": "string", "description": "precise and verifiable: what to do, and what to report"}
 RECENT = 5  # the latest ready tasks each turn names, besides those working or waiting
+DIRECTED = {
+    Directed.STEERED: "Taken into the turn it works on: tell the person in a few words.",
+    Directed.STARTED: "A new turn started in the same thread: tell the person in a few words.",
+    Directed.BUSY: "Not given: the turn it works on could not be stopped for it. Tell the person; they can try again "
+    "in a moment.",
+}
 
 
 def _spec(name: str, about: str, properties: Mapping[str, object], *required: str) -> ToolSpec:
@@ -231,6 +236,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                 task.id,
                 str(arguments["instruction"]),
                 by=context.person,
+                origin=context.address,
                 given=await self._given(arguments, context),
                 notify=_notify(arguments),
                 exchange=context.exchange,
@@ -238,12 +244,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
             )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
-        note = (
-            "Taken into the turn it works on: tell the person in a few words."
-            if directed is Directed.STEERED
-            else "A new turn started in the same thread: tell the person in a few words."
-        )
-        return {"task_id": task.id, "directed": directed.value, "note": note}
+        return {"task_id": task.id, "directed": directed.value, "note": DIRECTED[directed]}
 
     async def _stop(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         task = self._theirs(arguments, context)
@@ -310,7 +311,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                 if attached.kind is AttachmentKind.VOICE or attached.blob.digest in seen:
                     continue
                 seen.add(attached.blob.digest)
-                name = _unique(plain_name(attached.name, attached.blob.media_type), taken)
+                name = unique_name(plain_name(attached.name, attached.blob.media_type), taken)
                 taken.add(name)
                 sent.append((turn.exchange.turn_id if turn.exchange else "", FileRef(attached.blob, name)))
         wanted = arguments.get("files")
@@ -327,12 +328,3 @@ def _notify(arguments: Mapping[str, object]) -> Notify:
         return Notify(str(arguments.get("notify", Notify.AUTO)))
     except ValueError:
         raise ToolFailed(f"notify must be one of: {', '.join(Notify)}") from None
-
-
-def _unique(name: str, taken: set[str]) -> str:
-    """`name`, or `name (2)`, `name (3)`… when it is taken."""
-    stem, extension = posixpath.splitext(name)
-    found, n = name, 2
-    while found in taken:
-        found, n = f"{stem} ({n}){extension}", n + 1
-    return found

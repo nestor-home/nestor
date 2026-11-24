@@ -32,11 +32,12 @@ class TaskAccess:
         found = await self.nestor.tasks.admit(request.scope[SCOPE_KEY], task, tool)
         if found is None:
             raise ToolError(REFUSED)
+        origin = found.turn.origin
         attribute(  # the tool's own call: every tool starts here
             purpose=CallPurpose.TASK,
             person=found.owner,
-            channel=found.origin.channel,
-            session=found.origin.session,
+            channel=origin.channel,
+            session=origin.session,
             origin=About(Source.TASK, found.id).key,
         )
         return found
@@ -48,14 +49,14 @@ class TaskAccess:
         return task.owner
 
     async def since(self, task: Task) -> datetime:
-        """When the conversation its working turn was given in started: its first turn, a person's or Nestor's (a
-        wake-up)."""
+        """When the conversation its working turn was given in started (in that turn's own channel conversation, not
+        necessarily the task's first): its first turn, a person's or Nestor's (a wake-up)."""
         turn = task.turn
         if (known := self._since.get(turn.id)) is not None:
             return known
         found = turn.started_at
         if turn.exchange is not None:
-            history = await self.nestor.journal.history(UserTurn, NotificationTurn, session=task.origin.session)
+            history = await self.nestor.journal.history(UserTurn, NotificationTurn, session=turn.origin.session)
             found = next((t.at for t in in_conversation(history, turn.exchange.conversation_id)), found)
         working = {t.turn.id for t in self.nestor.tasks.working()}
         self._since = {k: v for k, v in self._since.items() if k in working} | {turn.id: found}  # ended turns go

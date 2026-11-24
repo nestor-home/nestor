@@ -280,3 +280,41 @@ async def test_it_answers_at_the_admin_s_public_address_not_only_on_this_machine
     async with httpx.AsyncClient() as http:
         answer = await http.post(world.served.url(), json=initialize, headers=headers)
     assert answer.status_code == 200, answer.text
+
+
+async def test_a_turn_given_in_another_conversation_is_briefed_from_that_one(world: World) -> None:
+    task_id, _ = await delegated(world, "Corrige le devis")
+    world.finish(task_id)
+    await world.nestor.tasks.wait(task_id)
+    elsewhere = Address("memory", "kitchen")
+    turn = await world.nestor.agent.conversations.turn(elsewhere, Medium.WRITTEN)
+    await turn.said("Ajoute la remise de 5 % au devis", Medium.WRITTEN, Speaker.account(MATHIS))
+    await world.nestor.tasks.direct(
+        task_id, "Ajoute la remise de 5 %", by=MATHIS, origin=elsewhere, exchange=turn.exchange
+    )
+    await eventually(lambda: world.nestor.tasks.tasks[task_id].turn.ref is not None)
+    given = world.given(task_id)
+    assert given.access is not None and given.task is not None
+    async with client(world, given.access.key) as nestor:
+        brief = await call(nestor, "task_brief", task=given.task)
+    assert any("Ajoute la remise de 5 % au devis" in line for line in brief["conversation"])
+    assert not any("Corrige le devis joint" in line for line in brief["conversation"]), "not the task's first one"
+    world.finish(task_id)
+
+
+async def test_a_link_ends_with_its_turn_even_while_the_task_goes_on(world: World) -> None:
+    task_id, given = await delegated(world, "Corrige le devis")
+    assert given.access is not None and given.task is not None
+    async with client(world, given.access.key) as nestor:
+        [file] = (await call(nestor, "task_brief", task=given.task))["files"]
+        download = (await call(nestor, "read_file", task=given.task, file=file["file"]))["url"]
+        upload = await call(nestor, "attach_file", task=given.task, name="tard.pdf", media_type="application/pdf")
+    world.finish(task_id)
+    await world.nestor.tasks.wait(task_id)
+    await world.nestor.tasks.direct(task_id, "Ajoute la remise de 5 %", by=MATHIS)
+    await eventually(lambda: world.nestor.tasks.tasks[task_id].turn.ref is not None)
+    async with httpx.AsyncClient() as http:
+        assert (await http.put(world.reached(upload["upload_url"]), content=b"%PDF-1.7 tard")).status_code == 404
+        assert (await http.get(world.reached(download))).status_code == 404
+    assert world.nestor.tasks.tasks[task_id].turn.files == [], "a late file never lands on the next turn"
+    world.finish(task_id)

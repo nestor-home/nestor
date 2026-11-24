@@ -29,7 +29,7 @@ from nestor.core import ContractError
 from nestor.http import file_response
 from nestor.modules.accounts import Scope
 from nestor.modules.cognition import TurnStatus
-from nestor.modules.cognition.delegation import Directed, Task
+from nestor.modules.cognition.delegation import Directed, ExecutorUnavailable, Task
 
 router = APIRouter(tags=["tasks"])
 Manager = Annotated[Caller, Depends(allowed(Scope.TASKS_MANAGE, Scope.TASKS_MANAGE_OWN))]
@@ -55,15 +55,20 @@ async def get_task(request: Request, caller: Manager, task_id: str) -> TaskThrea
 @router.post("/tasks/{task_id}/instructions")
 async def direct_task(request: Request, caller: Manager, task_id: str, body: InstructionIn) -> DirectedOut:
     """Give a task an instruction in the name of the account's person: taken into the turn that works when its
-    executor can, else it opens the next turn, in the same thread (the answer to its question)."""
+    executor can, else it opens the next turn, in the same thread (the answer to its question). 409 when the turn that
+    works could not be stopped for it, or when the task's executor is no longer plugged in: nothing was given."""
     admin = state(request)
     task = reachable_task(admin, caller, task_id)
     if caller.person is None:
         raise ApiError(403, "person_required")
     try:
-        directed = await admin.nestor.tasks.direct(task.id, body.text.strip(), by=caller.person, asked=True)
+        directed = await admin.nestor.tasks.direct(task.id, body.text, by=caller.person, asked=True)
+    except ExecutorUnavailable:
+        raise ApiError(409, "executor_unavailable") from None
     except ContractError:
         raise not_found("task_unknown") from None
+    if directed is Directed.BUSY:
+        raise ApiError(409, "task_not_stopped")
     return DirectedOut(task=_thread(admin, task), steered=directed is Directed.STEERED)
 
 

@@ -15,6 +15,10 @@ from nestor.modules.cognition.delegation.types import (
 )
 
 
+class SessionLost(ProviderError):
+    """The session an assignment names is one the executor no longer knows (deleted, expired): nothing started."""
+
+
 class Executor(Component, ABC):
     """Runs one turn of a task to its end and reports progress.
 
@@ -27,7 +31,8 @@ class Executor(Component, ABC):
     - a failure is returned as `Outcome.failed(...)`, never raised;
     - a turn that needs its owner ends with `Outcome.asked(question)`;
     - with `CONTINUE`, the turn names its session, as it attaches (`progress.attach(ref, session=…)`) or in its
-      outcome, and a turn given that session goes on in it: the executor remembers the turns before;
+      outcome, and a turn given that session goes on in it: the executor remembers the turns before; a turn given a
+      session it no longer knows ends with `Outcome.lost(...)`, when it can tell;
     - with `STEER`, the turn attaches its handle (`progress.attach`) and `steer(handle, instruction)` brings the
       instruction into it while it works, `True` once the executor took it;
     - on cancellation the executor stops the work and returns `Outcome.stopped()` only if the stop is confirmed,
@@ -61,7 +66,7 @@ class RemoteExecutor(Executor, ABC):
     A turn is submitted, attached, then followed; after a restart its reference is followed again (`resume`). A
     turn cancelled while Nestor closes (`progress.detached`) is left working; cancelled otherwise, it is stopped.
     Contract (checked by `nestor.testing.cognition.RemoteExecutorContract`):
-    - `submit` raises `ProviderError` when the work is refused;
+    - `submit` raises `ProviderError` when the work is refused, `SessionLost` when the session it names is unknown;
     - `follow` returns the outcome of a submitted turn, and can be called again for the same one (after a restart)
       without starting it twice;
     - `stop` returns `True` only once the remote side confirmed the stop.
@@ -82,6 +87,8 @@ class RemoteExecutor(Executor, ABC):
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         try:
             handle = await self.submit(assignment)
+        except SessionLost as error:
+            return Outcome.lost(str(error))
         except ProviderError as error:
             return Outcome.failed(str(error))
         progress.attach(handle.ref, session=handle.session)

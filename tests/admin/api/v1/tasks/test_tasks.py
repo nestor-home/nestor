@@ -5,11 +5,11 @@ reaches them only."""
 import asyncio
 from pathlib import Path
 
-from nestor.core import PersonId
+from nestor.core import Capabilities, PersonId
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Attachment, AttachmentKind
 from nestor.modules.cognition import Outcome, TaskState
-from nestor.modules.cognition.delegation import Task, TurnEnded
+from nestor.modules.cognition.delegation import CONTINUE, RESUME, Task, TurnEnded
 
 from ....harness import Harness
 
@@ -64,6 +64,7 @@ async def test_tasks_are_listed_waiting_first_and_reach_only_their_owner_or_who_
 async def test_answering_a_question_opens_the_next_turn_of_the_same_thread(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         task = await handed(admin, "Lave-vaisselle")
+        admin.remote.sessions.add("thread-1")  # the session the executor names as it asks
         admin.remote.finish(str(task.turn.ref), Outcome.asked("Quelle marque ?", session="thread-1"))
         await ended(admin, 1)
         api = await admin.api()
@@ -152,3 +153,22 @@ async def test_the_files_of_a_turn_download_for_who_reaches_the_task(tmp_path: P
         assert (await guest.get(f"/api/v1/tasks/{task.id}/turns/{turn}/files/0")).json()["error"][
             "code"
         ] == "task_unknown"
+
+
+async def test_an_instruction_that_cannot_be_given_says_why_and_starts_nothing(tmp_path: Path) -> None:
+    async with Harness(tmp_path, confirms_stop=False) as admin:
+        task = await handed(admin, "Site")
+        executor = admin.nestor.tasks.executors[task.executor]
+        executor.capabilities = Capabilities.of(RESUME, CONTINUE)  # it cannot take an instruction while it works
+        api = await admin.api()
+        blank = await api.post(f"/api/v1/tasks/{task.id}/instructions", {"text": " \n "})
+        assert (blank.status_code, blank.json()["error"]["code"]) == (422, "invalid_request")
+        busy = await api.post(f"/api/v1/tasks/{task.id}/instructions", {"text": "Et la page contact"})
+        assert (busy.status_code, busy.json()["error"]["code"]) == (409, "task_not_stopped")
+        assert len(task.turns) == 1 and len(admin.remote.runs) == 1
+        admin.remote.finish(str(task.turn.ref), Outcome.completed("Fait."))
+        await ended(admin, 1)
+        admin.nestor.tasks.executors = {}  # taken out of the configuration
+        gone = await api.post(f"/api/v1/tasks/{task.id}/instructions", {"text": "Et la page contact"})
+        assert (gone.status_code, gone.json()["error"]["code"]) == (409, "executor_unavailable")
+        assert len(task.turns) == 1

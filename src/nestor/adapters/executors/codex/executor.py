@@ -9,7 +9,15 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from nestor import __version__
-from nestor.adapters.executors.codex.protocol import COMMAND, DECLINED, ENDED, Sandbox, final_answer, item_step
+from nestor.adapters.executors.codex.protocol import (
+    COMMAND,
+    DECLINED,
+    ENDED,
+    Sandbox,
+    final_answer,
+    item_step,
+    unknown_thread,
+)
 from nestor.adapters.executors.common import (
     CODING_REPORT,
     INSTRUCTIONS,
@@ -33,6 +41,7 @@ from nestor.modules.cognition.delegation import (
     Outcome,
     Progress,
     RemoteExecutor,
+    SessionLost,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,6 +140,8 @@ class CodexExecutor(RemoteExecutor):
         except (KeyError, TypeError) as error:
             raise ProviderError(self.name, f"unexpected reply from Codex: {error!r}", transient=False) from None
         except RpcError as error:
+            if unknown_thread(error):
+                raise SessionLost(self.name, f"Codex no longer has this thread: {error}", transient=False) from None
             raise ProviderError(self.name, f"submission refused: {error}", transient=False) from None
         except (Closed, TimeoutError) as error:
             raise ProviderError(self.name, f"submission failed: {described(error)}", transient=True) from None
@@ -149,6 +160,8 @@ class CodexExecutor(RemoteExecutor):
                 logger.warning("%s: lost contact with Codex, following again in %ss (%s)", self.name, wait_s, error)
                 await asyncio.sleep(wait_s)
             except RpcError as error:
+                if unknown_thread(error):  # gone with the turn: the next turn starts a new thread
+                    return Outcome.lost(f"Codex no longer has this thread: {error}")
                 return Outcome.failed(f"Codex refused: {error}")
             except (KeyError, TypeError, ValueError) as error:  # not the protocol: a missing field, bad base64
                 return Outcome.failed(f"unexpected reply from Codex: {error!r}")

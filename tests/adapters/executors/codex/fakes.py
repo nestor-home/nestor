@@ -126,6 +126,10 @@ class FakeCodex:
         thread, _, _ = ref.partition(":")
         self._complete(self.threads[thread], self.turn(ref), report or self.report)
 
+    def forget(self, thread: str) -> None:
+        """Its records of the thread are deleted."""
+        del self.threads[thread]
+
     def drop_sessions(self) -> None:
         """The relay's connections break: every session ends at once."""
         for writer in list(self._sessions):
@@ -187,6 +191,8 @@ class FakeCodex:
                 self._subscribers.setdefault(thread.id, set()).add(writer)
                 return {"thread": self._thread(thread)}
             case "thread/resume":
+                if params["threadId"] not in self.threads:  # as Codex 0.160 answers it
+                    raise _Refused(-32600, f"no rollout found for thread id {params['threadId']}")
                 thread = self._thread_of(params)
                 self._subscribers.setdefault(thread.id, set()).add(writer)
                 return {"thread": self._thread(thread)}

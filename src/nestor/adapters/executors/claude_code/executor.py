@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from nestor.adapters.executors.claude_code.cli import COMMAND, TOOLS, PermissionMode
-from nestor.adapters.executors.claude_code.stream import REPORTING, tool_step, user_message
+from nestor.adapters.executors.claude_code.stream import REPORTING, tool_step, unknown_session, user_message
 from nestor.adapters.executors.common import (
     CODING_REPORT,
     INSTRUCTIONS,
@@ -160,6 +160,8 @@ class ClaudeCodeExecutor(Executor):
             said = f": {child.said}" if child.said else ""
             return Outcome.failed(f"Claude Code ended without a result (exit {child.process.returncode}){said}")
         last = turn.results[-1]
+        if unknown_session(last):  # resumed a session it no longer has: nothing ran
+            return Outcome.lost("; ".join(str(e) for e in last["errors"]))
         if last.get("is_error") or last.get("subtype") != "success":
             return Outcome.failed(str(last.get("result") or last.get("subtype") or "Claude Code failed"))
         reports = [Report.of(r.get("structured_output") or r.get("result") or "") for r in turn.results]

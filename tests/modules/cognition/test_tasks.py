@@ -10,6 +10,8 @@ from nestor.core import Capabilities, ContractError, PersonId
 from nestor.modules.channels import Address, Attachment, AttachmentKind, Medium
 from nestor.modules.cognition import Executor, Notify, Outcome, Progress, TaskState, TurnStatus
 from nestor.modules.cognition.delegation import (
+    CONTINUE,
+    RESUME,
     Assignment,
     Directed,
     ExecutorKeys,
@@ -20,6 +22,7 @@ from nestor.modules.cognition.delegation import (
     TaskSteered,
     TurnAttached,
     TurnEnded,
+    TurnRetried,
     TurnStarted,
     TurnStepped,
     TurnStopRequested,
@@ -35,6 +38,7 @@ from nestor.modules.journal import BlobRef, FileRef, Journal
 from nestor.testing.cognition import (
     FakeRemote,
     RemoteExecutorContract,
+    RemoteRun,
     ScriptedExecutor,
     ScriptedRemoteExecutor,
 )
@@ -609,7 +613,7 @@ async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_turn()
         pdf = Attachment(
             kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf"
         )
-        kept = await tasks.add_file(task, pdf)
+        kept = await tasks.add_file(task, task.turn.id, pdf)
         remote.finish(next(iter(remote.runs)), Outcome.completed("Devis prêt."))
         await tasks.wait(task.id)
     [ended] = await journal.history(TurnEnded)
@@ -639,3 +643,126 @@ async def test_a_revoked_key_stays_revoked_and_the_executor_works_without_nestor
     first, second = (r.assignment for r in remote.runs.values())
     assert (first.task, first.access) == (None, None), "no key made behind the person's back"
     assert second.task and second.access, "a key made again works again"
+
+
+class Unstoppable(ScriptedRemoteExecutor):
+    """Cannot take an instruction while it works, and never confirms a stop."""
+
+    name = "unstoppable"
+    capabilities = Capabilities.of(RESUME, CONTINUE)
+
+
+async def test_an_instruction_is_not_given_while_the_turn_that_works_could_not_be_stopped(journal: Journal) -> None:
+    remote = FakeRemote()
+    async with TaskManager(journal, [Unstoppable(remote, duration_s=None, confirms_stop=False)]) as tasks:
+        task = await started(tasks, "Mets à jour le site", owner=MATHIS)
+        await asyncio.sleep(0.01)
+        mine = ToolContext(address=VOICE, speaker=Speaker.account(MATHIS))
+        said = data(await tools_of(tasks)["continue_task"].run({"task": task.id, "instruction": "Plutôt ça"}, mine))
+        assert said["directed"] == "busy" and "could not be stopped" in str(said["note"]), "the model tells the person"
+        assert len(task.turns) == 1 and len(remote.runs) == 1, "never two turns of a task at once"
+        assert await journal.history(TurnStarted, TaskSteered) == [], "the instruction was not given"
+        remote.finish(next(iter(remote.runs)), Outcome.completed("fini"))
+        await tasks.wait(task.id)
+
+
+class TakesAsItEnds(ScriptedRemoteExecutor):
+    """Takes the instruction, and its turn ends right then, before Nestor hears it was taken."""
+
+    async def steer(self, handle: str, instruction: str) -> bool:
+        taken = await super().steer(handle, instruction)
+        self.remote.finish(handle, Outcome.completed("fini, consigne comprise"))
+        await asyncio.sleep(0.01)
+        return taken
+
+
+async def test_an_instruction_the_executor_took_is_not_given_again_when_its_turn_ended_meanwhile(
+    journal: Journal,
+) -> None:
+    remote = FakeRemote()
+    async with TaskManager(journal, [TakesAsItEnds(remote, duration_s=None)]) as tasks:
+        task = await started(tasks, "Mets à jour le site")
+        await asyncio.sleep(0.01)
+        assert await tasks.direct(task.id, "Ajoute la page contact", by=MATHIS) is Directed.STEERED
+        await tasks.wait(task.id)
+    assert len(task.turns) == 1 and len(remote.runs) == 1, "taken once, not run again in a turn of its own"
+    [steered] = await journal.history(TaskSteered)
+    assert steered.taken and [s.instruction for s in task.turn.steered] == ["Ajoute la page contact"]
+
+
+async def test_an_event_of_one_turn_never_changes_another(journal: Journal) -> None:
+    remote = FakeRemote()
+    remote.runs["r2"] = RemoteRun(Assignment("Et la page contact"), "s2")
+    remote.sessions.add("s2")
+    for event in (
+        TaskCreated(source="t", task_id="k", title="Site", executor="scripted-remote", origin=VOICE, turn_id="t1",
+                    instruction="Mets à jour le site"),
+        TurnEnded(source="t", task_id="k", turn_id="t1", status=TurnStatus.COMPLETED, result="fait", duration_s=1,
+                  executor_session="s1"),
+        TurnStarted(source="t", task_id="k", turn_id="t2", instruction="Et la page contact"),
+        TurnAttached(source="t", task_id="k", turn_id="t2", ref="r2", executor_session="s2"),
+        TaskSteered(source="t", task_id="k", turn_id="t1", instruction="trop tard", taken=True),
+        TurnEnded(source="t", task_id="k", turn_id="t1", status=TurnStatus.FAILED, error="en retard", duration_s=1,
+                  executor_session="s1"),
+        TurnEnded(source="t", task_id="k", turn_id="nope", status=TurnStatus.FAILED, error="?", duration_s=1),
+    ):  # fmt: skip
+        await journal.publish(event)
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)]) as tasks:
+        task = tasks.tasks["k"]
+        assert task.state is TaskState.WORKING and task.turn.status is TurnStatus.RUNNING, (
+            "the late end was the first's"
+        )
+        assert task.session == "s2" and task.turn.steered == []
+        assert [s.instruction for s in task.turns[0].steered] == ["trop tard"]
+        remote.finish("r2", Outcome.completed("ok"))
+        await tasks.wait("k")
+
+
+async def test_files_are_named_apart_across_the_whole_task(journal: Journal) -> None:
+    blobs = MemoryBlobStore()
+    first, other = await blobs.put(b"%PDF un", "application/pdf"), await blobs.put(b"%PDF deux", "application/pdf")
+    executor = ScriptedExecutor()
+    async with TaskManager(journal, [executor], blobs=blobs) as tasks:
+        task = await started(tasks, given=(FileRef(first, "devis.pdf"),))
+        await tasks.wait(task.id)
+        again = (FileRef(other, "devis.pdf"), FileRef(first, "devis.pdf"))  # another file, then the same one again
+        await tasks.direct(task.id, "Et celui-là", by=MATHIS, given=again)
+        await tasks.wait(task.id)
+    assert [f.name for f in executor.assignments[1].files] == ["devis (2).pdf", "devis.pdf"], "one folder per task"
+    assert [f.name for f in task.turns[1].given] == ["devis (2).pdf", "devis.pdf"]
+
+
+async def test_a_session_the_executor_lost_is_left_and_the_turn_runs_again_once_in_a_new_one(journal: Journal) -> None:
+    executor = ScriptedExecutor("Fait.")
+    async with TaskManager(journal, [executor]) as tasks:
+        task = await started(tasks, "Écris pomme dans note.txt")
+        lost = (await tasks.wait(task.id)).session
+        assert lost
+        executor.forget(lost)
+        await tasks.direct(task.id, "Quel mot as-tu écrit ?", by=MATHIS)
+        outcome = await tasks.wait(task.id)
+    assert outcome.status is TurnStatus.COMPLETED and task.session and task.session != lost
+    given, retried = executor.assignments[1:]
+    assert (given.session, retried.session) == (lost, None)
+    assert "Écris pomme dans note.txt" in retried.earlier, "told the turns before, its session gone"
+    [again] = await journal.history(TurnRetried)
+    assert again.turn_id == task.turn.id and len(await journal.history(TurnEnded)) == 2
+
+
+async def test_a_turn_runs_again_only_once_and_its_lost_session_is_never_given_again(journal: Journal) -> None:
+    """Its new session lost as well, followed again after a restart: the turn fails, the task keeps no session."""
+    remote = FakeRemote()
+    remote.runs["r1"] = RemoteRun(Assignment("Mets à jour le site"), "s2")
+    remote.finish("r1", Outcome.lost("no rollout found for thread id s2"))
+    for event in (
+        TaskCreated(source="t", task_id="k", title="Site", executor="scripted-remote", origin=VOICE, turn_id="t1",
+                    instruction="Mets à jour le site"),
+        TurnRetried(source="t", task_id="k", turn_id="t1", error="no rollout found for thread id s1"),
+        TurnAttached(source="t", task_id="k", turn_id="t1", ref="r1", executor_session="s2"),
+    ):  # fmt: skip
+        await journal.publish(event)
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote)]) as tasks:
+        outcome = await tasks.wait("k")
+        task = tasks.tasks["k"]
+    assert (outcome.status, task.session, len(remote.runs)) == (TurnStatus.FAILED, None, 1)
+    assert len(await journal.history(TurnRetried)) == 1

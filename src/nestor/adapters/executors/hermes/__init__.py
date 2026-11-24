@@ -14,6 +14,10 @@ A turn that needs its owner ends on a question in its final report, a JSON objec
 instructions ask for, as the coding agents' structured report. Hermes's own `clarify` is not the way: it holds the run
 and a worker until the answer, an hour at most by default, when the person may answer days later. A run that asks
 with `clarify` anyway is stopped and its turn ends on that question; the answer starts the next turn, in the session.
+
+A session Hermes no longer has cannot be told apart: `POST runs` with an unknown `session_id` is not refused, its run
+starts with an empty history under that id (Hermes reads the session's messages and finds none). Such a turn goes on
+without the turns before, never as `Outcome.lost`.
 """
 
 from nestor.adapters.executors.hermes.executor import HermesExecutor

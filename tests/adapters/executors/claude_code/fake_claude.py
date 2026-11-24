@@ -2,7 +2,8 @@
 reads user messages on standard input, one JSON line each; writes an init message, the assistant's tool calls, then a
 `result` message carrying the structured output; and exits only once its input is closed. `--behave` picks what the
 turn does, `--record` keeps the arguments, the instruction it was given, the folder it ran in and what it found there,
-the MCP servers it was given (`--mcp-config`), with that file's permissions."""
+the MCP servers it was given (`--mcp-config`), with that file's permissions. Its sessions are kept beside the task's
+folder, as Claude Code keeps them per project: one resumed that it has no record of fails as Claude Code fails it."""
 
 import argparse
 import json
@@ -20,6 +21,15 @@ parser.add_argument("--resume")
 parser.add_argument("--mcp-config")
 known, rest = parser.parse_known_args()
 session = known.resume or known.session_id
+sessions = Path.cwd().parent / ".sessions"
+if known.resume and not (sessions / known.resume).exists():
+    unknown = f"No conversation found with session ID: {known.resume}"
+    print(unknown, file=sys.stderr, flush=True)
+    failed = {"type": "result", "subtype": "error_during_execution", "is_error": True, "num_turns": 0}
+    print(json.dumps({**failed, "session_id": known.resume, "errors": [unknown]}), flush=True)
+    sys.exit(1)
+sessions.mkdir(exist_ok=True)
+(sessions / str(session)).touch()
 
 
 def heard() -> str | None:

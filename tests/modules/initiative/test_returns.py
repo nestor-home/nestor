@@ -3,12 +3,13 @@ than its turn, reaches whoever asked: in the conversation, in writing, or as soo
 
 import asyncio
 import contextlib
-from collections.abc import AsyncGenerator, Iterable, Mapping, Sequence
+from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from datetime import timedelta
+from typing import Any
 
 import pytest
 
-from nestor.core import Event, PersonId, ProviderError
+from nestor.core import Capabilities, Event, PersonId, ProviderError
 from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Executor, Notify, Outcome, Progress, TaskState
 from nestor.modules.cognition.delegation import Assignment, TaskReminded, TurnDelivered, TurnEnded
@@ -35,7 +36,7 @@ from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, Delive
 from nestor.modules.initiative.returns import REMINDERS, TICK_S
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
-from nestor.testing.cognition import ScriptedExecutor, ScriptedModel
+from nestor.testing.cognition import FakeRemote, ScriptedExecutor, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.cognition.images import PNG
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
@@ -598,3 +599,76 @@ async def test_the_history_keeps_what_the_model_heard_when_the_call_went_on() ->
     replayed = [m for m in model.requests[3].messages if m.role is Role.TOOL]
     assert len(replayed) == 1 and "still running" in replayed[0].content
     assert [d.call_id for d in await home.journal.history(ToolDeferred)] == ["c1"]
+
+
+async def test_a_turn_given_in_another_conversation_comes_back_there() -> None:
+    """A task asked aloud and taken up again in writing: what the written turn brings is told in writing, though the
+    spoken conversation still goes on."""
+    home = Home()
+    async with home.returns():
+        task_id = await home.task()
+        await delivered(home.journal)
+        assert home.tasks is not None
+        await home.agent.conversations.turn(TELEGRAM, Medium.WRITTEN)
+        await home.tasks.direct(task_id, "Et les tests ?", by=MATHIS.id, origin=TELEGRAM)
+        await home.tasks.wait(task_id)
+        await delivered(home.journal, 2)
+    assert [d.address for d in await home.journal.history(TurnDelivered)] == [VOICE, TELEGRAM]
+
+
+class AlwaysAsks(ScriptedExecutor):
+    """Keeps no session: each turn asks its question anew."""
+
+    name = "always-asks"
+    capabilities = Capabilities.of()
+
+
+async def test_a_question_is_recalled_where_it_was_asked() -> None:
+    home = Home(executors=[AlwaysAsks(asks="Quelle branche ?")])
+    async with home.returns(reminders=(timedelta(hours=3),), tick_s=3600) as returns:
+        assert home.tasks is not None
+        await home.agent.conversations.turn(VOICE, Medium.SPOKEN)
+        task = await home.tasks.start_task(
+            "Analyse", title="Analyse", origin=VOICE, owner=MATHIS.id, executor="always-asks"
+        )
+        await home.tasks.wait(task.id)
+        await delivered(home.journal)
+        await home.agent.conversations.turn(TELEGRAM, Medium.WRITTEN)
+        await home.tasks.direct(task.id, "Analyse plutôt main", by=MATHIS.id, origin=TELEGRAM)
+        await home.tasks.wait(task.id)
+        await delivered(home.journal, 2)
+        await home.agent.conversations.turn(VOICE, Medium.SPOKEN)  # the spoken one goes on too
+        ended = task.turn.ended_at
+        assert ended is not None
+        await returns.remind(ended + timedelta(hours=4))
+    [reminded] = await home.journal.history(TaskReminded)
+    assert reminded.session == TELEGRAM.session
+
+
+class Racing(Journal):
+    """A journal in which a task's turn ends just as `Returns` starts: after it subscribed, before it read the past."""
+
+    def __init__(self, end: Callable[[], None]) -> None:
+        super().__init__(MemoryEventLog())
+        self.end: Callable[[], None] | None = end
+
+    async def history(self, *types: Any, **options: Any) -> Any:
+        if TaskReminded in types and self.end is not None:
+            self.end()
+            self.end = None
+            while not await super().history(TurnEnded):
+                await asyncio.sleep(0.01)
+        return await super().history(*types, **options)
+
+
+async def test_a_turn_that_ends_as_nestor_starts_is_told_once() -> None:
+    remote = FakeRemote()
+    journal = Racing(lambda: remote.finish(next(iter(remote.runs)), Outcome.completed("tout est vert")))
+    home = Home(journal=journal, executors=[ScriptedRemoteExecutor(remote, duration_s=None)])
+    async with TaskManager(journal, home.executors) as tasks:  # it works on while Nestor restarts
+        await tasks.start_task("Analyse", title="Analyse", origin=TELEGRAM, owner=MATHIS.id, executor="scripted-remote")
+        await asyncio.sleep(0.01)
+    async with home.returns():
+        await delivered(home.journal)
+        await asyncio.sleep(0.05)
+    assert len(home.telegram.sent) == 1 and len(await journal.history(TurnDelivered)) == 1

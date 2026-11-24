@@ -45,6 +45,7 @@ journal-task-archived = Tâche { $task } archivée
 journal-task-turn-started = Tâche { $task } : nouvelle consigne
 journal-task-turn-attached = Tâche { $task } prise en charge par l'exécutant
 journal-task-turn-step = Tâche { $task } : nouvelle étape
+journal-task-turn-retried = Tâche { $task } relancée dans une nouvelle session : son exécutant avait perdu la précédente
 journal-task-steered = Tâche { $task } { $taken ->
     [yes] réorientée en cours de travail
    *[no] arrêtée pour une nouvelle consigne
