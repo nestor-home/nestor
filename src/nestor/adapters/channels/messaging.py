@@ -143,7 +143,6 @@ class MessagingChannel(Channel, ABC):
         super().__init__(channel_id, conversation_ends_after_s=conversation_ends_after_s)
         self._apology = apology
         self._retry_delay_s, self._max_retry_delay_s = retry_delay_s, max_retry_delay_s
-        self._failures = 0  # in a row, to reach the platform
         self._availability = Availability(logger, lambda: self.brand or self.name, "retrying until it answers")
         self._closing = asyncio.Event()
         self._conversations: _Conversations | None = None
@@ -201,14 +200,12 @@ class MessagingChannel(Channel, ABC):
         if isinstance(error, ProviderError) and not error.transient:
             raise error
         asked = error.retry_after_s if isinstance(error, ProviderError) else None
-        delay = asked or min(self._retry_delay_s * 2**self._failures, self._max_retry_delay_s)
-        self._failures += 1
+        delay = asked or min(self._retry_delay_s * 2**self._availability.failures, self._max_retry_delay_s)
         self._availability.lost(f"{error} (next attempt in {delay:.1f} s)")
         await self.unless_closed(asyncio.sleep(delay))
 
     def reached(self) -> None:
-        """The platform answered: the failures in a row are over, and if it had been lost, it is back."""
-        self._failures = 0
+        """The platform answered: if it had been lost, it is back, and the next failure waits the shortest delay."""
         self._availability.back()
 
     async def unless_closed[T](self, work: Awaitable[T]) -> T | None:

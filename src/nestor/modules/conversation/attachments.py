@@ -2,14 +2,12 @@
 transcribed, documents read, answers recorded in the assistant's voice. Channels only download and upload."""
 
 import asyncio
-import codecs
 import logging
-import mimetypes
 from collections.abc import AsyncIterator, Collection, Iterable, Mapping, Sequence
 from dataclasses import replace
 
 from nestor.core import ProviderError
-from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel, base_type
+from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel, identified
 from nestor.modules.cognition.model import Document, Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
@@ -21,11 +19,6 @@ logger = logging.getLogger(__name__)
 HEARD = frozenset({AttachmentKind.VOICE, AttachmentKind.AUDIO})  # recordings, transcribed when kept
 KEPT_SHOWN = 12  # files kept in memory once shown to a model, to show again next turn (a few conversations' worth)
 VOICE_TYPE = "audio/ogg"  # what `SpeechModel.synthesize` records
-# what a channel announces when it does not know: the file is identified by its name and its content instead
-UNKNOWN_TYPES = frozenset(
-    {"", "application/octet-stream", "application/binary", "binary/octet-stream", "application/x-binary"}
-)
-SNIFFED = 4096  # bytes looked at to tell text from binary
 
 
 class Attachments:
@@ -119,27 +112,13 @@ class Attachments:
                 continue
 
     async def _keep(self, attachment: Attachment, context: ToolContext) -> Attached:
-        attachment = replace(attachment, media_type=self._identified(attachment))
+        reads = self._documents[0].reads if self._documents else (lambda _: False)
+        found = identified(attachment.media_type, attachment.name, attachment.data, reads=reads)
+        attachment = replace(attachment, media_type=found)
         blob = await self._blobs.put(attachment.data, attachment.media_type)
         transcript = await self._transcribe(attachment) if attachment.kind in HEARD else None
         read = await self._read(attachment, context) if attachment.kind is AttachmentKind.FILE else None
         return Attached(kind=attachment.kind, blob=blob, name=attachment.name, transcript=transcript, read=read)
-
-    def _identified(self, attachment: Attachment) -> str:
-        """What a file is: the media type its channel announced, unless that says nothing (`application/octet-stream`);
-        then a PDF or text by its content, text typed by its name when the reader reads that type (`.json`), and what
-        its name says for the rest."""
-        if base_type(attachment.media_type) not in UNKNOWN_TYPES:
-            return attachment.media_type
-        named = mimetypes.guess_type(attachment.name, strict=False)[0] if attachment.name else None
-        head = attachment.data[:SNIFFED]
-        if head.startswith(b"%PDF-"):
-            return "application/pdf"
-        if _text(head):  # typed by its name only when that is a text type: a `.ts` source file is no MPEG stream
-            if named is not None and self._documents is not None and self._documents[0].reads(named):
-                return named
-            return "text/plain"
-        return named or "application/octet-stream"
 
     async def _read(self, attachment: Attachment, context: ToolContext) -> Read | None:
         if self._documents is None:
@@ -161,14 +140,3 @@ class Attachments:
         except ProviderError as error:
             logger.warning("could not transcribe a %s: %s", attachment.kind, error)
             return None
-
-
-def _text(head: bytes) -> bool:
-    """Whether the first bytes of a file are text: UTF-8 without a NUL byte, a character cut at the end allowed."""
-    if not head or b"\x00" in head:
-        return False
-    try:
-        codecs.getincrementaldecoder("utf-8")().decode(head)
-    except UnicodeDecodeError:
-        return False
-    return True

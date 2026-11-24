@@ -6,14 +6,32 @@ import re
 import pytest
 
 from nestor.adapters.documents import FileReader
-from nestor.core import ModelType
-from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender, TranscriptionModel
+from nestor.core import ModelType, PersonId
+from nestor.modules.channels import (
+    Address,
+    Attachment,
+    AttachmentKind,
+    InboundMessage,
+    Medium,
+    Sender,
+    TranscriptionModel,
+)
 from nestor.modules.cognition.images import ImageTools
 from nestor.modules.cognition.model import ModelRequest, Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Results, Risk, Tool
-from nestor.modules.conversation import AnswerAttached, Attachments, ChannelProfile, UserTurn
+from nestor.modules.conversation import (
+    About,
+    AnswerAttached,
+    Attachments,
+    ChannelProfile,
+    Draft,
+    Notification,
+    Source,
+    UserTurn,
+)
 from nestor.modules.conversation.conversations import DOCUMENTS, IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
+from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.modules.usage import CallPurpose, Consumer, Meter, PriceBook, UsageRecorded, metered
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
@@ -22,7 +40,7 @@ from nestor.testing.cognition.model import ScriptedModel
 from nestor.testing.documents import text_pdf
 from nestor.testing.journal import MemoryBlobStore
 
-from .conftest import TELEGRAM, MakeAgent
+from .conftest import MATHIS, TELEGRAM, MakeAgent
 
 PHOTO = Attachment(kind=AttachmentKind.IMAGE, data=b"jpeg bytes", media_type="image/jpeg")
 VOICE_NOTE = Attachment(kind=AttachmentKind.VOICE, data=b"rappelle-moi le pain", media_type="audio/ogg")
@@ -133,17 +151,19 @@ async def test_a_file_the_model_cannot_open_is_named_to_it(make_agent: MakeAgent
 
 
 @pytest.mark.parametrize(
-    ("name", "data", "read"),
+    ("name", "data", "kept"),
     [
-        ("diagnostics.json", b'{"program": "eco", "minutes_left": 39}', True),
-        ("app.ts", b"export const left = 39;\n", True),  # a source file, whatever its extension says elsewhere
-        ("notes", "Fin du cycle à 23 h 31".encode(), True),  # no extension: its content shows it is text
-        ("export.zip", b"PK\x03\x04\x00\x00binary", False),
+        ("diagnostics.json", b'{"program": "eco", "minutes_left": 39}', "application/json"),
+        ("app.ts", b"export const left = 39;\n", "text/plain"),  # a source file, not the MPEG stream `.ts` names
+        ("notes", "Fin du cycle à 23 h 31".encode(), "text/plain"),  # no extension: its content shows it is text
+        ("export.zip", b"PK\x03\x04\x00\x00binary", "application/zip"),
+        ("rapport.pdf", b"<html>Not found</html>", "text/plain"),  # its content is text, whatever its name says
+        ("devis", b"\xef\xbb\xbf" + text_pdf("Total 1200 EUR"), "application/pdf"),  # bytes before its header
     ],
-    ids=["json", "typescript", "no-extension", "zip"],
+    ids=["json", "typescript", "no-extension", "zip", "text-named-pdf", "pdf-header-later"],
 )
 async def test_a_file_sent_with_a_type_that_says_nothing_is_known_by_its_name_and_content(
-    make_agent: MakeAgent, journal: Journal, name: str, data: bytes, read: bool
+    make_agent: MakeAgent, journal: Journal, name: str, data: bytes, kept: str
 ) -> None:
     """Channels may announce `application/octet-stream` for anything: what can be read is read all the same."""
     blobs = MemoryBlobStore()
@@ -152,11 +172,45 @@ async def test_a_file_sent_with_a_type_that_says_nothing_is_known_by_its_name_an
     agent = make_agent(model=model, attachments=Attachments(blobs, documents=(FileReader(), results)), results=results)
     sent_file = Attachment(kind=AttachmentKind.FILE, data=data, media_type="application/binary", name=name)
     await agent.respond(sent("regarde", sent_file)).collect()
+    [turn] = await journal.history(UserTurn)
+    assert turn.attachments[0].blob.media_type == kept
     note = last_user(model.requests[0]).content
-    if read:
-        assert note.startswith(f"[A document ({name}): read its text with read_result"), note
-    else:
+    if kept == "application/zip":
         assert note.startswith(f"[A file ({name}), application/zip, 12 bytes, that you cannot open]"), note
+    else:
+        assert note.startswith(f"[A document ({name}): read its text with read_result"), note
+
+
+async def test_a_photo_sent_with_a_type_that_says_nothing_is_still_seen(make_agent: MakeAgent) -> None:
+    model = Seeing("Une photo.")
+    agent = make_agent(model=model, attachments=Attachments(MemoryBlobStore()))
+    photo = Attachment(kind=AttachmentKind.IMAGE, data=PNG, media_type="application/octet-stream")
+    await agent.respond(sent("regarde", photo)).collect()
+    assert [i.media_type for i in last_user(model.requests[0]).images] == ["image/png"]
+
+
+async def test_what_comes_back_by_itself_follows_how_its_recipient_speaks_not_the_others(
+    make_agent: MakeAgent,
+) -> None:
+    """In a group, one person's voice message does not make another's results heard."""
+    lea = Person(id=PersonId("lea"), name="Léa", accounts=(Account.parse("telegram:43"),))
+    group = Address("telegram", "family")
+    model = ScriptedModel("Vu.", "Bien reçu.", "C'est fini.", "C'est fini.")
+    agent = make_agent(
+        model=model,
+        household=Household([MATHIS, lea]),
+        attachments=Attachments(MemoryBlobStore(), speech=ScriptedSpeech()),
+        channels=SPEAKING,
+    )
+    await agent.respond(InboundMessage(address=group, sender=Sender("42"), text="lance la mise à jour")).collect()
+    await agent.respond(
+        InboundMessage(address=group, sender=Sender("43"), text="", attachments=(VOICE_NOTE,))
+    ).collect()
+    done = Notification("The update is finished.", About(Source.TASK, "t1", "completed"))
+    for_mathis = await agent.compose(group, MATHIS, done, Medium.WRITTEN)
+    for_lea = await agent.compose(group, lea, done, Medium.WRITTEN)
+    assert isinstance(for_mathis, Draft) and isinstance(for_lea, Draft)
+    assert (for_mathis.voiced, for_lea.voiced) == (False, True)
 
 
 async def test_a_document_is_read_by_the_model_where_it_was_sent_and_nowhere_else(

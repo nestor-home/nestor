@@ -15,8 +15,10 @@ class Availability:
         """`name`: the adapter's, read when it logs (a component is named once assembled)."""
         self._logger, self._name, self._meanwhile = logger, name, meanwhile
         self._since: float | None = None  # when it stopped answering
+        self.failures = 0  # attempts in a row that it did not answer, for whoever backs off
 
     def lost(self, reason: object) -> None:
+        self.failures += 1
         if self._since is not None:
             self._logger.debug("%s: still unavailable: %s", self._name(), reason)
             return
@@ -25,6 +27,7 @@ class Availability:
 
     def back(self, detail: str = "") -> bool:
         """It answers again: said once, when it had been lost; whether it had."""
+        self.failures = 0
         if self._since is None:
             return False
         gone, self._since = time.monotonic() - self._since, None

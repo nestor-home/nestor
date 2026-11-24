@@ -56,8 +56,8 @@ class DiscordChannel(MessagingChannel):
                 gateway = (await self._api.request("GET", "/gateway/bot")).json()["url"]
                 async with connect(f"{gateway}?v=10&encoding=json", logger=frames, max_size=2**24) as socket:
                     self._socket, beat = socket, Beat()
+                    self.reached()  # the gateway answered, whether anyone writes or not
                     async for incoming in self._session(socket, beat):
-                        self.reached()
                         yield incoming
                 if beat.asked_to_reconnect:
                     continue

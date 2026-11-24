@@ -41,7 +41,7 @@ from nestor.modules.cognition.model import (
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import IMAGES, SHOWN_BYTES, Conversations, Turn, to_show
-from nestor.modules.conversation.events import AssistantTurn
+from nestor.modules.conversation.events import AssistantTurn, UserTurn
 from nestor.modules.conversation.history import Shown, notification_message, seen_attached, tool_message
 from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import (
@@ -379,11 +379,12 @@ class AgentReply(Reply):
         if AttachmentKind.VOICE not in agent.channel(self._address).sends or not agent.attachments.speaks:
             return False
         opening = self._opening
-        said = (
-            opening
-            if isinstance(opening, InboundMessage)
-            else await agent.conversations.last_said(self._address, conversation)
-        )
+        if isinstance(opening, InboundMessage):
+            said: InboundMessage | UserTurn | None = opening
+        elif self._person is None:  # for no one in particular: nobody's way of speaking to follow
+            return False
+        else:  # theirs only: others may speak in the same conversation
+            said = await agent.conversations.last_said(self._address, conversation, self._person.id)
         return said is not None and any(a.kind is AttachmentKind.VOICE for a in said.attachments)
 
     def _context(self) -> ToolContext:

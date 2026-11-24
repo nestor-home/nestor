@@ -1,7 +1,9 @@
 """Values exchanged with channels: where a message comes from, who sent it, what it carries."""
 
+import codecs
 import mimetypes
 import posixpath
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -140,3 +142,46 @@ class InboundMessage:
     heard: Heard | None = None
     id: str = field(default_factory=new_id)
     at: datetime = field(default_factory=utc_now)
+
+
+# what a channel announces when it does not know: the file is identified by its content and its name instead
+UNKNOWN_TYPES = frozenset(
+    {"", "application/octet-stream", "application/binary", "binary/octet-stream", "application/x-binary"}
+)
+PDF = "application/pdf"
+SNIFFED = 4096  # bytes looked at to tell a file's type
+_MAGIC = (  # what the first bytes of a file show it is
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"GIF8", "image/gif"),
+)
+
+
+def identified(media_type: str, name: str | None, data: bytes, *, reads: Callable[[str], bool]) -> str:
+    """What a file is: `media_type`, as its channel announced it, unless that says nothing (`application/octet-stream`);
+    then what its content shows (a picture, a PDF, text), text typed by its name when `reads` reads that type as text
+    (`.json`), and what its name says for the rest."""
+    if base_type(media_type) not in UNKNOWN_TYPES:
+        return media_type
+    head = data[:SNIFFED]
+    if found := next((kind for magic, kind in _MAGIC if head.startswith(magic)), None):
+        return found
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    if b"%PDF-" in head[:1024]:  # readers accept a few bytes before the header
+        return PDF
+    named = mimetypes.guess_type(name, strict=False)[0] if name else None
+    if _text(head):  # a name types it only as text: a `.ts` source is no MPEG stream, a `.pdf` of text is no PDF
+        return named if named is not None and named != PDF and reads(named) else "text/plain"
+    return named or "application/octet-stream"
+
+
+def _text(head: bytes) -> bool:
+    """Whether the first bytes of a file are text: UTF-8 without a NUL byte, a character cut at the end allowed."""
+    if not head or b"\x00" in head:
+        return False
+    try:
+        codecs.getincrementaldecoder("utf-8")().decode(head)
+    except UnicodeDecodeError:
+        return False
+    return True
