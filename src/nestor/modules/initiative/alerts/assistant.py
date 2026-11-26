@@ -86,7 +86,7 @@ class AlertTools(ToolProvider, ContextProvider):
 
     async def context(self, turn: TurnContext) -> Sections:
         if not self.book.alerts:
-            return {}
+            return {Layer.HOUSEHOLD: "No alert is set."}
         listed = "\n".join(f"- [{a.id}] {a.title}, {self._when(a)}: {a.instruction}" for a in self.book.alerts.values())
         return {Layer.HOUSEHOLD: f"Alerts set:\n{listed}"}  # they change when one is set, rings or ends
 
