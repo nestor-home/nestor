@@ -1392,7 +1392,7 @@ export interface paths {
         };
         /**
          * List Retired
-         * @description The memories retired lately, newest first: tied to a task or an alert that ended, or merged or found outdated
+         * @description The memories retired lately, newest first: tied to what ended, or merged or found outdated
          *     by the nightly upkeep.
          */
         get: operations["listRetired"];
@@ -3636,7 +3636,7 @@ export interface components {
         };
         /**
          * RetiredOut
-         * @description A memory no longer used, and why: its task or alert ended, or the nightly upkeep merged it or found it
+         * @description A memory no longer used, and why: what it was tied to ended, or the nightly upkeep merged it or found it
          *     outdated.
          */
         RetiredOut: {

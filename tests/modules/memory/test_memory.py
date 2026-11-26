@@ -153,6 +153,7 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
     saved = data(
         await tools["remember"].run({"text": "Le portail s'ouvre avec le code 1234", "place": "home"}, context)
     )
+    hers = data(await tools["remember"].run({"text": "Mathilde garde un secret", "place": "people/mathilde"}, context))
     found = data(await tools["recall"].run({"query": "code du portail"}, context))
     today = f"{utc_now():%Y-%m-%d}"
     assert found["memories"] == [
@@ -169,6 +170,7 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
         ("remember", {"text": "x", "place": "people/voisin"}),
         ("remember", {"text": "x", "place": "garage"}),
         ("move_memory", {"memory_id": saved["memory_id"], "place": "projects/"}),
+        ("move_memory", {"memory_id": hers["memory_id"], "place": "household"}),  # hers, only she shares it
     ]:
         with pytest.raises(ToolFailed):
             await tools[name].run(arguments, context)

@@ -1,5 +1,5 @@
-"""What a memory may be tied to, and how it is untied: a memory that only holds while a task or an alert runs ("Léa
-wants to know when the TV drops below 1 000 €") is retired, with its reason journaled, when that one ends.
+"""What a memory may be tied to, and how it is untied: a memory that only holds while something runs, a task for
+one ("Léa wants to know when the TV drops below 1 000 €"), is retired, with its reason journaled, when that one ends.
 
 Each kind of thing is plugged in as a `Tie`: its name (`task`), the event that ends one, how that event names it,
 and whether one is still going on. A memory names what it is tied to as `<kind>:<id>` (`task:3f2a`).
@@ -20,7 +20,7 @@ log = logging.getLogger("nestor.memory")
 
 @dataclass(frozen=True, slots=True)
 class Tie[E: Event]:
-    kind: str  # `task`, `alert`
+    kind: str  # `task`
     ends: type[E]  # the event that ends one
     names: Callable[[E], str]  # the id of the one it ends
     running: Callable[[str], bool]  # whether one, by id, exists and is still going on
@@ -58,7 +58,19 @@ class Ties(Component):
         if not self.ties:
             return
         self._subscription = subscription = self.journal.subscribe(*(t.ends for t in self.ties.values()))
+        await self.reconcile()
         self._worker = asyncio.create_task(self._run(subscription), name=self.name)
+
+    async def reconcile(self) -> int:
+        """Retire what is tied to something no longer going on: it ended while Nestor was stopped, or its retirement
+        failed; how many were."""
+        retired = 0
+        for tie in {m.tied_to for m in await self.memories.store.everything() if m.tied_to}:
+            kind, _, ident = tie.partition(":")
+            known = self.ties.get(kind)
+            if known is not None and not known.running(ident):
+                retired += len(await self.memories.untie(tie))
+        return retired
 
     async def close(self) -> None:
         if self._subscription is not None:
@@ -81,5 +93,5 @@ class Ties(Component):
         async for event in subscription:
             try:
                 await self.ended(event)
-            except Exception:  # one failure never stops the next ending from untying
+            except Exception:  # one failure never stops the next ending from untying; the next start retries it
                 log.exception("memories tied to what %s ended were not retired", event.event_type)

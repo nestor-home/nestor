@@ -1,4 +1,4 @@
-"""A memory tied to a task or an alert is retired, with its reason journaled, when that one ends; a task's note
+"""A memory tied to a task is retired, with its reason journaled, when that one ends; a task's note
 becomes a memory only when Nestor keeps it."""
 
 import asyncio
@@ -13,7 +13,7 @@ from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories, MemoryRecorded, MemoryRetired, Retirement, Tie, Ties
+from nestor.modules.memory import Memories, MemoryRecorded, MemoryRetired, Place, Retirement, Tie, Ties
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Episodes
 from nestor.testing.journal import MemoryEventLog
@@ -70,6 +70,18 @@ async def test_a_memory_tied_to_a_task_is_retired_with_its_reason_when_the_task_
         "Léa veut un vélo cargo à moins de 2 000 €.",
     )
     assert [m.id for m in await memories.store.everything()] == [other["memory_id"]], "only what that task tied"
+
+
+async def test_what_ended_while_nestor_was_stopped_is_retired_when_it_starts() -> None:
+    journal, memories, ties, _ = home(running={"t2"})
+    gone = await memories.remember("Léa veut un vélo cargo.", place=Place.of(LEA.id), tied_to="task:t1")
+    going = await memories.remember("Hugo cherche un vélo.", place=Place.of(HUGO.id), tied_to="task:t2")
+
+    async with ties:
+        (retired,) = await journal.history(MemoryRetired)
+
+    assert (retired.memory_id, retired.reason, retired.tied_to) == (gone.id, Retirement.ENDED, "task:t1")
+    assert [m.id for m in await memories.store.everything()] == [going.id]
 
 
 async def test_a_note_of_a_task_becomes_a_memory_only_when_kept_and_says_where_it_came_from() -> None:

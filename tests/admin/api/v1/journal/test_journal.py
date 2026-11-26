@@ -14,7 +14,7 @@ from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation import About, AssistantTurn, Source, UserTurn
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import DeliveryConsidered
-from nestor.modules.memory import MemoryRecorded
+from nestor.modules.memory import MemoryRecorded, MemoryRetired, Retirement
 from nestor.modules.satellites import PROTOCOL
 from nestor.testing.satellites import SOFTWARE, pair_by_code
 
@@ -72,6 +72,33 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
         assert item["detail_text"] == "Prévu : à voix haute sur voice:salon" and item["detail"] == ""
         assert item["kind"] == "delivery"
         assert item["people"] == [{"id": "mathis", "name": "Mathis"}] and item["channels"] == ["voice"]
+
+
+async def test_a_memory_s_place_and_tie_are_said_as_a_person_reads_them(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        for event in (
+            MemoryRecorded(
+                source="memory", memory_id="m1", text="Mathilde a peur des araignées", place="people/mathilde"
+            ),
+            MemoryRecorded(source="memory", memory_id="m2", text="Le couvreur vient jeudi", place="projects/toit-nord"),
+            MemoryRecorded(source="memory", memory_id="m3", text="La chaudière est au garage", place="home"),
+            MemoryRetired(
+                source="memory",
+                memory_id="m4",
+                text="Mathilde veut un vélo",
+                place="people/mathilde",
+                reason=Retirement.ENDED,
+                tied_to="task:t1",
+            ),
+        ):
+            await admin.nestor.journal.publish(event)
+        items = (await (await admin.api()).get("/api/v1/journal", kinds="memory")).json()["items"]
+        assert {i["text"] for i in items} == {
+            "Souvenir enregistré dans Mathilde",
+            "Souvenir enregistré dans toit nord",
+            "Souvenir enregistré dans la maison",
+            "Souvenir retiré : sa tâche est terminée",
+        }
 
 
 async def test_sign_ins_are_in_the_journal_without_secrets(tmp_path: Path) -> None:

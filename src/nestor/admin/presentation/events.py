@@ -521,7 +521,7 @@ class EventDescriber:
                     "journal-memory-recorded",
                     drawn=_yes(e.episode is not None),
                     kept=_yes(e.task is not None),
-                    place=e.place,
+                    **self._place(e.place),
                 ),
                 detail=e.text,
                 people=[Place.parse(e.place).person, e.told_by],
@@ -533,11 +533,13 @@ class EventDescriber:
                 detail=e.text,
                 people=[e.by],
             ),
-            MemoryMoved: lambda e: self._line(e, Message.of("journal-memory-moved", place=e.place), people=[e.by]),
+            MemoryMoved: lambda e: self._line(
+                e, Message.of("journal-memory-moved", **self._place(e.place)), people=[e.by]
+            ),
             MemoryForgotten: lambda e: self._line(e, Message.of("journal-memory-forgotten"), people=[e.by]),
             MemoryRetired: lambda e: self._line(
                 e,
-                Message.of("journal-memory-retired", reason=e.reason.value, tie=e.tied_to or ""),
+                Message.of("journal-memory-retired", reason=e.reason.value, tie=(e.tied_to or "").partition(":")[0]),
                 detail=f"{e.text} ({e.why})" if e.why else e.text,
                 people=[Place.parse(e.place).person],
             ),
@@ -769,6 +771,11 @@ class EventDescriber:
     def login(self, account_id: str | None) -> str:
         account = self.accounts.accounts.get(account_id or "") if self.accounts else None
         return account.login if account else str(account_id or "")
+
+    def _place(self, path: str) -> dict[str, str]:
+        """A memory's place as a person reads it: its shelf, and the person's name or the project's or topic's."""
+        place = Place.parse(path)
+        return {"shelf": place.shelf.value, "name": self.name(place.person) if place.person else place.label}
 
     def name(self, person: PersonId | None) -> str:
         if person is None:

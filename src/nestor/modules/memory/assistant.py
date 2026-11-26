@@ -31,15 +31,20 @@ HOW_TO_REMEMBER = (
     "(rooms, devices, appliances, works done), household for the family's shared life (routines, pets, contacts, "
     "rules), projects/<name> for something with an end (a renovation, a trip, a purchase), topics/<name> for a lasting "
     "interest (the garden, wine). Reuse a project or topic already listed; name a new one in a few lowercase words "
-    "joined by hyphens. When a memory only holds while a task or an alert runs (a price to watch, a search going "
-    "on), tie it to it: it is retired when that ends. An executor's notes belong to its task: keep one as a memory "
-    "with keep_note only when it matters beyond the task. The memories that seem to matter to this turn are listed "
+    "joined by hyphens. The memories that seem to matter to this turn are listed "
     "with it, and so are the past conversations of whoever speaks: their latest ones, and older ones that seem to "
     "matter. When a question may depend on something said earlier and it is not listed, call recall, with a place "
     'and since and until for a time ("last week": compute the dates from now); to know exactly what was said in a '
     "conversation, call read_conversation with its id. Each memory is dated: when two disagree, the later one holds, "
     "and you may correct or forget the earlier. Move, correct or forget a memory when asked, by its id. Never invent "
     "a memory."
+)
+HOW_TO_TIE = (
+    "When a memory only holds while a {kinds} runs (a price to watch, a search going on), tie it to it: it is retired "
+    "when that ends."
+)
+HOW_TO_KEEP_NOTES = (
+    "An executor's notes belong to its task: keep one as a memory with keep_note only when it matters beyond the task."
 )
 SHELVES = list(Shelf)  # the order places are listed in
 
@@ -174,7 +179,12 @@ class MemoryTools(ToolProvider, ContextProvider):
         return tools
 
     def guidance(self) -> str:
-        return HOW_TO_REMEMBER
+        parts = [HOW_TO_REMEMBER]
+        if self.ties and self.ties.kinds:
+            parts.append(HOW_TO_TIE.format(kinds=" or ".join(self.ties.kinds)))
+        if self.task_notes is not None:
+            parts.append(HOW_TO_KEEP_NOTES)
+        return " ".join(parts)
 
     async def context(self, turn: TurnContext) -> Sections:
         """The latest memories with the household (they change now and then, so the cache keeps them); with this
@@ -341,10 +351,13 @@ class MemoryTools(ToolProvider, ContextProvider):
 
     async def _move(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         place = self._placed(arguments.get("place"))
+        memory_id = str(arguments["memory_id"])
+        found = await self.memories.store.get(memory_id)
+        if found is not None and found.place.person not in (None, context.person):
+            # out of a person's place, it would be shared with the whole household
+            raise ToolFailed(f"only {found.place.person} moves what is filed in {found.place}")
         try:
-            memory = await self.memories.move(
-                str(arguments["memory_id"]), place, by=context.person, exchange=context.exchange
-            )
+            memory = await self.memories.move(memory_id, place, by=context.person, exchange=context.exchange)
         except ContractError as error:
             raise ToolFailed(str(error)) from None
         return {"memory_id": memory.id, "place": str(memory.place)}

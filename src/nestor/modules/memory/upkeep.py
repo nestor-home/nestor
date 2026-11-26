@@ -116,22 +116,31 @@ class Upkeep(Component):
         merged = retired = 0
         failed: list[str] = []
         with attributed(purpose=CallPurpose.CONSOLIDATION):
-            for place, kept in sorted(by_place.items()):
-                tidying = await self._ask(place, kept)
+            for place, listed in sorted(by_place.items()):
+                tidying = await self._ask(place, listed)
                 if tidying is None:
                     failed.append(str(place))
                     continue
+                still = await self._unchanged(listed)  # changed or forgotten while the model read them: left alone
                 for merge in tidying.merges:
+                    if not still.issuperset((merge.keep, *merge.drop)):
+                        continue
                     kept = await self.memories.correct(merge.keep, merge.text, merged=merge.drop)
                     for dropped in merge.drop:
                         await self.memories.retire(dropped, Retirement.MERGED, into=kept)
                     merged += len(merge.drop)
                 for memory_id, why in tidying.retired:
-                    await self.memories.retire(memory_id, Retirement.STALE, why=why)
-                    retired += 1
+                    if memory_id in still:
+                        await self.memories.retire(memory_id, Retirement.STALE, why=why)
+                        retired += 1
         done = MemoryUpkept(source="memory", places=len(by_place), merged=merged, retired=retired, failed=tuple(failed))
         await self.journal.publish(done)
         return done
+
+    async def _unchanged(self, memories: Sequence[Memory]) -> set[str]:
+        """The ids of `memories` that are still as they were read."""
+        now = {m.id: await self.memories.store.get(m.id) for m in memories}
+        return {m.id for m in memories if (found := now[m.id]) is not None and found.updated_at == m.updated_at}
 
     async def _ask(self, place: Place, memories: Sequence[Memory]) -> Tidying | None:
         system = INSTRUCTIONS.format(
@@ -142,6 +151,7 @@ class Upkeep(Component):
         )
         listed = "\n".join(
             f"- [{m.id}] {m.updated_at.astimezone(self.zone):%Y-%m-%d} {m.text}"
+            + (f" (only while {m.tied_to} runs)" if m.tied_to else "")
             for m in sorted(memories, key=lambda m: m.updated_at)
         )
         request = ModelRequest(messages=(Message(role=Role.SYSTEM, content=system), Message.user(listed)))
@@ -154,9 +164,9 @@ class Upkeep(Component):
 
 
 def tidying(answer: Mapping[str, Any] | None, memories: Mapping[str, Memory], today: date) -> Tidying | None:
-    """What the model asked for, of it what holds: ids of the place's own memories, each used once; a merge kept on
-    the latest of its memories; a memory retired only when a later one of the place overrides it or the date it
-    gives has passed. `None` when the answer cannot be read."""
+    """What the model asked for, of it what holds: ids of the place's own memories, each used once; a merge of
+    memories tied alike, kept on the latest of them; a memory retired only when a later one of the place overrides it
+    or the date it gives has passed. `None` when the answer cannot be read."""
     if answer is None:
         return None
     used: set[str] = set()
@@ -165,8 +175,8 @@ def tidying(answer: Mapping[str, Any] | None, memories: Mapping[str, Memory], to
         if not isinstance(asked, dict) or not (text := str(asked.get("text") or "").strip()):
             continue
         together = list(dict.fromkeys(i for i in map(str, asked.get("ids") or ()) if i in memories and i not in used))
-        if len(together) < 2:
-            continue
+        if len(together) < 2 or len({memories[i].tied_to for i in together}) > 1:
+            continue  # nothing to merge, or a fact that lasts with one that ends with its task
         keep = max(together, key=lambda i: memories[i].updated_at)
         merges.append(Merge(keep, text, tuple(i for i in together if i != keep)))
         used.update(together)

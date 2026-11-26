@@ -14,7 +14,7 @@ class MemoryStore(Component, ABC):
     - `search` finds memories sharing words with the query or with the name of their project or topic, ignoring
       case and accents, best first;
     - `recent` lists by last update, newest first; `everything` lists them all, in no particular order; `tied`, those
-      tied to one task or alert;
+      tied to one task (`task:<id>`);
     - `about` restricts to one person's and those every member shares (any place but another person's); `place`
       to that place, or to that shelf when it names none (`projects`).
     """

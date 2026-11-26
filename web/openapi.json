@@ -9304,7 +9304,7 @@
           "memories"
         ],
         "summary": "List Retired",
-        "description": "The memories retired lately, newest first: tied to a task or an alert that ended, or merged or found outdated\nby the nightly upkeep.",
+        "description": "The memories retired lately, newest first: tied to what ended, or merged or found outdated\nby the nightly upkeep.",
         "operationId": "listRetired",
         "parameters": [
           {
@@ -19405,7 +19405,7 @@
           "event"
         ],
         "title": "RetiredOut",
-        "description": "A memory no longer used, and why: its task or alert ended, or the nightly upkeep merged it or found it\noutdated."
+        "description": "A memory no longer used, and why: what it was tied to ended, or the nightly upkeep merged it or found it\noutdated."
       },
       "Retirement": {
         "type": "string",

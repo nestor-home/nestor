@@ -21,6 +21,7 @@ from nestor.modules.cognition.delegation import TaskCreated, TurnDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
+from nestor.modules.memory import MemoryRetired, Retirement
 from nestor.modules.usage import CallPurpose, CostBasis, Counted, UsageFilter
 from nestor.modules.web import Found, WebSearch
 from nestor.runtime import Backoff, Nestor, Registry
@@ -445,6 +446,42 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
         serving.cancel()
     async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
         assert [m.text for m in await restarted.memories.recall("chat", vector=None)] == ["Le chat s'appelle Biscotte"]
+
+
+async def test_a_memory_tied_to_a_task_is_retired_when_the_task_is_archived(tmp_path: Path) -> None:
+    fakes, started = Fakes(), {}
+    fakes.script = [
+        ToolCall(
+            "c1", "start_task", {"title": "Vélo cargo", "instruction": "Trouve un vélo cargo", "notify": "message"}
+        ),
+        "Je cherche.",
+        lambda _: ToolCall(
+            "c2",
+            "remember",
+            {
+                "text": "Mathis veut un vélo cargo à moins de 2 000 €",
+                "place": "people/mathis",
+                "tied_to": started["id"],
+            },
+        ),
+        "Noté.",
+    ]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Trouve-moi un vélo cargo")
+        (task,) = await nestor.journal.history(TaskCreated)
+        started["id"] = f"task:{task.task_id}"
+        await fakes.channels[0].ask("Seulement sous 2 000 €, le temps de la recherche")
+        (memory,) = await nestor.memories.recent()
+        retired = nestor.journal.subscribe(MemoryRetired)
+
+        await nestor.tasks.archive(task.task_id)
+
+        event = await retired.next(timeout_s=2)
+        serving.cancel()
+        assert await nestor.memories.recent() == []
+    assert isinstance(event, MemoryRetired)
+    assert (event.memory_id, event.reason, event.tied_to) == (memory.id, Retirement.ENDED, started["id"])
 
 
 async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:

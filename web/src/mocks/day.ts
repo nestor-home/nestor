@@ -649,7 +649,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 149.4,
     type: "memory.recorded",
-    title: "Memory recorded in people/jules",
+    title: "Memory recorded in Jules",
     detail: HANDBALL,
     people: [ref("jules")],
     channels: [VOICE],
@@ -1369,7 +1369,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 520.7,
     type: "memory.retired",
-    title: "Memory retired: task:t-c1a9de ended",
+    title: "Memory retired: its task ended",
     detail: fr(
       "Mathis wants the dependency update to keep Node 22.",
       "Mathis veut que la mise à jour des dépendances garde Node 22.",

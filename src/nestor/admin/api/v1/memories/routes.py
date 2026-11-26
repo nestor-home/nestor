@@ -63,7 +63,7 @@ async def list_memories(
 async def list_retired(
     request: Request, caller: Keeper, limit: Annotated[int, Query(ge=1, le=200)] = 50
 ) -> list[RetiredOut]:
-    """The memories retired lately, newest first: tied to a task or an alert that ended, or merged or found outdated
+    """The memories retired lately, newest first: tied to what ended, or merged or found outdated
     by the nightly upkeep."""
     admin = state(request)
     people = People(admin.nestor.household)

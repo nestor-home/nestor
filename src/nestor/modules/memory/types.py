@@ -97,14 +97,14 @@ def slug(text: str) -> str:
 class Retirement(StrEnum):
     """Why a memory was retired: no longer used, its record kept in the journal."""
 
-    ENDED = "ended"  # the task or alert it was tied to ended
+    ENDED = "ended"  # what it was tied to ended
     STALE = "stale"  # the upkeep found it outdated or overridden
     MERGED = "merged"  # the upkeep merged it into another saying the same
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Memory:
-    """`tied_to` is what it only holds while it runs (`task:<id>`, `alert:<id>`): it is retired when that ends."""
+    """`tied_to` is what it only holds while it runs (`task:<id>`): it is retired when that ends."""
 
     text: str
     place: Place = HOUSEHOLD

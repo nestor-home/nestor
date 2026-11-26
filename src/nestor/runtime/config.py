@@ -288,6 +288,14 @@ class MemoryConfig(Section):
     # persona's timezone; none to never
     upkeep_at: time | None = time(3, 30)
 
+    @field_validator("upkeep_at", mode="before")
+    @classmethod
+    def _upkeep_at(cls, value: object) -> object:
+        # YAML reads an unquoted 23:15 as the number 1395, which pydantic would take for seconds
+        if isinstance(value, int | float):
+            raise ValueError('a time of day, quoted: "03:30"')
+        return value
+
     def recall(self) -> RecallSettings:
         return RecallSettings(
             strategy=self.strategy,

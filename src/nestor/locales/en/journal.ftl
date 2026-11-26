@@ -151,11 +151,16 @@ journal-watch-ended = Watch { $watch } { $reason ->
    *[other] { $reason }
 }
 
+journal-memory-place = { $shelf ->
+    [home] the house
+    [household] the household
+   *[other] { $name }
+}
 journal-memory-recorded = { $drawn ->
-    [yes] Memory drawn from a conversation, in { $place }
+    [yes] Memory drawn from a conversation, in { journal-memory-place }
    *[no] { $kept ->
-        [yes] Task note kept as a memory, in { $place }
-       *[no] Memory recorded in { $place }
+        [yes] Task note kept as a memory, in { journal-memory-place }
+       *[no] Memory recorded in { journal-memory-place }
     }
 }
 journal-memory-corrected = { $merged ->
@@ -163,10 +168,13 @@ journal-memory-corrected = { $merged ->
     [one] Memory merged with another during the nightly upkeep
    *[other] Memory merged with { $merged } others during the nightly upkeep
 }
-journal-memory-moved = Memory moved to { $place }
+journal-memory-moved = Memory moved to { journal-memory-place }
 journal-memory-forgotten = Memory forgotten
 journal-memory-retired = { $reason ->
-    [ended] Memory retired: { $tie } ended
+    [ended] { $tie ->
+        [task] Memory retired: its task ended
+       *[other] Memory retired: what it was tied to ended
+    }
     [merged] Memory merged into another
    *[stale] Memory retired as outdated
 }

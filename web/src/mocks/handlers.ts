@@ -323,6 +323,21 @@ function stopWorking(task: In<"TaskThreadOut">): boolean {
   return true;
 }
 
+/** What changing a memory writes in the journal, as the server does: by whom, linked to the memory. */
+function journalizeMemory(type: "memory.corrected" | "memory.moved" | "memory.forgotten", id: string, title: string) {
+  const person = signedIn()?.person;
+  journalize({ type, title, people: person ? [person] : [], links: { memory: id } });
+}
+
+/** A memory's place as the journal names it (messages.ts reads it back). */
+const whereOf = (place: In<"PlaceOut">) =>
+  place.person?.name ??
+  (place.shelf === "home"
+    ? "the house"
+    : place.shelf === "household"
+      ? "the household"
+      : (place.name ?? "").replaceAll("-", " "));
+
 /** A new journal entry at the next position, as the stream and the list will send it. */
 function journalize(draft: Draft): In<"JournalItem"> {
   const position = db.journal.reduce((last, e) => Math.max(last, e.item.position), 0) + 1;
@@ -1630,7 +1645,7 @@ export const handlers = [
     if (!filed) return fail(400, "unknown_place");
     memory.place = filed;
     memory.updated_at = new Date().toISOString();
-    save();
+    journalizeMemory("memory.moved", memory.id, `Memory moved to ${whereOf(filed)}`);
     return json(memory);
   }),
 
@@ -1644,15 +1659,18 @@ export const handlers = [
     if (!text.trim()) return fail(400, "empty_memory");
     memory.text = text.trim();
     memory.updated_at = new Date().toISOString();
-    save();
+    journalizeMemory("memory.corrected", memory.id, "Memory corrected");
     return json(memory);
   }),
 
   http.delete(`${API}/memories/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    db.memories = db.memories.filter((m) => m.id !== params.id);
-    save();
+    const forgotten = db.memories.find((m) => m.id === params.id);
+    if (!forgotten) return notFound("memory");
+    if (!forgotten.editable) return fail(403, "memory_shared");
+    db.memories = db.memories.filter((m) => m.id !== forgotten.id);
+    journalizeMemory("memory.forgotten", forgotten.id, "Memory forgotten");
     return noContent();
   }),
   // -- the agent --------------------------------------------------------------------------------

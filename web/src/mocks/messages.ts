@@ -44,6 +44,13 @@ export function render(lang: Lang, message: Message): string {
 }
 
 const msg = (id: string, args: Message["args"] = {}): Message => ({ id, args });
+/** A memory's place as the journal names it: the house, the household, or a person's or project's name. */
+const placed = (where = ""): Message["args"] =>
+  where === "the house"
+    ? { shelf: "home", name: "" }
+    : where === "the household"
+      ? { shelf: "household", name: "" }
+      : { shelf: "people", name: where };
 
 /** "task 3f2a completed", "schedule sc-tv": what an unprompted message is about, as the server says it. */
 const subject = (s: string, followUp = false): Message["args"] => {
@@ -184,11 +191,13 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     /^Picture taken by (\S+) \(room “(.+)”\)$/,
     (m) => msg("journal-media-snapshot", { device: m[1] ?? "", room: m[2] ?? "" }),
   ],
-  [/^Memory recorded in (\S+)$/, (m) => msg("journal-memory-recorded", { drawn: "no", kept: "no", place: m[1] ?? "" })],
-  [/^Memory moved to (\S+)$/, (m) => msg("journal-memory-moved", { place: m[1] ?? "" })],
+  [/^Memory recorded in (.+)$/, (m) => msg("journal-memory-recorded", { drawn: "no", kept: "no", ...placed(m[1]) })],
+  [/^Memory moved to (.+)$/, (m) => msg("journal-memory-moved", placed(m[1]))],
+  [/^Memory corrected$/, () => msg("journal-memory-corrected", { merged: 0 })],
+  [/^Memory forgotten$/, () => msg("journal-memory-forgotten")],
   [/^Memory merged into another$/, () => msg("journal-memory-retired", { reason: "merged", tie: "" })],
   [/^Memory retired as outdated$/, () => msg("journal-memory-retired", { reason: "stale", tie: "" })],
-  [/^Memory retired: (\S+) ended$/, (m) => msg("journal-memory-retired", { reason: "ended", tie: m[1] ?? "" })],
+  [/^Memory retired: its task ended$/, () => msg("journal-memory-retired", { reason: "ended", tie: "task" })],
   [
     /^Nightly upkeep of the memories: (\d+) merged, (\d+) retired$/,
     (m) => msg("journal-memory-upkept", { merged: Number(m[1]), retired: Number(m[2]), failed: 0 }),

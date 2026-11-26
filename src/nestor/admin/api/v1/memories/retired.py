@@ -1,5 +1,5 @@
-"""The memories retired lately, read from the journal: what the nightly upkeep and the endings of tasks and alerts
-changed."""
+"""The memories retired lately, read from the journal: what the nightly upkeep changed, and what went when what it
+was tied to ended."""
 
 from collections.abc import Callable
 

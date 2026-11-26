@@ -49,7 +49,7 @@ class MemoryForgotten(Event, event_type="memory.forgotten"):
 
 
 class MemoryRetired(Event, event_type="memory.retired"):
-    """No longer used, and kept here with what it said: its task or alert ended (`tied_to`), or the nightly upkeep
+    """No longer used, and kept here with what it said: what it was tied to ended (`tied_to`), or the nightly upkeep
     found it outdated or merged it `into` another (`merged_text`: what that one says now), `why` in the consolidation
     model's words."""
 

@@ -27,7 +27,7 @@ class MemoryOut(BaseModel):
     text: str
     place: PlaceOut
     told_by: PersonRef | None
-    tied_to: str | None  # task:<id> or alert:<id>: retired when that ends
+    tied_to: str | None  # what it holds while (task:<id>): retired when that ends
     learnt_in: str | None  # the conversation it was learnt in
     session: str | None  # that conversation's session, to open its thread in the journal
     learnt_event: int | None  # the journal position of the entry that recorded it
@@ -53,7 +53,7 @@ class MemoryOut(BaseModel):
 
 
 class RetiredOut(BaseModel):
-    """A memory no longer used, and why: its task or alert ended, or the nightly upkeep merged it or found it
+    """A memory no longer used, and why: what it was tied to ended, or the nightly upkeep merged it or found it
     outdated."""
 
     memory_id: str

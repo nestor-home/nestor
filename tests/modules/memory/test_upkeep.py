@@ -105,6 +105,53 @@ async def test_each_place_is_tidied_only_as_far_as_it_holds_and_every_change_is_
     assert await journal.history(MemoryUpkept) == [done]
 
 
+async def test_a_memory_changed_while_the_model_reads_it_is_left_alone_and_a_tie_never_merges_away() -> None:
+    journal = Journal(MemoryEventLog())
+    memories = Memories(journal, InMemoryMemoryStore())
+    lea = Place.of(LEA.id)
+    lasting = memory("m1", "Léa aime les télés Samsung.", lea, "2026-01-10")
+    tied = Memory(
+        id="m2",
+        text="Léa surveille le prix des télés Samsung.",
+        place=lea,
+        tied_to="task:t1",
+        created_at=NOW - timedelta(days=3),
+        updated_at=NOW - timedelta(days=3),
+    )
+    for kept in (lasting, tied, memory("r1", "Le couvreur passe le 3 mars 2026.", ROOF, "2026-02-01")):
+        await memories.store.put(kept)
+    meanwhile: list[asyncio.Task[Memory]] = []
+
+    def answer(request: ModelRequest) -> str:
+        if str(ROOF) in request.messages[0].content:  # Léa corrects it while the model reads the place
+            meanwhile.append(asyncio.create_task(memories.correct("r1", "Le couvreur repasse le 3 mars 2027.")))
+            return json.dumps({"retire": [{"id": "r1", "until": "2026-03-03", "why": "le couvreur est passé"}]})
+        assert "(only while task:t1 runs)" in request.messages[-1].content
+        return json.dumps({"merge": [{"ids": ["m1", "m2"], "text": "Léa aime et surveille les télés Samsung."}]})
+
+    upkeep = Upkeep(
+        journal,
+        ScriptedModel(answer, answer, word_delay_s=0.001),
+        memories,
+        Household([LEA]),
+        at=time(3, 30),
+        assistant="Richie",
+        timezone="Europe/Paris",
+        clock=lambda: NOW,
+    )
+
+    done = await upkeep.upkeep()
+
+    assert meanwhile and meanwhile[0].done()
+    assert {m.id: m.text for m in await memories.store.everything()} == {
+        "m1": "Léa aime les télés Samsung.",  # a lasting fact, never retired with the task
+        "m2": "Léa surveille le prix des télés Samsung.",
+        "r1": "Le couvreur repasse le 3 mars 2027.",
+    }
+    assert await journal.history(MemoryRetired) == []
+    assert (done.places, done.merged, done.retired, done.failed) == (2, 0, 0, ())
+
+
 async def test_a_night_missed_while_stopped_is_caught_up_at_start_and_the_next_waits_for_its_hour() -> None:
     journal = Journal(MemoryEventLog())
     model = ScriptedModel()
