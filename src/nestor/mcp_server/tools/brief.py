@@ -34,7 +34,6 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             await transcript(
                 nestor.journal,
                 nestor.household,
-                address=turn.origin,
                 conversation=turn.exchange.conversation_id,
                 since=await access.since(found),
                 assistant=persona.name,

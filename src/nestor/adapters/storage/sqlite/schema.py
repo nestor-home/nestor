@@ -27,25 +27,31 @@ MEMORIES = """
 CREATE TABLE memories (
     id TEXT PRIMARY KEY,
     text TEXT NOT NULL,
-    about TEXT,
+    place TEXT NOT NULL,  -- people/<id>, home, household, projects/<name>, topics/<name>
+    label TEXT NOT NULL,  -- the words of its project's or topic's name, searched with its text
     source TEXT,
     told_by TEXT,
+    tied_to TEXT,  -- <kind>:<id>: retired when that ends
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 ) STRICT;
 CREATE INDEX memories_by_update ON memories (updated_at);
+CREATE INDEX memories_by_place ON memories (place);
+CREATE INDEX memories_by_tie ON memories (tied_to) WHERE tied_to IS NOT NULL;
 -- Accent-insensitive full-text index kept in step with the table.
 CREATE VIRTUAL TABLE memories_text USING fts5 (
-    text, content = 'memories', content_rowid = 'rowid', tokenize = 'unicode61 remove_diacritics 2'
+    text, label, content = 'memories', content_rowid = 'rowid', tokenize = 'unicode61 remove_diacritics 2'
 );
 CREATE TRIGGER memories_indexed AFTER INSERT ON memories
-BEGIN INSERT INTO memories_text (rowid, text) VALUES (new.rowid, new.text); END;
+BEGIN INSERT INTO memories_text (rowid, text, label) VALUES (new.rowid, new.text, new.label); END;
 CREATE TRIGGER memories_unindexed AFTER DELETE ON memories
-BEGIN INSERT INTO memories_text (memories_text, rowid, text) VALUES ('delete', old.rowid, old.text); END;
+BEGIN
+    INSERT INTO memories_text (memories_text, rowid, text, label) VALUES ('delete', old.rowid, old.text, old.label);
+END;
 CREATE TRIGGER memories_reindexed AFTER UPDATE ON memories
 BEGIN
-    INSERT INTO memories_text (memories_text, rowid, text) VALUES ('delete', old.rowid, old.text);
-    INSERT INTO memories_text (rowid, text) VALUES (new.rowid, new.text);
+    INSERT INTO memories_text (memories_text, rowid, text, label) VALUES ('delete', old.rowid, old.text, old.label);
+    INSERT INTO memories_text (rowid, text, label) VALUES (new.rowid, new.text, new.label);
 END;
 """
 

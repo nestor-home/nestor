@@ -93,7 +93,8 @@ def load_variant[K: Knobs](
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
     built = build_models(config, registry, services)
     answering = [k for k, m in config.models.items() if m.type is ModelType.LANGUAGE]
-    roles = config.roles(answering) if suite.models else {}  # a suite that calls no model needs none answering
+    wanted = (*suite.models, *(suite.optional_models if answering else ()))
+    roles = config.roles(answering) if wanted else {}  # a suite that calls no model needs none answering
     described: dict[str, Mapping[str, Any]] = {}
 
     def chosen[M](role: str, key: str, expected: type[M]) -> M:
@@ -109,7 +110,7 @@ def load_variant[K: Knobs](
         }
         return model
 
-    models = {role: chosen(role, roles[role], LanguageModel) for role in suite.models}
+    models = {role: chosen(role, roles[role], LanguageModel) for role in wanted}
     key = config.memory.embedder
     embedder = chosen("embedder", key, EmbeddingModel) if suite.embedder and key else None
     voices = config.voices.embedder

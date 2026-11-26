@@ -25,6 +25,8 @@ bench-memory-recall-noise-when-nothing-matters = memories injected when none mat
 bench-memory-recall-duplicates-injected = older copies of a fact injected, per duplicate case
 bench-memory-recall-obsolete-injected = memories of an ended task or alert injected, per turn
 bench-memory-recall-notes-injected = executor notes injected as memories (must stay at 0)
+bench-memory-recall-upkeep-retired = memories the upkeep retired as outdated
+bench-memory-recall-upkeep-retired-outdated = of them, overridden by a later memory in the dataset
 
 bench-memory-recall-missed-list = Memories missed
 bench-memory-recall-item = { $case } “{ $said }”: { $memory }{ $of ->

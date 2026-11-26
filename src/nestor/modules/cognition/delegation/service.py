@@ -495,6 +495,16 @@ class TaskManager(Component):
         ]
         return sorted(found, key=lambda t: (ORDER[t.state], -t.last_activity.timestamp()))
 
+    def running(self, task_id: str) -> bool:
+        """Whether the task exists and is not archived."""
+        task = self.tasks.get(task_id)
+        return task is not None and task.state is not TaskState.ARCHIVED
+
+    def theirs(self, task_id: str, person: PersonId | None) -> Task | None:
+        """The task, when it is `person`'s: nobody reaches another's, even in a shared conversation."""
+        task = self.tasks.get(task_id)
+        return task if task is not None and person is not None and task.owner == person else None
+
     def _task(self, task_id: str) -> Task:
         task = self.tasks.get(task_id)
         if task is None:

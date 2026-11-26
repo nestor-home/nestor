@@ -79,6 +79,7 @@ class Suite[S, K: Knobs](ABC):
     description: str  # a message id
     knobs: type[K]
     models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)
+    optional_models: tuple[str, ...] = ()  # roles it calls only when the variant has a language model
     embedder: bool = False  # it searches by meaning with the variant's `memory.embedder`, when there is one
     voices: bool = False  # it tells voices apart with the variant's `voices.embedder`
     transcription: bool = False  # it hears recordings with the variant's `agent.transcription`

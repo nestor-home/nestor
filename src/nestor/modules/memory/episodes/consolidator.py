@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from nestor.core import Component, PersonId, ProviderError, utc_now
+from nestor.core import Component, ContractError, PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, Role, json_answer
 from nestor.modules.conversation.events import AssistantTurn, NotificationTurn, UserTurn
@@ -23,6 +23,7 @@ from nestor.modules.memory.episodes.service import Episodes
 from nestor.modules.memory.episodes.transcript import transcript
 from nestor.modules.memory.episodes.types import Episode, how
 from nestor.modules.memory.service import Memories
+from nestor.modules.memory.types import HOUSEHOLD, Place
 from nestor.modules.usage import CallPurpose, attributed
 
 log = logging.getLogger("nestor.memory")
@@ -37,13 +38,16 @@ Write, in {language}:
   switched on, a passing question);
 - "topics": a few short keywords;
 - "facts": the lasting facts or preferences about the household it reveals and that are not known yet, each one
-  short self-contained sentence, about one of: {people}, or "household".
+  short self-contained sentence, filed in its place: "people/<id>" for one of {people}; "home" for the house itself;
+  "household" for the family's shared life; "projects/<name>" for something with an end, "topics/<name>" for a
+  lasting interest, reusing a name already known when there is one. The tools {assistant} used are shown in
+  brackets: what they returned is the state of things then, not a lasting fact.
 
 Already known:
 {known}
 
 Answer only with JSON:
-{{"summary": "...", "topics": ["..."], "facts": [{{"text": "...", "about": "<id or household>"}}]}}"""
+{{"summary": "...", "topics": ["..."], "facts": [{{"text": "...", "place": "<place>"}}]}}"""
 
 
 @dataclass(slots=True)
@@ -62,7 +66,7 @@ class _Open:
 class Consolidation:
     summary: str
     topics: tuple[str, ...]
-    facts: tuple[tuple[str, PersonId | None], ...]  # text, about whom (None: the household)
+    facts: tuple[tuple[str, Place], ...]  # text, where it is filed
 
 
 class Consolidator(Component):
@@ -128,7 +132,10 @@ class Consolidator(Component):
         ]
         if not due:
             return 0
-        known = "\n".join(f"- {m.text}" for m in await self.memories.recent(limit=self._known)) or "- nothing yet"
+        known = (
+            "\n".join(f"- {m.place}: {m.text}" for m in await self.memories.recent(limit=self._known))
+            or "- nothing yet"
+        )
         done = 0
         for conversation in due:
             try:
@@ -160,6 +167,7 @@ class Consolidator(Component):
         seen = self._open.get(event.exchange.conversation_id)
         if seen is None:
             seen = self._open[event.exchange.conversation_id] = _Open(event.address, event.at, event.at)
+        seen.started_at = min(seen.started_at, event.at)  # a turn published after a later one
         seen.last_at = max(seen.last_at, event.at)
         if isinstance(event, UserTurn):
             seen.medium = event.medium
@@ -171,7 +179,6 @@ class Consolidator(Component):
         lines = await transcript(
             self.journal,
             self.household,
-            address=seen.address,
             conversation=conversation,
             since=seen.started_at,
             assistant=self.assistant,
@@ -202,8 +209,8 @@ class Consolidator(Component):
         await self.episodes.record(episode)
         del self._open[conversation]
         self._done.add(conversation)  # kept once, even if a fact below fails
-        for text, about in made.facts:
-            await self.memories.remember(text, about=about, source=seen.address, episode=conversation)
+        for text, place in made.facts:
+            await self.memories.remember(text, place=place, source=seen.address, episode=conversation)
         return 1
 
     def _failed(self, conversation: str) -> None:
@@ -236,14 +243,23 @@ class Consolidator(Component):
 
 
 def _consolidation(answer: dict[str, Any] | None, people: Mapping[PersonId, object]) -> Consolidation | None:
-    """What the model wrote; None when it cannot be read. A fact about someone unknown goes to the household."""
+    """What the model wrote; None when it cannot be read. A fact filed with someone unknown, or nowhere that exists,
+    goes to the household."""
     if answer is None or not isinstance(answer.get("summary"), str):
         return None
     summary = answer["summary"].strip()
     topics = tuple(t for t in (str(t).strip() for t in answer.get("topics") or ()) if t) if summary else ()
     facts = tuple(
-        (text, PersonId(about) if isinstance(about := f.get("about"), str) and about in people else None)
+        (text, _filed(f.get("place"), people))
         for f in answer.get("facts") or ()
         if isinstance(f, dict) and (text := str(f.get("text", "")).strip())
     )
     return Consolidation(summary, topics, facts)
+
+
+def _filed(value: object, people: Mapping[PersonId, object]) -> Place:
+    try:
+        place = Place.parse(str(value or ""))
+    except ContractError:
+        return HOUSEHOLD
+    return HOUSEHOLD if place.person is not None and place.person not in people else place

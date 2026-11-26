@@ -270,7 +270,8 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
             if turn.files:
                 read["files"] = [f.name for f in turn.files]
             turns.append(read)
-        return {**task.summary(), "turns": turns, "notes": task.notes}
+        notes = [{"note": number, "text": text} for number, text in enumerate(task.notes, start=1)]
+        return {**task.summary(), "turns": turns, "notes": notes}
 
     async def _rename(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         task = await self.tasks.rename(self._theirs(arguments, context).id, titled(arguments), by=context.person)
@@ -282,8 +283,8 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
 
     def _theirs(self, arguments: Mapping[str, object], context: ToolContext) -> Task:
         """The task named, when it is the asking person's: nobody reaches another's, even in a shared conversation."""
-        task = self.tasks.tasks.get(str(arguments.get("task", "")))
-        if task is None or context.person is None or task.owner != context.person:
+        task = self.tasks.theirs(str(arguments.get("task", "")), context.person)
+        if task is None:
             raise ToolFailed(f"no task {arguments.get('task')!r} of theirs: list_tasks names them")
         return task
 

@@ -25,6 +25,8 @@ bench-memory-recall-noise-when-nothing-matters = souvenirs injectés quand aucun
 bench-memory-recall-duplicates-injected = anciennes copies d'un fait injectées, par cas de doublon
 bench-memory-recall-obsolete-injected = souvenirs d'une tâche ou d'une alerte finie injectés, par tour
 bench-memory-recall-notes-injected = notes d'exécutant injectées comme souvenirs (doit rester à 0)
+bench-memory-recall-upkeep-retired = souvenirs retirés comme périmés par l'entretien
+bench-memory-recall-upkeep-retired-outdated = dont remplacés par un souvenir plus récent du jeu
 
 bench-memory-recall-missed-list = Souvenirs manqués
 bench-memory-recall-item = { $case } « { $said } » : { $memory }{ $of ->

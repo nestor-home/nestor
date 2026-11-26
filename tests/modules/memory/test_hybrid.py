@@ -8,7 +8,7 @@ import pytest
 
 from nestor.core import PersonId, ProviderError
 from nestor.modules.cognition.embedding import Vector
-from nestor.modules.memory import Memories, Memory
+from nestor.modules.memory import Memories, Memory, Place
 from nestor.modules.memory import index as index_module
 from nestor.modules.memory.index import fused
 from nestor.runtime.app import open_memories
@@ -41,7 +41,9 @@ async def remembered(memories: Memories) -> dict[str, str]:
     texts = ("Mathilde est végétarienne.", "Le portail s'ouvre avec le code 1234.", "Le chat s'appelle Moustache.")
     ids = {}
     for text in texts:
-        ids[text.split()[1]] = (await memories.remember(text, about=MATHILDE if "Mathilde" in text else None)).id
+        ids[text.split()[1]] = (
+            await memories.remember(text, place=Place.of(MATHILDE if "Mathilde" in text else None))
+        ).id
     await settled(memories)
     return ids
 

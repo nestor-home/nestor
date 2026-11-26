@@ -38,7 +38,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -51,12 +51,14 @@ from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition.delegation import TaskNoted
-from nestor.modules.memory import Memories, Memory
+from nestor.modules.household import Household
+from nestor.modules.memory import Memories, Memory, MemoryRetired, Place, Retirement, Upkeep
 from nestor.modules.memory.episodes import Episode, Episodes
 from nestor.modules.memory.recall import for_turn
 from nestor.runtime.app import open_memories
 
 NAME = "memory-recall"
+UPKEPT_ON = datetime(2026, 11, 2, 3, 30, tzinfo=UTC)  # the dataset's night: its dates are read against it
 KINDS = (
     "direct",
     "paraphrase",
@@ -90,13 +92,19 @@ class Remembered:
     ended: Mapping[str, tuple[str, str]] = field(default_factory=dict)  # memory: the task or alert that ended, why
 
 
-class MemoryRecall(Suite[Remembered, Knobs]):
-    """A variant's `memory` section, embedder included, says how memories are found: no knobs of its own."""
+class RecallKnobs(Knobs):
+    upkeep: bool = False  # tidy the memories once with the variant's consolidation model before the cases
+
+
+class MemoryRecall(Suite[Remembered, RecallKnobs]):
+    """A variant's `memory` section, embedder included, says how memories are found; `upkeep` measures a night's
+    tidying by its consolidation model."""
 
     name = NAME
     description = "bench-memory-recall-description"
-    knobs = Knobs
+    knobs = RecallKnobs
     models = ()  # retrieval calls no language model
+    optional_models = ("consolidation",)  # the upkeep does
     embedder = True  # but searches by meaning with the variant's embedder
 
     def __init__(self) -> None:
@@ -116,8 +124,8 @@ class MemoryRecall(Suite[Remembered, Knobs]):
         cases: list[Case] = []
         for number, record in enumerate(records[1:], start=2):
             if "memory" in record and isinstance(record.get("text"), str):
-                place = str(record.get("place") or "")
-                about = place.removeprefix("people/") if place.startswith("people/") else record.get("about")
+                about = record.get("about")
+                place = Place.parse(str(record["place"])) if record.get("place") else Place.of(PersonId(about or ""))
                 if record.get("tied_to") and record.get("ended"):
                     untied[str(record["memory"])] = (str(record["tied_to"]), str(record["ended"]))
                 at = datetime.fromisoformat(str(record.get("at", "2026-01-01"))).replace(tzinfo=UTC)
@@ -125,7 +133,8 @@ class MemoryRecall(Suite[Remembered, Knobs]):
                     Memory(
                         id=str(record["memory"]),
                         text=record["text"],
-                        about=PersonId(about) if about else None,
+                        place=place,
+                        tied_to=record.get("tied_to"),
                         created_at=at,
                         updated_at=at,
                     )
@@ -173,14 +182,32 @@ class MemoryRecall(Suite[Remembered, Knobs]):
             shared=Remembered(tuple(memories), tuple(episodes), tuple(notes), untied),
         )
 
-    async def run(self, case: Case, shared: Remembered, trial: Trial[Knobs]) -> Mapping[str, Any]:
+    async def run(self, case: Case, shared: Remembered, trial: Trial[RecallKnobs]) -> Mapping[str, Any]:
         memories, episodes = await self._stores_for(shared, trial)
         speaker = PersonId(str(case.data["speaker"])) if case.data.get("speaker") else None
         found = await for_turn(memories, episodes, str(case.data["said"]), speaker, trial.config.memory.recall())
         carried = (*found.found, *found.shown, *found.latest_episodes, *found.found_episodes)
-        return {"injected": [item.id for item in carried]}
+        merged, retired = await self._upkept(memories)
+        injected = [item.id for item in carried]
+        return {
+            "injected": injected,
+            "carried": sorted({*injected, *(m for i in injected for m in merged.get(i, ()))}),
+            "retired": retired,
+        }
 
-    async def _stores_for(self, shared: Remembered, trial: Trial[Knobs]) -> tuple[Memories, Episodes]:
+    @staticmethod
+    async def _upkept(memories: Memories) -> tuple[dict[str, set[str]], list[str]]:
+        """What the upkeep did: the memories merged into each one (their content goes on), and those it retired."""
+        merged: dict[str, set[str]] = {}
+        retired: list[str] = []
+        for event in await memories.journal.history(MemoryRetired):
+            if event.reason is Retirement.MERGED and event.into:
+                merged.setdefault(event.into, set()).update({event.memory_id, *merged.pop(event.memory_id, ())})
+            elif event.reason is Retirement.STALE:
+                retired.append(event.memory_id)
+        return merged, retired
+
+    async def _stores_for(self, shared: Remembered, trial: Trial[RecallKnobs]) -> tuple[Memories, Episodes]:
         """The household's memories and episodes in stores of the variant's own, filled and embedded once."""
         if (found := self._stores.get(trial.variant)) is not None:
             return found
@@ -193,6 +220,19 @@ class MemoryRecall(Suite[Remembered, Knobs]):
             await episodes.store.put(episode)
         for note in shared.notes:  # as an executor keeps a note on its task
             await memories.journal.publish(TaskNoted(source="bench", task_id=note.task, text=note.text))
+        for tie in {tie for tie, _ in shared.ended.values()}:  # as its task or alert ends
+            await memories.untie(tie)
+        if trial.knobs.upkeep:
+            await Upkeep(
+                memories.journal,
+                trial.model("consolidation"),
+                memories,
+                Household([]),
+                at=time(3, 30),
+                assistant="Nestor",
+                language=trial.config.persona.language,
+                clock=lambda: UPKEPT_ON,
+            ).upkeep()
         for index in (memories.index, episodes.index):
             if index is not None:
                 index.refresh()
@@ -209,12 +249,24 @@ class MemoryRecall(Suite[Remembered, Knobs]):
         counted: Counter[str] = Counter()
         participants = {e.id: set(e.participants) for e in dataset.shared.episodes}
         tied = set(dataset.shared.ended)
+        overridden = {  # an outdated memory, and the later one that says otherwise
+            stale: c.data["expected"][0]
+            for c in dataset.cases
+            if c.data["kind"] == "contradiction"
+            for stale in c.data.get("stale", ())
+        }
+        outdated = set(overridden)
+        upkept: set[str] = set()
         note_ids = {n.id for n in dataset.shared.notes}
         missed: Counter[tuple[str, str]] = Counter()
         for result in results:
             data = cases[result.case].data
             kind, expected = str(data["kind"]), set(data.get("expected", ()))
             got = set(result.output["injected"])
+            carried = set(result.output.get("carried", got))  # merged memories go on in the one they joined
+            retired = set(result.output.get("retired", ()))
+            upkept |= retired
+            carried |= {old for old, new in overridden.items() if old in retired and new in carried}  # superseded
             counted[kind] += 1
             injected += len(got)
             stale += len(got & set(data.get("stale", ()))) if kind == "contradiction" else 0
@@ -228,10 +280,10 @@ class MemoryRecall(Suite[Remembered, Knobs]):
             if kind in UNSCORED and not expected:
                 continue
             wanted[kind] += len(expected)
-            reached[kind] += len(expected & got)
+            reached[kind] += len(expected & carried)
             answered += 1
-            complete += expected <= got
-            for memory in sorted(expected - got):
+            complete += expected <= carried
+            for memory in sorted(expected - carried):
                 missed[result.case, memory] += 1
 
         def ratio(part: float, whole: float) -> float | None:
@@ -274,6 +326,8 @@ class MemoryRecall(Suite[Remembered, Knobs]):
                 metric("duplicates-injected", ratio(duplicates, counted["duplicate"]), Unit.COUNT, Better.LOWER),
                 metric("obsolete-injected", ratio(obsolete, len(results)), Unit.COUNT, Better.LOWER),
                 metric("notes-injected", notes / repetitions, Unit.COUNT, Better.LOWER),
+                metric("upkeep-retired", float(len(upkept)), Unit.COUNT, Better.LOWER),
+                metric("upkeep-retired-outdated", float(len(upkept & outdated)), Unit.COUNT, Better.HIGHER),
             ),
             findings=findings,
         )
