@@ -2,9 +2,8 @@
 (public addresses only), with a short timeout so that an offline Nestor answers from its map at once."""
 
 from nestor.adapters.common.web import PublicWeb
-from nestor.modules.system.selfmap import Documentation
+from nestor.modules.system.selfmap import DOCS, Documentation
 
-SITE = "https://nestorhome.dev"
 MARKDOWN = "text/markdown, text/plain;q=0.9"
 MAX_BYTES = 500_000  # the longest page (the protocol) is under 100 KB
 
@@ -14,14 +13,14 @@ class SiteDocumentation(Documentation):
 
     name = "documentation"
 
-    def __init__(self, site: str = SITE, *, timeout_s: float = 5.0) -> None:
-        self._site = site.rstrip("/")
+    def __init__(self, docs: str = DOCS, *, timeout_s: float = 5.0) -> None:
+        self._docs = docs.rstrip("/")
         self._web = PublicWeb(accept=MARKDOWN, timeout_s=timeout_s, max_bytes=MAX_BYTES)
         self._pages: dict[str, str] = {}
 
     async def page(self, slug: str) -> str:
         if slug not in self._pages:
-            fetched = await self._web.get(f"{self._site}/docs/{slug}.md")
+            fetched = await self._web.get(f"{self._docs}/{slug}.md")
             self._pages[slug] = fetched.body.decode(errors="replace")
         return self._pages[slug]
 

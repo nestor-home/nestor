@@ -111,7 +111,7 @@ class Routing(Suite[None, Knobs]):
         events.close()
         calls = [event async for event in events]
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
-        routes = [_route(e, trial) for e in calls if isinstance(e, ToolCalled)]
+        routes = [_route(e) for e in calls if isinstance(e, ToolCalled)]
         return {"route": routes[0] if routes else NONE, "calls": routes, "right": right, "said": said, "failed": failed}
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
@@ -201,7 +201,7 @@ def _kind(route: str) -> str:
     return "delegate" if kind == "continue" else kind
 
 
-def _route(called: ToolCalled, trial: Trial[Knobs]) -> str:
+def _route(called: ToolCalled) -> str:
     """`delegate:<executor>` for a task handed over, `continue:<task>` for one going on, else `tool:<name>`."""
     if called.name == CONTINUE:
         return f"continue:{called.arguments.get('task', '')}"

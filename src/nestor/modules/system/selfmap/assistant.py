@@ -23,8 +23,8 @@ NOTHING = "No part matches the question's words: the overview names every part."
 class AboutNestor(ToolProvider, ContextProvider):
     name = "about-nestor"
 
-    def __init__(self, parts: SelfMap, docs: Documentation | None = None) -> None:
-        self.map, self.docs = parts, docs
+    def __init__(self, selfmap: SelfMap, docs: Documentation | None = None) -> None:
+        self.selfmap, self.docs = selfmap, docs
 
     def tools(self) -> Sequence[Tool]:
         question = {
@@ -58,9 +58,9 @@ class AboutNestor(ToolProvider, ContextProvider):
         return {}
 
     async def _about(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        parts = self.map.relevant(str(arguments.get("question", "")))
+        parts = self.selfmap.relevant(str(arguments.get("question", "")))
         answer: dict[str, object] = {
-            "overview": self.map.overview(),
+            "overview": self.selfmap.overview(),
             "relevant": "\n".join(describe(p) for p in parts) or NOTHING,
         }
         if parts and self.docs is not None:

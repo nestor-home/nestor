@@ -36,7 +36,7 @@ class SelfMap:
             said = []
             for standing in Standing:
                 ids = [p.id for p in parts if p.standing is standing]
-                said.append(f"{standing.value}: {', '.join(ids)}" if ids else f"{standing.value}: none")
+                said.append(f"{standing.value}: {', '.join(ids) or 'none'}")
             lines.append(f"- {capability.value}: {'; '.join(said)}")
         return "\n".join(lines)
 

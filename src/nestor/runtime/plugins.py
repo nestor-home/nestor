@@ -112,7 +112,7 @@ class Plugin[S: AdapterSettings]:
     def capability(self) -> Capability:
         if self.serves is not None:
             return Capability.model(self.serves.type)
-        return _CAPABILITIES[self.family]
+        return Capability(self.family.value)
 
     @property
     def id(self) -> str:
@@ -136,15 +136,6 @@ class Plugin[S: AdapterSettings]:
                 f"(no module {(missing.name or '').partition('.')[0]!r}): pip install '{self.requires}'"
             ) from None
 
-
-_CAPABILITIES = {
-    Family.EXECUTOR: Capability.EXECUTOR,
-    Family.CHANNEL: Capability.CHANNEL,
-    Family.HOME: Capability.HOME,
-    Family.TOOLS: Capability.TOOLS,
-    Family.INBOUND: Capability.INBOUND,
-    Family.CONNECTOR: Capability.CONNECTOR,
-}
 
 BUILT_IN = "nestor-home"  # the distribution of Nestor's own plugins
 

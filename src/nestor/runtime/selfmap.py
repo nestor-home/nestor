@@ -3,60 +3,51 @@ and the packages of the ecosystem that run elsewhere (satellites)."""
 
 import re
 from collections.abc import Iterable
+from functools import cache
 from importlib.metadata import PackageNotFoundError, distribution, requires
 
 from nestor.core import Component
 from nestor.modules.system.selfmap import Capability, Card, Need, Part, SelfMap, Standing
 from nestor.runtime.plugins import Plugged, Registry
 
+
+def _satellite(id: str, summary: str, docs: str, install: str) -> Part:
+    return Part(
+        id=id,
+        capability=Capability.SATELLITE,
+        card=Card(summary=summary, docs=docs, needs=(Need.HARDWARE,)),
+        standing=Standing.MISSING,
+        install=install,
+    )
+
+
 # Packages of the ecosystem that are not plugins of this server: each runs on a device of its own and pairs with it.
 ECOSYSTEM = (
-    Part(
-        id="nestor-satellite (Python)",
-        capability=Capability.SATELLITE,
-        card=Card(
-            summary="Makes any computer with a microphone and a speaker a satellite in a room (talk aloud or type), "
-            "or writes one in Python.",
-            docs="sdks/python",
-            needs=(Need.HARDWARE,),
-        ),
-        standing=Standing.MISSING,
-        install="uv tool install nestor-satellite, on that computer",
+    _satellite(
+        "nestor-satellite (Python)",
+        "Makes any computer with a microphone and a speaker a satellite in a room (talk aloud or type), or writes one "
+        "in Python.",
+        "sdks/python",
+        "uv tool install nestor-satellite, on that computer",
     ),
-    Part(
-        id="nestor-reachy",
-        capability=Capability.SATELLITE,
-        card=Card(
-            summary="Makes a Reachy Mini robot a satellite: Nestor hears and speaks through it, its head and antennas "
-            "following as it listens, thinks and speaks.",
-            docs="satellites#ready-to-run",
-            needs=(Need.HARDWARE,),
-        ),
-        standing=Standing.MISSING,
-        install="uv tool install nestor-reachy, on the robot",
+    _satellite(
+        "nestor-reachy",
+        "Makes a Reachy Mini robot a satellite: Nestor hears and speaks through it, its head and antennas following "
+        "as it listens, thinks and speaks.",
+        "satellites#ready-to-run",
+        "uv tool install nestor-reachy, on the robot",
     ),
-    Part(
-        id="@nestor-home/satellite",
-        capability=Capability.SATELLITE,
-        card=Card(
-            summary="A satellite in a browser tab or in Node (a tablet on the wall, a kiosk), written in TypeScript.",
-            docs="sdks/typescript",
-            needs=(Need.HARDWARE,),
-        ),
-        standing=Standing.MISSING,
-        install="npm install @nestor-home/satellite",
+    _satellite(
+        "@nestor-home/satellite",
+        "A satellite in a browser tab or in Node (a tablet on the wall, a kiosk), written in TypeScript.",
+        "sdks/typescript",
+        "npm install @nestor-home/satellite",
     ),
-    Part(
-        id="nestor-satellite (Rust)",
-        capability=Capability.SATELLITE,
-        card=Card(
-            summary="A satellite as a single binary for small boards (a Raspberry Pi with a microphone), or written "
-            "in Rust.",
-            docs="sdks/rust",
-            needs=(Need.HARDWARE,),
-        ),
-        standing=Standing.MISSING,
-        install="the nestor-satellite command from its installer, or cargo add nestor-satellite",
+    _satellite(
+        "nestor-satellite (Rust)",
+        "A satellite as a single binary for small boards (a Raspberry Pi with a microphone), or written in Rust.",
+        "sdks/rust",
+        "the nestor-satellite command from its installer, or cargo add nestor-satellite",
     ),
 )
 
@@ -93,6 +84,7 @@ def survey(registry: Registry, plugged: Iterable[Plugged]) -> SelfMap:
     return SelfMap([*parts, *ECOSYSTEM])
 
 
+@cache
 def satisfied(requirement: str) -> bool:
     """Whether a pip requirement (`nestor-home[voice]`, `some-package`) is installed: the package, and every package
     its extras add."""
