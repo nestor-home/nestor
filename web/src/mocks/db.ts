@@ -12,6 +12,7 @@ import type {
   Memory,
   Messages,
   PairingMethodId,
+  Retired,
   Satellite,
   Schedule,
   Service,
@@ -66,6 +67,7 @@ export interface Db {
   confirmations: Confirmation[];
   home: Home | null;
   memories: Memory[];
+  retired: Retired[]; // newest first
   system: SystemInfo;
   executors: Executors;
   updates: Updates;
@@ -75,7 +77,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v23.stress" : "nestor.mock.db.v23");
+const KEY = () => (stressed() ? "nestor.mock.db.v24.stress" : "nestor.mock.db.v24");
 
 export function fresh(): Db {
   const settings = config.fresh();
@@ -89,6 +91,9 @@ export function fresh(): Db {
   const memories = fixtures
     .memories()
     .map((m) => (m.learnt_event === fixtures.LEARNT ? { ...m, learnt_event: learnt } : m));
+  const retirement = (id: string) =>
+    journal.find((e) => e.item.type === "memory.retired" && e.item.links.memory === id)?.item.position ?? 0;
+  const retired = fixtures.retired().map((r) => ({ ...r, event: retirement(r.memory_id) }));
   const state: Db = {
     signedIn: "acc-mathis",
     people: fixtures.people(doc),
@@ -114,6 +119,7 @@ export function fresh(): Db {
       satellites,
     ),
     memories,
+    retired,
     system,
     executors: fixtures.executors(doc),
     updates: fixtures.updates(),

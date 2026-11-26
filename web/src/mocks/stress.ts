@@ -187,14 +187,49 @@ export function stress(db: Db, now = Date.now()): void {
   db.memories.unshift({
     id: "m-stress",
     text: `${LONG_NAME} keeps her papers at ${LONG_URL} and calls it ${LONG_WORD}.`,
+    place: { path: `people/${MARIE.id}`, shelf: "people", name: MARIE.id, person: MARIE },
     about: MARIE,
     told_by: MARIE,
+    tied_to: null,
     learnt_in: "web",
     created_at: at(10),
     updated_at: at(10),
     learnt_event: null,
     session: "s-stress",
     editable: true,
+  });
+  // a project the agent named at length, and what the upkeep set aside from it
+  const project = `projects/${LONG_ROOM}-renovation-and-insulation`;
+  const renovation = {
+    path: project,
+    shelf: "projects",
+    name: project.slice("projects/".length),
+    person: null,
+  } as const;
+  db.memories.push({
+    id: "m-stress-project",
+    text: LONG_SENTENCE,
+    place: renovation,
+    about: null,
+    told_by: MARIE,
+    tied_to: `task:${"0123456789abcdef".repeat(2)}`,
+    learnt_in: "web",
+    created_at: at(20),
+    updated_at: at(20),
+    learnt_event: null,
+    session: "s-stress",
+    editable: true,
+  });
+  db.retired.unshift({
+    memory_id: "m-stress-old",
+    text: `${LONG_NAME} keeps her papers at ${LONG_URL}.`,
+    place: renovation,
+    reason: "stale",
+    why: LONG_SENTENCE,
+    tied_to: null,
+    into: null,
+    at: at(15),
+    event: 1,
   });
   const connection = db.connections[0];
   if (connection) {

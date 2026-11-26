@@ -184,7 +184,15 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     /^Picture taken by (\S+) \(room “(.+)”\)$/,
     (m) => msg("journal-media-snapshot", { device: m[1] ?? "", room: m[2] ?? "" }),
   ],
-  [/^Memory recorded$/, () => msg("journal-memory-recorded", { drawn: "no" })],
+  [/^Memory recorded in (\S+)$/, (m) => msg("journal-memory-recorded", { drawn: "no", kept: "no", place: m[1] ?? "" })],
+  [/^Memory moved to (\S+)$/, (m) => msg("journal-memory-moved", { place: m[1] ?? "" })],
+  [/^Memory merged into another$/, () => msg("journal-memory-retired", { reason: "merged", tie: "" })],
+  [/^Memory retired as outdated$/, () => msg("journal-memory-retired", { reason: "stale", tie: "" })],
+  [/^Memory retired: (\S+) ended$/, (m) => msg("journal-memory-retired", { reason: "ended", tie: m[1] ?? "" })],
+  [
+    /^Nightly upkeep of the memories: (\d+) merged, (\d+) retired$/,
+    (m) => msg("journal-memory-upkept", { merged: Number(m[1]), retired: Number(m[2]), failed: 0 }),
+  ],
 ];
 
 /** Why a message went where it went, as the delivery policy says it (`delivery.ftl`). */

@@ -304,6 +304,9 @@ export const api = {
     unwrap(client.PATCH("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } }, body: { text } })),
   forgetMemory: (id: Id) =>
     done(client.DELETE("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } } })),
+  moveMemory: (id: Id, place: string) =>
+    unwrap(client.POST("/api/v1/memories/{memory_id}/move", { params: { path: { memory_id: id } }, body: { place } })),
+  retiredMemories: () => unwrap(client.GET("/api/v1/memories/retired")),
 };
 
 export type Api = typeof api;
