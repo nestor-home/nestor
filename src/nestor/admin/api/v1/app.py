@@ -124,8 +124,10 @@ def openapi_text() -> str:
 def mock_answers(localizer: Localizer) -> dict[str, str]:
     """What the admin's mock server answers as an instance of this version would, by file name: the configuration's
     schemas in each shipped locale (Nestor's own plugins only, whatever else is installed), the journal kind of each
-    event type, and the scopes each role grants, said with Nestor's own catalogue. What `nestor admin mocks` writes."""
-    schema = ConfigSchema(Registry.installed(distribution=BUILT_IN))
+    event type, the scopes each role grants, said with Nestor's own catalogue, and each plugin's page of the
+    documentation. What `nestor admin mocks` writes."""
+    built_in = Registry.installed(distribution=BUILT_IN)
+    schema = ConfigSchema(built_in)
     answers: dict[str, Any] = {
         f"config-schema.{locale}.json": ConfigSchemaOut.of(schema, Phrasebook(localizer, locale)).model_dump(
             mode="json"
@@ -134,4 +136,5 @@ def mock_answers(localizer: Localizer) -> dict[str, str]:
     }
     answers["journal-kinds.json"] = {e.event_type: kind for kind, events in CATEGORIES.items() for e in events}
     answers["role-scopes.json"] = {role: sorted(scopes) for role, scopes in GRANTS.items()}
+    answers["plugin-docs.json"] = {f"{p.family}/{p.id}": p.card.docs for p in built_in.plugins()}
     return {name: json.dumps(answer, indent=2, ensure_ascii=False) + "\n" for name, answer in sorted(answers.items())}

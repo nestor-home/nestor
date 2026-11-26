@@ -31,6 +31,7 @@ class ComponentOut(BaseModel):
     health: Health | None  # None: it cannot tell (a satellite without a spoken channel to hear it)
     health_detail: str | None  # why it is degraded or unavailable, in the reader's language
     details: dict[str, str]  # what else it says about itself: its model, its speech service, its room
+    docs: str | None  # its page of the documentation, by slug and section (`tools#search`); None for a satellite
 
     @classmethod
     def of(cls, plugged: Plugged, nestor: Nestor, words: Phrasebook) -> "ComponentOut":
@@ -52,6 +53,7 @@ class ComponentOut(BaseModel):
             health=component.health() if component else Health.STARTED,
             health_detail=words.text(detail) if detail else None,
             details=dict(component.details()) if component else {},
+            docs=nestor.registry.get(plugged.family, plugged.id).card.docs,
         )
 
     @classmethod
@@ -71,6 +73,7 @@ class ComponentOut(BaseModel):
             health=None if heard is None else Health.UNAVAILABLE if offline else Health.STARTED,
             health_detail=words.text(Message.of("health-satellite-offline", room=satellite.room)) if offline else None,
             details={"room": satellite.room},
+            docs=None,
         )
 
 

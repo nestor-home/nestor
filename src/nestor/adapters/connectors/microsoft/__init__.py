@@ -13,8 +13,20 @@ Configuration (family `connector`, kind `microsoft`), every key optional:
 """
 
 from nestor.adapters.connectors.microsoft.settings import MicrosoftSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["plugin"]
 
-plugin = Plugin(Family.CONNECTOR, "microsoft", MicrosoftSettings, build)
+plugin = Plugin(
+    Family.CONNECTOR,
+    "microsoft",
+    MicrosoftSettings,
+    build,
+    card=Card(
+        summary="People connect their Microsoft 365 account: Outlook mail and calendar, OneDrive, To Do; mail feeds "
+        "the watches.",
+        docs="accounts#microsoft-365",
+        needs=(Need.ACCOUNT, Need.KEY),
+    ),
+)

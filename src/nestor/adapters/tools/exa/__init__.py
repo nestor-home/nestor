@@ -10,8 +10,15 @@ with a real key yet.
 """
 
 from nestor.adapters.tools.exa.settings import ExaSettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
-plugin = Plugin(Family.TOOLS, "exa", ExaSettings, build)
+plugin = Plugin(
+    Family.TOOLS,
+    "exa",
+    ExaSettings,
+    build,
+    card=Card(summary="Web search through Exa, free without a key.", docs="tools#search"),
+)
 
 __all__ = ["plugin"]

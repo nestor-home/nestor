@@ -15,6 +15,7 @@ from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
 from nestor.testing.cognition import ConceptEmbedder
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.system import DOUBLE
 
 HOUSEHOLD = [
     {"dataset": "memory-recall", "version": 1},
@@ -52,6 +53,7 @@ CONCEPTS = Plugin(
     ConceptSettings,
     lambda settings, name, services: ConceptEmbedder({"jambon": "meat", "vegetarienne": "meat"}),
     serves=EmbeddingModel,
+    card=DOUBLE,
 )
 SEARCHING = "models: {sens: {type: embedding, provider: concepts}}\n"
 SEARCHING += "memory: {strategy: search, recent_episodes: 0, embedder: sens}\n"

@@ -20,6 +20,7 @@ from nestor.modules.cognition import (
     Role,
     TextDelta,
 )
+from nestor.modules.system.selfmap import Card
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 SERVED = "fake/word-overlap-1"
@@ -72,4 +73,13 @@ def _build(settings: FakeSettings, name: str, services: Services) -> FakeTriageM
     return FakeTriageModel()
 
 
-plugin = Plugin(Family.MODEL, "watch-triage-fake", FakeSettings, _build, serves=LanguageModel)
+plugin = Plugin(
+    Family.MODEL,
+    "watch-triage-fake",
+    FakeSettings,
+    _build,
+    serves=LanguageModel,
+    card=Card(
+        summary="A deterministic stand-in for a triage model, to run the suite without a network.", docs="plugins"
+    ),
+)

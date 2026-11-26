@@ -23,6 +23,7 @@ from nestor.modules.identity import SpeakerModel, Vector, VoiceprintStore
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.identity import TaggedVoices, VoiceprintStoreContract, speaker_of, tagged
+from nestor.testing.system import DOUBLE
 
 
 class Muted(TaggedVoices):
@@ -43,7 +44,7 @@ def _build(settings: TaggedSettings, name: str, services: Services) -> TaggedVoi
     return Muted(threshold=settings.threshold)
 
 
-TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, serves=SpeakerModel)
+TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, serves=SpeakerModel, card=DOUBLE)
 VARIANT = "models: {voice: {type: speaker, provider: tagged-voices}}\nvoices: {embedder: voice}\n"
 
 

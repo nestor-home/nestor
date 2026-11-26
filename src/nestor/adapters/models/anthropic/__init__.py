@@ -12,8 +12,20 @@ replays its history without it, which the API accepts.
 
 from nestor.adapters.models.anthropic.settings import AnthropicLanguageSettings, build_language
 from nestor.modules.cognition import LanguageModel
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-language = Plugin(Family.MODEL, "anthropic", AnthropicLanguageSettings, build_language, serves=LanguageModel)
+language = Plugin(
+    Family.MODEL,
+    "anthropic",
+    AnthropicLanguageSettings,
+    build_language,
+    serves=LanguageModel,
+    card=Card(
+        summary="Thinks and answers with Claude models through Anthropic's own API.",
+        docs="models#choose-a-provider",
+        needs=(Need.KEY,),
+    ),
+)
 
 __all__ = ["language"]

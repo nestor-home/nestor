@@ -252,7 +252,14 @@ async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_t
     hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
     hermes.name = "hermes"
     check = ToolCall(
-        "c", "start_task", {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "notify": "message"}
+        "c",
+        "start_task",
+        {
+            "executor": "hermes",
+            "title": "Prix des télés",
+            "instruction": "Vérifie le prix des télés",
+            "notify": "message",
+        },
     )
     model = ScriptedModel(
         check,

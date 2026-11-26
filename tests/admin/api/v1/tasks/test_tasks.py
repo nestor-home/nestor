@@ -20,7 +20,9 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 async def handed(admin: Harness, title: str, owner: PersonId = MATHIS) -> Task:
     """A task working remotely, its turn submitted."""
     before = len(admin.remote.runs)
-    task = await admin.nestor.tasks.start_task(title, title=title, origin=TELEGRAM, owner=owner)
+    task = await admin.nestor.tasks.start_task(
+        title, title=title, origin=TELEGRAM, owner=owner, executor="scripted-remote"
+    )
     while len(admin.remote.runs) == before or task.turn.ref is None:
         await asyncio.sleep(0.01)
     return task

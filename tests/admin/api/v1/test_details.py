@@ -53,8 +53,12 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
         member = await admin.account("mathilde", Role.MEMBER, "mathilde")
-        theirs = await nestor.tasks.start_task("Plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE)
-        mine = await nestor.tasks.start_task("Dépôt", title="Dépôt", origin=TELEGRAM, owner=MATHIS)
+        theirs = await nestor.tasks.start_task(
+            "Plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE, executor="scripted-remote"
+        )
+        mine = await nestor.tasks.start_task(
+            "Dépôt", title="Dépôt", origin=TELEGRAM, owner=MATHIS, executor="scripted-remote"
+        )
         await asyncio.sleep(0.01)
         await nestor.tasks.stop(mine.id)
         watch = await nestor.watch_book.create(Watch(title="Le colis", what="le colis", owner=MATHIS))

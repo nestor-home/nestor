@@ -22,8 +22,20 @@ without the turns before, never as `Outcome.lost`.
 
 from nestor.adapters.executors.hermes.executor import HermesExecutor
 from nestor.adapters.executors.hermes.settings import HermesSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["HermesExecutor", "HermesSettings", "build", "plugin"]
 
-plugin = Plugin(Family.EXECUTOR, "hermes", HermesSettings, build)
+plugin = Plugin(
+    Family.EXECUTOR,
+    "hermes",
+    HermesSettings,
+    build,
+    card=Card(
+        summary="Hands long tasks to a Hermes agent server: web research, code and files in its own container, "
+        "reports.",
+        docs="executors#hermes",
+        needs=(Need.SERVER, Need.KEY),
+    ),
+)

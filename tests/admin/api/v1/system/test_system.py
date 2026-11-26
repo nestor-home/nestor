@@ -48,6 +48,7 @@ async def test_the_system_lists_every_plugged_component_and_paired_satellite(tmp
         assert {"model", "executor", "channel", "home", "connector"} <= {f for f, _ in by_name}
         assert by_name[("channel", "telegram")]["health"] == "started"
         assert by_name[("connector", "mailbox")]["version"] is None, "registered by code, not by a package"
+        assert by_name[("channel", "telegram")]["docs"] == "plugins", "its plugin's page of the documentation"
         satellite = by_name[("satellite", "reachy-salon")]
         assert satellite["brand"] == "pollen-robotics" and satellite["version"] == "0.1.0"
         assert satellite["distribution"] == "nestor-reachy" and satellite["adapter"] == "reachy-mini"

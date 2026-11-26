@@ -35,9 +35,11 @@ from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.delegation import Executor
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.identity import SpeakerModel
+from nestor.modules.system.selfmap import SelfMap
 from nestor.runtime.app import build_each, build_models
 from nestor.runtime.config import NestorConfig, environment, validate_config
-from nestor.runtime.plugins import Family, Registry, Services
+from nestor.runtime.plugins import Family, Plugged, Registry, Services
+from nestor.runtime.selfmap import survey
 
 DEFAULTS: dict[str, Any] = {
     "persona": {"name": "Nestor", "character": ""},
@@ -60,6 +62,7 @@ class Variant[K: Knobs]:
     localizer: Localizer | None = None  # what the variant was loaded with
     executors: tuple[Executor, ...] = ()  # its `executors`, built but not started, when the suite uses them
     tools: tuple[Component, ...] = ()  # its `tools` (providers and search engines), likewise
+    made_of: SelfMap | None = None  # the map of what it plugs in and could, when the suite uses its components
     described: Mapping[
         str, Mapping[str, Any]
     ]  # each role's model: its name, type, provider and settings, secrets masked
@@ -91,7 +94,8 @@ def load_variant[K: Knobs](
     merged = DEFAULTS | {k: _over(DEFAULTS.get(k), v) for k, v in fragment.items()}
     config = validate_config(merged, environ if environ is not None else environment(path), origin=str(path))
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
-    built = build_models(config, registry, services)
+    plugged: list[Plugged] = []
+    built = build_models(config, registry, services, plugged)
     answering = [k for k, m in config.models.items() if m.type is ModelType.LANGUAGE]
     wanted = (*suite.models, *(suite.optional_models if answering else ()))
     roles = config.roles(answering) if wanted else {}  # a suite that calls no model needs none answering
@@ -123,9 +127,13 @@ def load_variant[K: Knobs](
         raise BenchError(Message.of("bench-variant-no-speech", path=str(path)))
     executors: tuple[Executor, ...] = ()
     tools: tuple[Component, ...] = ()
+    made_of = None
     if suite.components:
-        executors = tuple(build_each(config.executors, "executors", Family.EXECUTOR, Executor, registry, services))
-        tools = tuple(build_each(config.tools, "tools", Family.TOOLS, Component, registry, services))
+        executors = tuple(
+            build_each(config.executors, "executors", Family.EXECUTOR, Executor, registry, services, plugged)
+        )
+        tools = tuple(build_each(config.tools, "tools", Family.TOOLS, Component, registry, services, plugged))
+        made_of = survey(registry, plugged)
     return Variant(
         name=knobs.name or path.stem,
         source=path,
@@ -140,6 +148,7 @@ def load_variant[K: Knobs](
         localizer=localizer,
         executors=executors,
         tools=tools,
+        made_of=made_of,
     )
 
 

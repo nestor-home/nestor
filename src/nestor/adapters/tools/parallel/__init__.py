@@ -10,8 +10,15 @@ goes as `Authorization: Bearer`, as Parallel documents it; that path has not bee
 """
 
 from nestor.adapters.tools.parallel.settings import ParallelSettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
-plugin = Plugin(Family.TOOLS, "parallel", ParallelSettings, build)
+plugin = Plugin(
+    Family.TOOLS,
+    "parallel",
+    ParallelSettings,
+    build,
+    card=Card(summary="Web search through Parallel, free without a key.", docs="tools#search"),
+)
 
 __all__ = ["plugin"]

@@ -115,6 +115,7 @@ async def run_suite[S](
                 localizer=variant.localizer,
                 executors=variant.executors,
                 tools=variant.tools,
+                made_of=variant.made_of,
             )
             async with gate:
                 log = CaseLog(case=case.id, repetition=repetition, seed=plan.seed)

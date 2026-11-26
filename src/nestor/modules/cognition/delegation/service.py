@@ -223,10 +223,6 @@ class TaskManager(Component):
         self._writer: asyncio.Task[None] | None = None
         self._sweeper: asyncio.Task[None] | None = None
 
-    @property
-    def default_executor(self) -> Executor | None:
-        return next(iter(self.executors.values()), None)
-
     async def start(self) -> None:
         """Rebuild the tasks from the journal and pick up the turns that were working."""
         self._writer = asyncio.create_task(self._write(), name="task-manager writer")
@@ -284,7 +280,7 @@ class TaskManager(Component):
         title: str,
         origin: Address,
         owner: PersonId | None = None,
-        executor: str | None = None,
+        executor: str,
         exchange: Exchange | None = None,
         thread: str | None = None,
         given: Sequence[FileRef] = (),
@@ -296,9 +292,10 @@ class TaskManager(Component):
         comes back with is always told."""
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
-        chosen = self.executors.get(executor) if executor else self.default_executor
+        chosen = self.executors.get(executor)
         if chosen is None:
-            raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
+            known = ", ".join(self.executors) or "none is plugged in"
+            raise ContractError(f"no executor named {executor!r} (executors: {known})")
         task_id = new_id()[:8]
         named = _named(given, ())
         assignment = await self._assignment(chosen, task_id, instruction, named)

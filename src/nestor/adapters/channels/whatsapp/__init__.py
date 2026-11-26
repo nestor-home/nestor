@@ -12,8 +12,19 @@ once Meta gives up retrying.
 """
 
 from nestor.adapters.channels.whatsapp.settings import WhatsAppSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "whatsapp", WhatsAppSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "whatsapp",
+    WhatsAppSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on WhatsApp, through a WhatsApp Business number on Meta's Cloud API.",
+        docs="channels#choose-channels",
+        needs=(Need.ACCOUNT, Need.KEY, Need.PUBLIC_ADDRESS),
+    ),
+)
 
 __all__ = ["plugin"]

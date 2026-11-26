@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Self, cast
 
 from nestor import __version__
+from nestor.adapters.docs import SiteDocumentation
 from nestor.adapters.documents import FileReader
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
@@ -83,10 +84,12 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
+from nestor.modules.system.selfmap import AboutNestor
 from nestor.modules.usage import Consumer, Ledger, Meter, PriceBook, PriceCatalogue, Rates, metered
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
+from nestor.runtime.selfmap import survey
 
 log = logging.getLogger("nestor")
 
@@ -331,6 +334,9 @@ class Nestor:
         schedule_tools = ScheduleTools(self.schedule_book)
         self.connector_tools = connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.confirmations = Confirmations(self.journal, self.household, self.message_book)
+        # what it is made of, read online where its documentation is
+        self.documentation = SiteDocumentation()
+        about = AboutNestor(survey(registry, self.plugged), self.documentation)
         self.toolbox = toolbox = Toolbox(
             self.journal,
             providers=[
@@ -341,6 +347,7 @@ class Nestor:
                 message_tools,
                 schedule_tools,
                 self.confirmations,
+                about,
                 *offered,
                 *([self.home.tools] if self.home else []),
                 *connector_tools,
@@ -375,6 +382,7 @@ class Nestor:
                 message_tools,
                 schedule_tools,
                 self.confirmations,
+                about,
                 RunningNotes(
                     lambda: dict.fromkeys(
                         [*(p.component for p in self.plugged if isinstance(p.component, Component)), *offered]
@@ -521,6 +529,7 @@ class Nestor:
             *([self.executor_keys] if self.executor_keys else []),  # after the vault
             *self.tools,
             *home,  # its presence and its tools
+            self.documentation,  # read by about_nestor
             self.toolbox,  # after its tools: its calls in the background stop first
             self.tasks,
             self.memory_ties,  # after the tasks it reads
