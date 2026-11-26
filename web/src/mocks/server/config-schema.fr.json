@@ -20,6 +20,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Nom",
             "help": null
           }
@@ -41,6 +42,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Personnalité",
             "help": "Qui est l'assistant et comment il parle."
           }
@@ -63,6 +65,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Langue",
             "help": "Ex. fr-FR. Langue des textes fixes et, par défaut, de l'admin."
           }
@@ -85,6 +88,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Langue des réponses",
             "help": "Son nom dans le prompt, ex. français."
           }
@@ -107,6 +111,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Fuseau horaire",
             "help": null
           }
@@ -139,6 +144,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Identifiant",
             "help": null
           }
@@ -160,6 +166,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Nom",
             "help": null
           }
@@ -185,6 +192,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Comptes",
             "help": "Comment les canaux reconnaissent cette personne, ex. telegram:123456789."
           }
@@ -214,6 +222,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Où lui écrire",
             "help": null
           }
@@ -241,6 +250,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Peut envoyer un message à",
             "help": "Via l'assistant, à d'autres que soi : identifiants de personnes, ou * pour tout le monde. On peut toujours s'écrire à soi-même."
           }
@@ -282,6 +292,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle à l'oral",
             "help": "Pour les réponses parlées. Par défaut, le modèle à l'écrit."
           }
@@ -311,6 +322,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle à l'écrit",
             "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral."
           }
@@ -340,6 +352,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle des titres",
             "help": "Titre chaque conversation à partir de son premier échange, pour les listes. Un petit modèle suffit ; par défaut, le modèle à l'écrit."
           }
@@ -369,6 +382,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Transcription des vocaux",
             "help": "Écoute les messages vocaux envoyés. Par défaut, le seul modèle de transcription."
           }
@@ -398,6 +412,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Voix des vocaux",
             "help": "Répond à un message vocal par un autre. Par défaut, le seul modèle de synthèse vocale."
           }
@@ -427,6 +442,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Images",
             "help": "Dessine les images demandées. Par défaut, le seul modèle d'images."
           }
@@ -451,6 +467,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Attente des outils à l'oral (s)",
             "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
           }
@@ -475,6 +492,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Attente des outils à l'écrit (s)",
             "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
           }
@@ -499,6 +517,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Taille d'un résultat d'outil (caractères)",
             "help": "Un résultat plus long est mis de côté : le modèle en voit le début et la fin, et lit la suite au besoin."
           }
@@ -536,6 +555,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle de tri",
             "help": "Lit chaque mail, article de flux ou page reçu face aux alertes qui l'attendent. Par défaut, le modèle à l'écrit."
           }
@@ -576,6 +596,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Choix des souvenirs",
             "help": "both : les plus récents, puis ceux que la conversation évoque ; recent : les récents seuls ; search : ceux que la conversation évoque seuls."
           }
@@ -600,6 +621,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Souvenirs récents par tour",
             "help": null
           }
@@ -624,6 +646,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Souvenirs trouvés par tour",
             "help": null
           }
@@ -648,6 +671,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Conversations récentes par tour",
             "help": "Celles de la personne qui parle, résumées."
           }
@@ -672,6 +696,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Anciennes conversations trouvées par tour",
             "help": null
           }
@@ -701,6 +726,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle de résumé",
             "help": "Résume chaque conversation terminée. Par défaut, le modèle à l'écrit."
           }
@@ -730,6 +756,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Modèle d'embedding",
             "help": "Cherche les souvenirs par le sens. Sans lui, par mots-clés seulement."
           }
@@ -753,6 +780,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Timeout de l'embedding (secondes)",
             "help": "Au-delà, la recherche se fait par mots-clés seulement."
           }
@@ -783,6 +811,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Rangement des souvenirs la nuit",
             "help": "Heure où les doublons sont fusionnés et les souvenirs périmés retirés, chaque changement gardé dans le journal. Vide : jamais."
           }
@@ -819,6 +848,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Heures calmes",
             "help": "Ex. 22:30-07:30. Rien à voix haute, sauf urgence."
           }
@@ -848,6 +878,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Pièce principale",
             "help": "Où parler quand on sait seulement que quelqu'un est à la maison."
           }
@@ -871,6 +902,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Relance écrite après (secondes)",
             "help": null
           }
@@ -901,6 +933,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Hôte",
             "help": null
           }
@@ -925,6 +958,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Port",
             "help": null
           }
@@ -954,6 +988,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "URL publique",
             "help": "L'URL de l'admin, ex. https://nestor.example.org."
           }
@@ -976,6 +1011,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Relais OAuth",
             "help": null
           }
@@ -1006,6 +1042,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Chercher les nouvelles versions",
             "help": "Une fois par jour, sans rien installer."
           }
@@ -1028,6 +1065,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Flux des versions",
             "help": null
           }
@@ -1058,6 +1096,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Liste publique des prix",
             "help": "Donne leur prix aux modèles hébergés d'après la liste publique de LiteLLM, téléchargée une fois par jour, quand un fournisseur ne dit pas ce qu'il a facturé."
           }
@@ -1080,6 +1119,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Adresse de la liste des prix",
             "help": null
           }
@@ -1110,6 +1150,7 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
+            "variants": null,
             "title": "Dossier des données",
             "help": "Base de données, coffre et historique de la configuration."
           }
@@ -1184,6 +1225,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -1214,6 +1256,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -1244,6 +1287,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -1274,6 +1318,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -1304,6 +1349,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -1334,6 +1380,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -1364,6 +1411,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -1394,6 +1442,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -1423,6 +1472,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1444,6 +1494,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1467,6 +1518,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -1489,6 +1541,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -1512,6 +1565,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Réponse la plus longue (tokens)",
                 "help": null
               }
@@ -1540,6 +1594,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Effort de réflexion",
                 "help": "Combien Claude réfléchit avant de répondre : low est plus rapide et moins cher. Sinon, le défaut du modèle."
               }
@@ -1562,6 +1617,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Champs JSON supplémentaires",
                 "help": "Ajoutés à chaque requête."
               }
@@ -1584,6 +1640,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -1607,6 +1664,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -1630,6 +1688,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -1650,6 +1709,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
@@ -1670,6 +1730,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -1704,6 +1765,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1725,6 +1787,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1748,6 +1811,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -1770,6 +1834,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "ID de la voix",
                 "help": "Une voix de votre bibliothèque ElevenLabs."
               }
@@ -1792,6 +1857,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": "Ex. eleven_v4_turbo."
               }
@@ -1812,6 +1878,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -1856,6 +1923,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -1886,6 +1954,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -1916,6 +1985,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -1946,6 +2016,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -1976,6 +2047,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -2006,6 +2078,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -2036,6 +2109,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -2066,6 +2140,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -2096,6 +2171,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -2117,6 +2193,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -2140,6 +2217,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -2162,6 +2240,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": "Ex. scribe_v2_realtime."
               }
@@ -2184,6 +2263,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle des enregistrements",
                 "help": "Pour les messages vocaux, ex. scribe_v2. Les modèles temps réel ne lisent pas de fichiers."
               }
@@ -2207,6 +2287,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Langue",
                 "help": "La langue parlée, ex. fr."
               }
@@ -2227,6 +2308,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -2270,6 +2352,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -2300,6 +2383,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -2330,6 +2414,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -2360,6 +2445,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -2390,6 +2476,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -2420,6 +2507,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -2450,6 +2538,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -2480,6 +2569,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -2511,6 +2601,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -2532,6 +2623,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -2555,6 +2647,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -2577,6 +2670,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -2599,6 +2693,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Champs JSON supplémentaires",
                 "help": "Ajoutés à chaque requête, par exemple generationConfig."
               }
@@ -2621,6 +2716,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -2644,6 +2740,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -2667,6 +2764,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -2687,6 +2785,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
@@ -2707,6 +2806,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -2751,6 +2851,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -2781,6 +2882,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -2811,6 +2913,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -2841,6 +2944,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -2871,6 +2975,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -2901,6 +3006,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -2931,6 +3037,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -2961,6 +3068,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -2992,6 +3100,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -3013,6 +3122,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -3042,6 +3152,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -3073,6 +3184,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -3094,6 +3206,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -3116,6 +3229,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Dimensions",
                 "help": "Taille des vecteurs renvoyés par le modèle."
               }
@@ -3138,6 +3252,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Demander ces dimensions",
                 "help": "Pour les modèles qui raccourcissent leurs vecteurs (Matryoshka)."
               }
@@ -3160,6 +3275,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Préfixe des requêtes",
                 "help": "Ex. query: pour les modèles qui l'attendent."
               }
@@ -3182,6 +3298,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Préfixe des documents",
                 "help": "Ex. passage: pour les modèles qui l'attendent."
               }
@@ -3205,6 +3322,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Textes par requête",
                 "help": null
               }
@@ -3227,6 +3345,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Champs JSON supplémentaires",
                 "help": null
               }
@@ -3250,6 +3369,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -3273,6 +3393,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -3293,6 +3414,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -3338,6 +3460,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -3368,6 +3491,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -3398,6 +3522,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -3428,6 +3553,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -3458,6 +3584,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -3488,6 +3615,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -3518,6 +3646,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -3548,6 +3677,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -3598,6 +3728,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -3628,6 +3759,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -3658,6 +3790,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -3688,6 +3821,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -3718,6 +3852,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -3748,6 +3883,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -3778,6 +3914,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -3808,6 +3945,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -3837,6 +3975,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -3858,6 +3997,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -3887,6 +4027,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -3918,6 +4059,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -3939,6 +4081,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -3960,6 +4103,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Point d'accès",
                 "help": "images : /images/generations (OpenAI, Gemini). chat : Chat Completions (OpenRouter)."
               }
@@ -3989,6 +4133,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Taille",
                 "help": "Comme le modèle la prend, par exemple 1024x1024. Sinon, celle du modèle."
               }
@@ -4011,6 +4156,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Champs JSON supplémentaires",
                 "help": null
               }
@@ -4034,6 +4180,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -4054,6 +4201,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -4089,6 +4237,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -4110,6 +4259,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -4139,6 +4289,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -4170,6 +4321,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -4191,6 +4343,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -4213,6 +4366,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Champs JSON supplémentaires",
                 "help": "Ajoutés à chaque requête, ex. le routage d'OpenRouter."
               }
@@ -4236,6 +4390,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -4259,6 +4414,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -4288,6 +4444,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prompt caching",
                 "help": "Activé par défaut pour OpenRouter et Anthropic."
               }
@@ -4310,6 +4467,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Voit les images",
                 "help": "À activer pour un modèle qui lit les images : il voit alors les photos envoyées. Sinon, il dit qu'il ne les voit pas."
               }
@@ -4330,6 +4488,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
@@ -4350,6 +4509,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -4394,6 +4554,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -4424,6 +4585,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -4454,6 +4616,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -4484,6 +4647,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -4514,6 +4678,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -4544,6 +4709,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -4574,6 +4740,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -4604,6 +4771,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -4634,6 +4802,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -4655,6 +4824,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -4684,6 +4854,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -4715,6 +4886,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -4736,6 +4908,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -4758,6 +4931,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Voix",
                 "help": "Comme le serveur la nomme : alloy, nova (OpenAI), ff_siwis (Kokoro, français)."
               }
@@ -4781,6 +4955,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -4801,6 +4976,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -4846,6 +5022,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -4876,6 +5053,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -4906,6 +5084,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -4936,6 +5115,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -4966,6 +5146,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -4996,6 +5177,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -5026,6 +5208,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -5056,6 +5239,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -5086,6 +5270,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -5107,6 +5292,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -5136,6 +5322,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -5167,6 +5354,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -5188,6 +5376,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -5218,6 +5407,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Langue",
                 "help": null
               }
@@ -5241,6 +5431,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -5261,6 +5452,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -5305,6 +5497,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -5335,6 +5528,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -5365,6 +5559,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -5395,6 +5590,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -5425,6 +5621,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -5455,6 +5652,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -5485,6 +5683,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -5515,6 +5714,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -5546,6 +5746,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -5567,6 +5768,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -5597,6 +5799,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle de voix",
                 "help": "titanet-small, 3dspeaker-campplus-zh-en ou 3dspeaker-eres2net (téléchargé une fois), ou le chemin d'un fichier .onnx."
               }
@@ -5621,6 +5824,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Threads CPU",
                 "help": "Un seul suffit."
               }
@@ -5652,6 +5856,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Seuil de reconnaissance",
                 "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
               }
@@ -5672,6 +5877,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -5715,6 +5921,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -5745,6 +5952,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -5775,6 +5983,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -5805,6 +6014,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -5835,6 +6045,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -5865,6 +6076,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -5895,6 +6107,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -5925,6 +6138,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -5956,6 +6170,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -5977,6 +6192,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -6004,6 +6220,7 @@
                 },
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -6028,6 +6245,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Threads CPU",
                 "help": null
               }
@@ -6048,6 +6266,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Prix",
                 "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
@@ -6086,6 +6305,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée, par million de tokens",
                     "help": null
                   }
@@ -6116,6 +6336,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Entrée en cache, par million de tokens",
                     "help": null
                   }
@@ -6146,6 +6367,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Écriture en cache, par million de tokens",
                     "help": null
                   }
@@ -6176,6 +6398,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Sortie, par million de tokens",
                     "help": null
                   }
@@ -6206,6 +6429,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par million de caractères prononcés",
                     "help": null
                   }
@@ -6236,6 +6460,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par minute entendue",
                     "help": null
                   }
@@ -6266,6 +6491,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par image",
                     "help": null
                   }
@@ -6296,6 +6522,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Par appel",
                     "help": null
                   }
@@ -6354,6 +6581,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -6375,6 +6603,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -6405,6 +6634,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -6434,6 +6664,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -6457,6 +6688,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -6480,6 +6712,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Le jeton du bot, dans le Developer Portal. Le bot a besoin de l'intent Message Content."
               }
@@ -6523,6 +6756,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -6544,6 +6778,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -6574,6 +6809,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -6603,6 +6839,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -6626,6 +6863,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -6648,6 +6886,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Adresse de Nestor",
                 "help": "Là où les membres écrivent ; les réponses en partent."
               }
@@ -6670,6 +6909,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Identifiant",
                 "help": null
               }
@@ -6693,6 +6933,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Mot de passe d'application",
                 "help": null
               }
@@ -6714,6 +6955,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Serveur IMAP",
                 "help": null
               }
@@ -6738,6 +6980,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port IMAP",
                 "help": null
               }
@@ -6759,6 +7002,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Serveur SMTP",
                 "help": null
               }
@@ -6783,6 +7027,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port SMTP",
                 "help": null
               }
@@ -6804,6 +7049,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Sécurité SMTP",
                 "help": "tls sur le port 465, starttls sur le 587 ; none seulement pour un serveur sur cette machine."
               }
@@ -6826,6 +7072,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Dossier",
                 "help": null
               }
@@ -6848,6 +7095,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Seulement le courrier authentifié",
                 "help": "Ne répond qu'au courrier que votre serveur a authentifié (DMARC, ou DKIM et SPF) : n'importe qui peut écrire un en-tête From."
               }
@@ -6884,6 +7132,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -6905,6 +7154,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -6935,6 +7185,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -6964,6 +7215,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -6987,6 +7239,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -7008,6 +7261,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Serveur d'accueil",
                 "help": "Le serveur du compte du bot, par exemple https://matrix.org."
               }
@@ -7031,6 +7285,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Le jeton d'accès du compte du bot. Les salons chiffrés ne sont pas lus."
               }
@@ -7055,6 +7310,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout du long polling (secondes)",
                 "help": null
               }
@@ -7088,6 +7344,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -7109,6 +7366,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -7139,6 +7397,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -7161,6 +7420,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": "ntfy.sh, ou votre propre serveur."
               }
@@ -7192,6 +7452,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Un jeton d'accès, pour un serveur à accès contrôlé."
               }
@@ -7223,6 +7484,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -7244,6 +7506,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -7274,6 +7537,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -7301,6 +7565,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clés d'API",
                 "help": "Par nom de compte : un client qui présente la clé parle en tant que openai-api:<nom>. Gardées comme secrets."
               }
@@ -7323,6 +7588,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Hôte",
                 "help": "0.0.0.0 pour des clients sur d'autres machines."
               }
@@ -7347,6 +7613,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port",
                 "help": null
               }
@@ -7382,6 +7649,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Modèle de transcription",
                     "help": "Entend ce que disent les personnes : un modèle de transcription de Modèles."
                   }
@@ -7403,6 +7671,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Modèle de synthèse vocale",
                     "help": "Donne sa voix à l'assistant : un modèle de synthèse vocale de Modèles."
                   }
@@ -7425,6 +7694,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Style d'écriture",
                     "help": null
                   }
@@ -7454,6 +7724,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Phrase dite si la transcription échoue",
                     "help": null
                   }
@@ -7484,6 +7755,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Dossier des clips de secours",
                     "help": "stt.wav et tts.wav, joués si la transcription ou la synthèse tombe en panne."
                   }
@@ -7507,6 +7779,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Silence avant de prendre la parole (secondes)",
                     "help": null
                   }
@@ -7539,6 +7812,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -7560,6 +7834,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -7590,6 +7865,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": "Passé ce silence, l'assistant ne relit plus les échanges précédents. Par défaut, 5 min à l'oral, 4 h à l'écrit."
               }
@@ -7612,6 +7888,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Hôte",
                 "help": null
               }
@@ -7636,6 +7913,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port",
                 "help": null
               }
@@ -7666,6 +7944,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL publique",
                 "help": "Celle que les satellites utilisent, ex. http://nestor.local:8471."
               }
@@ -7694,6 +7973,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Voix",
                 "help": "Sans elle, les satellites fonctionnent par écrit seulement. Nécessite l'extra voice."
               }
@@ -7717,6 +7997,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout d'envoi (secondes)",
                 "help": null
               }
@@ -7748,6 +8029,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -7769,6 +8051,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -7799,6 +8082,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -7828,6 +8112,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -7851,6 +8136,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -7872,6 +8158,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": "signal-cli-rest-api en mode normal ou native, par exemple http://signal:8080."
               }
@@ -7894,6 +8181,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Numéro",
                 "help": "Le numéro du bot tel qu'enregistré dans signal-cli, par exemple +33612345678."
               }
@@ -7918,6 +8206,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente des messages (secondes)",
                 "help": "Combien de temps chaque appel à signal-cli-rest-api attend que des messages arrivent."
               }
@@ -7951,6 +8240,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -7972,6 +8262,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8002,6 +8293,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -8031,6 +8323,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -8054,6 +8347,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -8077,6 +8371,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Jeton d'application",
                 "help": "xapp-…, avec connections:write, pour le Socket Mode."
               }
@@ -8100,6 +8395,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Jeton du bot",
                 "help": "xoxb-…"
               }
@@ -8133,6 +8429,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -8154,6 +8451,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8184,6 +8482,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": "Passé ce silence, l'assistant ne relit plus les messages précédents. 4 h par défaut."
               }
@@ -8213,6 +8512,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -8236,6 +8536,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -8259,6 +8560,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": null
               }
@@ -8281,6 +8583,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL de l'API",
                 "help": null
               }
@@ -8305,6 +8608,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout du long polling (secondes)",
                 "help": null
               }
@@ -8328,6 +8632,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout des requêtes (secondes)",
                 "help": null
               }
@@ -8360,6 +8665,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -8381,6 +8687,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8411,6 +8718,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -8442,6 +8750,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -8463,6 +8772,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8493,6 +8803,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -8514,6 +8825,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": "Où chaque message est envoyé en JSON."
               }
@@ -8545,6 +8857,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Secret de signature",
                 "help": "Signe chaque corps (X-Nestor-Signature: sha256=…)."
               }
@@ -8577,6 +8890,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -8598,6 +8912,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8628,6 +8943,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": null
               }
@@ -8657,6 +8973,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -8680,6 +8997,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Première attente avant de se reconnecter (secondes)",
                 "help": null
               }
@@ -8702,6 +9020,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Identifiant du numéro",
                 "help": "Dans le tableau de bord de l'app Meta, sous WhatsApp, configuration de l'API (pas le numéro lui-même)."
               }
@@ -8725,6 +9044,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Un jeton d'accès permanent d'un utilisateur système."
               }
@@ -8748,6 +9068,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Jeton de vérification",
                 "help": "Choisi par vous, donné à Meta à la configuration du webhook."
               }
@@ -8771,6 +9092,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Secret de l'app",
                 "help": "Vérifie que chaque message vient bien de Meta."
               }
@@ -8793,6 +9115,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Hôte",
                 "help": "Votre reverse proxy transmet ici https://<votre hôte>/whatsapp."
               }
@@ -8817,6 +9140,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port",
                 "help": null
               }
@@ -8877,6 +9201,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -8898,6 +9223,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -8920,6 +9246,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Agit avec de vrais pouvoirs",
                 "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
               }
@@ -8950,6 +9277,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Archiver une tâche finie après (jours)",
                 "help": "Vide : ses tâches ne sont jamais archivées."
               }
@@ -8975,6 +9303,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Commande",
                 "help": "La commande claude."
               }
@@ -8997,6 +9326,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Dossier de travail",
                 "help": "Les fichiers ne sont rendus que depuis ce dossier."
               }
@@ -9018,6 +9348,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Ce qu'il sait faire",
                 "help": "L'assistant s'en sert pour décider quoi lui confier."
               }
@@ -9040,6 +9371,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Consignes",
                 "help": null
               }
@@ -9069,6 +9401,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -9090,6 +9423,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Mode de permission",
                 "help": "Personne ne répond à une demande : dontAsk n'exécute que les outils autorisés."
               }
@@ -9114,6 +9448,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Outils autorisés",
                 "help": "Par exemple Bash(git *). Par défaut son dossier et le web, sans shell."
               }
@@ -9138,6 +9473,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Outils refusés",
                 "help": null
               }
@@ -9168,6 +9504,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Budget par tâche (USD)",
                 "help": null
               }
@@ -9199,6 +9536,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": "Sans elle, le compte avec lequel Claude Code est connecté."
               }
@@ -9222,6 +9560,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout d'arrêt (secondes)",
                 "help": null
               }
@@ -9245,6 +9584,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Plus gros fichier rendu (octets)",
                 "help": null
               }
@@ -9289,6 +9629,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -9310,6 +9651,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -9332,6 +9674,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Agit avec de vrais pouvoirs",
                 "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
               }
@@ -9362,6 +9705,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Archiver une tâche finie après (jours)",
                 "help": "Vide : ses tâches ne sont jamais archivées."
               }
@@ -9387,6 +9731,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Commande",
                 "help": "codex app-server, ou un relais vers un serveur Codex : ssh codex@hôte codex app-server proxy."
               }
@@ -9408,6 +9753,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Dossier de travail",
                 "help": "Sur la machine où tourne Codex. Les fichiers ne sont rendus que depuis ce dossier."
               }
@@ -9429,6 +9775,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Ce qu'il sait faire",
                 "help": "L'assistant s'en sert pour décider quoi lui confier."
               }
@@ -9451,6 +9798,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Consignes",
                 "help": null
               }
@@ -9480,6 +9828,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -9501,6 +9850,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Bac à sable",
                 "help": "Ce que Codex peut modifier. Il n'attend jamais d'approbation."
               }
@@ -9523,6 +9873,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Réglages de Codex",
                 "help": "Appliqués à chaque tâche, comme dans le config.toml de Codex : serveurs MCP, accès réseau."
               }
@@ -9546,6 +9897,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -9569,6 +9921,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout d'arrêt (secondes)",
                 "help": null
               }
@@ -9592,6 +9945,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Plus gros fichier rendu (octets)",
                 "help": null
               }
@@ -9625,6 +9979,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -9646,6 +10001,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -9668,6 +10024,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Agit avec de vrais pouvoirs",
                 "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
               }
@@ -9698,6 +10055,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Archiver une tâche finie après (jours)",
                 "help": "Vide : ses tâches ne sont jamais archivées."
               }
@@ -9719,6 +10077,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -9742,6 +10101,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -9763,6 +10123,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -9784,6 +10145,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Ce qu'il sait faire",
                 "help": "L'assistant s'en sert pour décider quoi lui confier."
               }
@@ -9806,6 +10168,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Consignes",
                 "help": null
               }
@@ -9829,6 +10192,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -9852,6 +10216,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout d'arrêt (secondes)",
                 "help": null
               }
@@ -9874,6 +10239,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Son profil a les outils de Nestor",
                 "help": "Le serveur MCP de Nestor, déclaré sous le nom nestor dans le profil Hermes avec la clé de cet exécutant (Système, Exécutants)."
               }
@@ -9921,6 +10287,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -9942,6 +10309,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -9965,6 +10333,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -9997,6 +10366,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10018,6 +10388,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10049,6 +10420,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": "Facultative : sans clé, l’offre gratuite de Exa, parfois lente ou limitée."
               }
@@ -10071,6 +10443,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": null
               }
@@ -10102,6 +10475,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10123,6 +10497,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10154,6 +10529,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": "Facultative : sans clé, l’offre gratuite de Firecrawl, parfois lente ou limitée."
               }
@@ -10176,6 +10552,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": null
               }
@@ -10207,6 +10584,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10228,6 +10606,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10259,6 +10638,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": "Facultative : sans clé, l’offre gratuite de Keenable, parfois lente ou limitée."
               }
@@ -10281,6 +10661,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": null
               }
@@ -10347,6 +10728,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Outil",
                     "help": "Nom sur le serveur, ex. intent__HassTurnOff."
                   }
@@ -10374,6 +10756,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Valeurs sensibles",
                     "help": "Par argument, ex. device_class : garage, gate ; domain : lock."
                   }
@@ -10405,6 +10788,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10426,6 +10810,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10447,6 +10832,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": null
               }
@@ -10468,6 +10854,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Transport",
                 "help": null
               }
@@ -10499,6 +10886,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Envoyé en Authorization: Bearer."
               }
@@ -10525,6 +10913,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "En-têtes HTTP",
                 "help": "Valeurs stockées comme secrets."
               }
@@ -10548,6 +10937,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -10580,6 +10970,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Outils proposés",
                 "help": "Noms des outils du serveur. Vide : tous."
               }
@@ -10604,6 +10995,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Outils exclus",
                 "help": null
               }
@@ -10628,6 +11020,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Risques des outils",
                 "help": "Par nom d'outil ; remplace ce que le serveur déclare."
               }
@@ -10652,6 +11045,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Appels à confirmer",
                 "help": "Selon ce sur quoi ils agissent, ex. serrures, alarme, garage."
               }
@@ -10675,6 +11069,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente avant reconnexion (secondes)",
                 "help": null
               }
@@ -10696,6 +11091,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Négociation du protocole",
                 "help": "legacy saute la détection de la version 2026-07-28 du protocole."
               }
@@ -10728,6 +11124,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10749,6 +11146,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10778,6 +11176,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Ville du foyer",
                 "help": "Pour la météo quand aucun lieu n'est demandé, par exemple Lyon."
               }
@@ -10809,6 +11208,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10830,6 +11230,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10859,6 +11260,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Adresse du foyer",
                 "help": "Le départ des trajets quand aucun départ n'est demandé."
               }
@@ -10881,6 +11283,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Serveur de recherche de lieux (Nominatim)",
                 "help": "Le serveur public d'OpenStreetMap par défaut."
               }
@@ -10903,6 +11306,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Serveur d'itinéraires (OSRM)",
                 "help": "Sert /routed-car, /routed-bike et /routed-foot."
               }
@@ -10934,6 +11338,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -10955,6 +11360,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -10986,6 +11392,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": "Facultative : sans clé, l’offre gratuite de Parallel, parfois lente ou limitée."
               }
@@ -11008,6 +11415,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": null
               }
@@ -11039,6 +11447,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11060,6 +11469,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11081,6 +11491,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": "L'instance, par exemple http://searxng:8080. Ses réglages doivent autoriser le format JSON."
               }
@@ -11112,6 +11523,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Seulement pour une instance derrière un proxy qui en demande un."
               }
@@ -11144,6 +11556,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11165,6 +11578,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11188,6 +11602,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -11220,6 +11635,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11241,6 +11657,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11264,6 +11681,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -11287,6 +11705,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Taille maximale d'une page lue (octets)",
                 "help": null
               }
@@ -11333,6 +11752,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Nom",
                     "help": null
                   }
@@ -11355,6 +11775,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "URL",
                     "help": null
                   }
@@ -11387,6 +11808,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11408,6 +11830,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11431,6 +11854,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -11454,6 +11878,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Plus gros flux lu (octets)",
                 "help": null
               }
@@ -11479,6 +11904,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Flux",
                 "help": "Chacun avec le nom qu'on lui donne, ex. LWN."
               }
@@ -11502,6 +11928,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Vérifier toutes les (secondes)",
                 "help": null
               }
@@ -11537,6 +11964,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Nom",
                     "help": null
                   }
@@ -11559,6 +11987,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "URL",
                     "help": null
                   }
@@ -11591,6 +12020,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11612,6 +12042,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11635,6 +12066,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -11658,6 +12090,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Plus grosse page lue (octets)",
                 "help": null
               }
@@ -11683,6 +12116,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Pages",
                 "help": "Chacune avec le nom qu'on lui donne, ex. la lampe Ikea. Adresses publiques seulement."
               }
@@ -11706,6 +12140,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Lire toutes les (secondes)",
                 "help": null
               }
@@ -11741,6 +12176,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Nom",
                     "help": "Son adresse : /hooks/<nom>."
                   }
@@ -11763,6 +12199,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Type",
                     "help": "Ce que sont ses envois, pour les alertes, ex. lave-vaisselle. Une alerte dessus sonne à chaque envoi."
                   }
@@ -11786,6 +12223,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Secret",
                     "help": null
                   }
@@ -11819,6 +12257,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -11840,6 +12279,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -11865,6 +12305,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Webhooks",
                 "help": "Chacun reçoit sur /hooks/<nom>, signé avec son secret (X-Hub-Signature-256) ou le portant (Authorization: Bearer)."
               }
@@ -11887,6 +12328,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Hôte",
                 "help": "Votre reverse proxy renvoie https://<votre hôte>/hooks/ ici."
               }
@@ -11911,6 +12353,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Port",
                 "help": null
               }
@@ -11934,6 +12377,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Plus gros envoi (octets)",
                 "help": null
               }
@@ -11960,6 +12404,390 @@
       "kinds": {
         "home-assistant": {
           "$defs": {
+            "McpSettings": {
+              "additionalProperties": false,
+              "properties": {
+                "url": {
+                  "title": "Url",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "url",
+                    "title_id": "config-home-home-assistant-mcpsettings-url",
+                    "help_id": "config-home-home-assistant-mcpsettings-url-help",
+                    "fallback_title_id": "config-field-url",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "URL",
+                    "help": "L'adresse du serveur, ex. https://mcp.example/mcp."
+                  }
+                },
+                "transport": {
+                  "$ref": "#/$defs/McpTransport",
+                  "default": "streamable-http",
+                  "x-nestor": {
+                    "field": "transport",
+                    "title_id": "config-home-home-assistant-mcpsettings-transport",
+                    "help_id": "config-home-home-assistant-mcpsettings-transport-help",
+                    "fallback_title_id": "config-field-transport",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Transport",
+                    "help": null
+                  }
+                },
+                "token": {
+                  "anyOf": [
+                    {
+                      "format": "password",
+                      "type": "string",
+                      "writeOnly": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Token",
+                  "x-nestor": {
+                    "field": "token",
+                    "title_id": "config-home-home-assistant-mcpsettings-token",
+                    "help_id": "config-home-home-assistant-mcpsettings-token-help",
+                    "fallback_title_id": "config-field-token",
+                    "secret": true,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Token",
+                    "help": "Envoyé en Authorization: Bearer."
+                  }
+                },
+                "headers": {
+                  "additionalProperties": {
+                    "format": "password",
+                    "type": "string",
+                    "writeOnly": true
+                  },
+                  "title": "Headers",
+                  "type": "object",
+                  "x-nestor": {
+                    "field": "headers",
+                    "title_id": "config-home-home-assistant-mcpsettings-headers",
+                    "help_id": "config-home-home-assistant-mcpsettings-headers-help",
+                    "fallback_title_id": "config-field-headers",
+                    "secret": false,
+                    "secret_values": true,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "En-têtes HTTP",
+                    "help": "Valeurs stockées comme secrets."
+                  }
+                },
+                "timeout_s": {
+                  "default": 10.0,
+                  "exclusiveMinimum": 0,
+                  "title": "Timeout S",
+                  "type": "number",
+                  "x-nestor": {
+                    "field": "timeout_s",
+                    "title_id": "config-home-home-assistant-mcpsettings-timeout_s",
+                    "help_id": "config-home-home-assistant-mcpsettings-timeout_s-help",
+                    "fallback_title_id": "config-field-timeout_s",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Timeout (secondes)",
+                    "help": null
+                  }
+                },
+                "include": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Include",
+                  "x-nestor": {
+                    "field": "include",
+                    "title_id": "config-home-home-assistant-mcpsettings-include",
+                    "help_id": "config-home-home-assistant-mcpsettings-include-help",
+                    "fallback_title_id": "config-field-include",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Outils proposés",
+                    "help": "Noms des outils du serveur. Vide : tous."
+                  }
+                },
+                "exclude": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Exclude",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "exclude",
+                    "title_id": "config-home-home-assistant-mcpsettings-exclude",
+                    "help_id": "config-home-home-assistant-mcpsettings-exclude-help",
+                    "fallback_title_id": "config-field-exclude",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Outils exclus",
+                    "help": null
+                  }
+                },
+                "risks": {
+                  "additionalProperties": {
+                    "$ref": "#/$defs/Risk"
+                  },
+                  "title": "Risks",
+                  "type": "object",
+                  "x-nestor": {
+                    "field": "risks",
+                    "title_id": "config-home-home-assistant-mcpsettings-risks",
+                    "help_id": "config-home-home-assistant-mcpsettings-risks-help",
+                    "fallback_title_id": "config-field-risks",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Risques des outils",
+                    "help": "Par nom d'outil ; remplace ce que le serveur déclare."
+                  }
+                },
+                "sensitive": {
+                  "items": {
+                    "$ref": "#/$defs/SensitiveCalls"
+                  },
+                  "title": "Sensitive",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "sensitive",
+                    "title_id": "config-home-home-assistant-mcpsettings-sensitive",
+                    "help_id": "config-home-home-assistant-mcpsettings-sensitive-help",
+                    "fallback_title_id": "config-field-sensitive",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Appels à confirmer",
+                    "help": "Selon ce sur quoi ils agissent, en plus des actions à confirmer."
+                  }
+                },
+                "retry_after_s": {
+                  "default": 30.0,
+                  "exclusiveMinimum": 0,
+                  "title": "Retry After S",
+                  "type": "number",
+                  "x-nestor": {
+                    "field": "retry_after_s",
+                    "title_id": "config-home-home-assistant-mcpsettings-retry_after_s",
+                    "help_id": "config-home-home-assistant-mcpsettings-retry_after_s-help",
+                    "fallback_title_id": "config-field-retry_after_s",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Attente avant reconnexion (secondes)",
+                    "help": null
+                  }
+                },
+                "negotiation": {
+                  "$ref": "#/$defs/Negotiation",
+                  "default": "auto",
+                  "x-nestor": {
+                    "field": "negotiation",
+                    "title_id": "config-home-home-assistant-mcpsettings-negotiation",
+                    "help_id": "config-home-home-assistant-mcpsettings-negotiation-help",
+                    "fallback_title_id": "config-field-negotiation",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-mcpsettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Négociation du protocole",
+                    "help": "legacy saute la détection de la version 2026-07-28 du protocole."
+                  }
+                }
+              },
+              "required": [
+                "url"
+              ],
+              "title": "McpSettings",
+              "type": "object"
+            },
+            "McpTransport": {
+              "enum": [
+                "streamable-http",
+                "sse"
+              ],
+              "title": "McpTransport",
+              "type": "string"
+            },
+            "Negotiation": {
+              "enum": [
+                "auto",
+                "legacy"
+              ],
+              "type": "string"
+            },
+            "Risk": {
+              "enum": [
+                "read",
+                "write",
+                "sensitive"
+              ],
+              "title": "Risk",
+              "type": "string"
+            },
+            "SensitiveCalls": {
+              "additionalProperties": false,
+              "description": "Calls confirmed by the person first when one of these values appears in an argument: a server's tools may\ndrive harmless and dangerous things alike.",
+              "properties": {
+                "tool": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Tool",
+                  "x-nestor": {
+                    "field": "tool",
+                    "title_id": "config-home-home-assistant-sensitivecalls-tool",
+                    "help_id": "config-home-home-assistant-sensitivecalls-tool-help",
+                    "fallback_title_id": "config-field-tool",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Outil",
+                    "help": "Nom sur le serveur."
+                  }
+                },
+                "arguments": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Arguments",
+                  "type": "object",
+                  "x-nestor": {
+                    "field": "arguments",
+                    "title_id": "config-home-home-assistant-sensitivecalls-arguments",
+                    "help_id": "config-home-home-assistant-sensitivecalls-arguments-help",
+                    "fallback_title_id": "config-field-arguments",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "variants": null,
+                    "title": "Valeurs sensibles",
+                    "help": "Par argument, ex. device_class : garage, gate ; domain : lock."
+                  }
+                }
+              },
+              "required": [
+                "arguments"
+              ],
+              "title": "SensitiveCalls",
+              "type": "object"
+            },
             "SensitiveTargets": {
               "additionalProperties": false,
               "description": "What an action of Home Assistant acts on that makes it need the person's go-ahead, whatever the tool: one of\nthese values in the call's `domain`, `device_class` or `name`, ignoring case. Lights, heating and media are not.",
@@ -11988,6 +12816,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Domaines",
                     "help": "Le domaine Home Assistant de ce que l'appel vise."
                   }
@@ -12017,6 +12846,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Classes d'appareil",
                     "help": "La classe d'appareil de ce que l'appel vise."
                   }
@@ -12048,6 +12878,7 @@
                     "brands": null,
                     "suggest_keys": null,
                     "suggest_values": null,
+                    "variants": null,
                     "title": "Mots dans le nom",
                     "help": "Dans le nom de ce que l'appel vise, sans tenir compte de la casse : ajoutez les mots de votre langue."
                   }
@@ -12076,6 +12907,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -12097,6 +12929,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "URL",
                 "help": "L'adresse de Home Assistant, ex. http://homeassistant.local:8123."
               }
@@ -12120,6 +12953,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Token",
                 "help": "Un jeton d'accès longue durée (votre profil dans Home Assistant, Sécurité)."
               }
@@ -12144,6 +12978,7 @@
                 "brands": null,
                 "suggest_keys": "people",
                 "suggest_values": "residents",
+                "variants": null,
                 "title": "Entités personne",
                 "help": "Chaque personne du foyer et son entité, ex. alice: person.alice."
               }
@@ -12168,6 +13003,7 @@
                 "brands": null,
                 "suggest_keys": "people",
                 "suggest_values": null,
+                "variants": null,
                 "title": "Suivi des pièces",
                 "help": "Le capteur qui donne la pièce de chaque personne, ex. Bermuda ou ESPresense."
               }
@@ -12200,6 +13036,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Capteurs de présence",
                 "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
               }
@@ -12238,6 +13075,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Actions à confirmer",
                 "help": "La personne confirme d'abord une action sur ce qui correspond. Lumières, chauffage et médias jamais."
               }
@@ -12261,6 +13099,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout de synchronisation (secondes)",
                 "help": null
               }
@@ -12284,6 +13123,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente minimale avant reconnexion (secondes)",
                 "help": null
               }
@@ -12307,6 +13147,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente maximale avant reconnexion (secondes)",
                 "help": null
               }
@@ -12330,8 +13171,65 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Délai d'une action (s)",
-                "help": null
+                "help": "Pour le serveur d'actions de Home Assistant."
+              }
+            },
+            "mcp": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/McpSettings"
+                },
+                {
+                  "const": false,
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Mcp",
+              "x-nestor": {
+                "field": "mcp",
+                "title_id": "config-home-home-assistant-mcp",
+                "help_id": "config-home-home-assistant-mcp-help",
+                "fallback_title_id": "config-field-mcp",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "home-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "variants": [
+                  {
+                    "key": "mcpsettings",
+                    "title_id": "config-home-home-assistant-mcp-mcpsettings",
+                    "help_id": "config-home-home-assistant-mcp-mcpsettings-help",
+                    "title": "Un autre serveur",
+                    "help": "N'importe quel serveur MCP, réglé comme dans les outils. Celui de Home Assistant n'est alors pas utilisé."
+                  },
+                  {
+                    "key": "false",
+                    "title_id": "config-home-home-assistant-mcp-false",
+                    "help_id": "config-home-home-assistant-mcp-false-help",
+                    "title": "Aucun",
+                    "help": "Présence seule : la maison n'offre aucune action."
+                  },
+                  {
+                    "key": "default",
+                    "title_id": "config-home-home-assistant-mcp-default",
+                    "help_id": "config-home-home-assistant-mcp-default-help",
+                    "title": "Celui de Home Assistant",
+                    "help": "Son serveur MCP intégré, sur /api/mcp, avec le même jeton."
+                  }
+                ],
+                "title": "Serveur d'actions",
+                "help": "Le serveur MCP par lequel l'assistant agit sur la maison. Les actions à confirmer valent quel qu'il soit."
               }
             }
           },
@@ -12375,6 +13273,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -12396,6 +13295,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -12427,6 +13327,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -12448,6 +13349,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -12471,6 +13373,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Intervalle de polling (secondes)",
                 "help": null
               }
@@ -12494,6 +13397,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente quand les identifiants sont refusés (secondes)",
                 "help": null
               }
@@ -12517,6 +13421,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Premier nouvel essai après (secondes)",
                 "help": null
               }
@@ -12540,6 +13445,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente maximale entre deux essais (secondes)",
                 "help": null
               }
@@ -12563,6 +13469,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur maximale d'un message ou d'un fichier lu (caractères)",
                 "help": null
               }
@@ -12586,6 +13493,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur d'un extrait (caractères)",
                 "help": null
               }
@@ -12609,6 +13517,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Taille maximale d'un fichier lu (octets)",
                 "help": null
               }
@@ -12640,6 +13549,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -12661,6 +13571,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -12684,6 +13595,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -12707,6 +13619,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "IDLE renouvelé après (secondes)",
                 "help": "Moins de 1740 : les serveurs coupent IDLE après 29 min."
               }
@@ -12730,6 +13643,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Intervalle de polling sans IDLE (secondes)",
                 "help": null
               }
@@ -12753,6 +13667,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Taille maximale d'un message lu (octets)",
                 "help": null
               }
@@ -12776,6 +13691,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente quand les identifiants sont refusés (secondes)",
                 "help": null
               }
@@ -12799,6 +13715,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Premier nouvel essai après (secondes)",
                 "help": null
               }
@@ -12822,6 +13739,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente maximale entre deux essais (secondes)",
                 "help": null
               }
@@ -12845,6 +13763,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur maximale d'un message ou d'un fichier lu (caractères)",
                 "help": null
               }
@@ -12868,6 +13787,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur d'un extrait (caractères)",
                 "help": null
               }
@@ -12899,6 +13819,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -12920,6 +13841,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -12943,6 +13865,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -12966,6 +13889,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente avant reconnexion (secondes)",
                 "help": null
               }
@@ -12997,6 +13921,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Type",
                 "help": null
               }
@@ -13018,6 +13943,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Nom",
                 "help": null
               }
@@ -13041,6 +13967,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Intervalle de polling (secondes)",
                 "help": null
               }
@@ -13064,6 +13991,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente quand les identifiants sont refusés (secondes)",
                 "help": null
               }
@@ -13087,6 +14015,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Premier nouvel essai après (secondes)",
                 "help": null
               }
@@ -13110,6 +14039,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Attente maximale entre deux essais (secondes)",
                 "help": null
               }
@@ -13133,6 +14063,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur maximale d'un message ou d'un fichier lu (caractères)",
                 "help": null
               }
@@ -13156,6 +14087,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Longueur d'un extrait (caractères)",
                 "help": null
               }
@@ -13179,6 +14111,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
+                "variants": null,
                 "title": "Taille maximale d'un fichier lu (octets)",
                 "help": null
               }

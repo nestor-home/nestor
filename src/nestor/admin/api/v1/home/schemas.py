@@ -93,5 +93,5 @@ class HomeOut(BaseModel):
                 for p in household.people
             ],
             unplaced_sensors=list(overview.unplaced_sensors),
-            tools=[HomeToolOut.of(t) for t in sorted(home.tools.tools(), key=lambda t: t.name)],
+            tools=[HomeToolOut.of(t) for t in sorted(home.tools.tools() if home.tools else (), key=lambda t: t.name)],
         )

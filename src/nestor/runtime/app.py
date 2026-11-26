@@ -349,7 +349,7 @@ class Nestor:
                 self.confirmations,
                 about,
                 *offered,
-                *([self.home.tools] if self.home else []),
+                *([self.home.tools] if self.home and self.home.tools else []),
                 *connector_tools,
                 *([ImageTools(images)] if (images := optional(drawing, ImageModel, "images")) else []),
                 *(

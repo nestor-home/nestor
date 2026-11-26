@@ -69,7 +69,7 @@ def properties(node: Any, where: str) -> Iterator[tuple[str, dict[str, Any]]]:
             yield from properties(child, where)
 
 
-def test_every_field_of_every_installed_plugin_has_a_title_in_every_locale() -> None:
+def test_every_field_of_every_installed_plugin_and_each_of_its_forms_has_a_title_in_every_locale() -> None:
     schema = ConfigSchema(REGISTRY)
     sections, slots = schema.sections(), schema.slots()
     found = [*properties(sections, "sections")]
@@ -81,6 +81,13 @@ def test_every_field_of_every_installed_plugin_has_a_title_in_every_locale() -> 
         for _, meta in found
         for locale, ids in IDS.items()
         if meta["title_id"] not in ids and meta["fallback_title_id"] not in ids
+    }
+    missing |= {
+        (locale, variant["title_id"])
+        for _, meta in found
+        for variant in meta["variants"] or ()
+        for locale, ids in IDS.items()
+        if variant["title_id"] not in ids
     }
     missing |= {(locale, f"config-section-{s}") for s in sections for locale, ids in IDS.items()} - {
         (locale, i) for locale, ids in IDS.items() for i in ids

@@ -23,6 +23,7 @@ import {
   type Control,
   controlOf,
   defaultText,
+  deref,
   fieldsOf,
   getAt,
   helpOf,
@@ -40,6 +41,8 @@ import {
   resolve,
   titleOf,
   typedSecret,
+  variantOf,
+  variantValue,
 } from "./schema";
 
 const idOf = (path: Path) => `cfg-${path.join("-").replace(/[^\w-]/g, "_")}`;
@@ -141,6 +144,7 @@ export function Property({
   const label = titleOf(node, name);
   const here = problemsByPath(problems).get(keyOf(path)) ?? [];
   const id = idOf(path);
+  if (control === "variant") return <VariantFields node={node} root={root} path={path} label={label} />;
   if (control === "object") {
     const nested = problemsUnder(problems, path).filter((p) => keyOf(p.path) !== keyOf(path));
     return (
@@ -165,6 +169,47 @@ export function Property({
     >
       <ControlFor control={control} id={id} node={node} root={root} path={path} required={required} label={label} />
     </FieldFrame>
+  );
+}
+
+/** A setting that is one of several forms (`home.mcp`: unset, another server, none): the form picked, then the
+ * fields of an object form. */
+function VariantFields({ node, root, path, label }: { node: JsonSchema; root: JsonSchema; path: Path; label: string }) {
+  const { draft, set, problems } = useConfigEditor();
+  const value = getAt(draft, path);
+  const variants = node["x-nestor"]?.variants ?? [];
+  const picked = variantOf(node, root, value);
+  const option = node.anyOf?.[picked];
+  const form = option ? deref(option, root) : undefined;
+  const id = idOf(path);
+  const here = problemsByPath(problems).get(keyOf(path)) ?? [];
+  const nested = problemsUnder(problems, path).filter((p) => keyOf(p.path) !== keyOf(path));
+  return (
+    <fieldset className="grid min-w-0 gap-4 rounded-(--radius-surface) border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
+      <legend className="px-1.5 text-body font-medium text-ink">{label}</legend>
+      {helpOf(node) ? <p className="-mt-1 text-micro text-ink-muted">{helpOf(node)}</p> : null}
+      <div className="grid gap-1.5">
+        <Label htmlFor={id} className="sr-only">
+          {label}
+        </Label>
+        <Choice
+          id={id}
+          value={String(Math.max(picked, 0))}
+          options={variants.map((v, index) => ({ value: String(index), label: v.title ?? v.key }))}
+          className="sm:max-w-72"
+          describedBy={variants[picked]?.help ? `${id}-help` : undefined}
+          onChange={(next) => set(path, variantValue(node, root, Number(next), value))}
+        />
+        {variants[picked]?.help ? (
+          <p id={`${id}-help`} className="text-micro text-pretty text-ink-muted">
+            {variants[picked]?.help}
+          </p>
+        ) : null}
+      </div>
+      {form?.properties ? <ObjectFields schema={form} root={root} path={path} /> : null}
+      <Problems problems={here} label={label} />
+      {nested.length && !isRecord(value) ? <Problems problems={nested} /> : null}
+    </fieldset>
   );
 }
 

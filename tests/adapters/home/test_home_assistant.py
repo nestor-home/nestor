@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
@@ -28,6 +30,8 @@ from nestor.modules.home import Granularity, Presence, Resident, Room, Whereabou
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
 from nestor.testing.i18n import EchoLocalizer
+
+from ..served import Served, bearer
 
 TOKEN = "eyJhbGciOiJIUzI1NiJ9.long-lived-test-token.c2lnbmF0dXJl"
 ALICE, BOB = PersonId("alice"), PersonId("bob")
@@ -600,6 +604,7 @@ async def test_the_plugin_builds_the_home_its_presence_and_its_overview_from_one
     )
     assert overview.unplaced_sensors == ("binary_sensor.hall_motion",)
     assert built.health() is Health.DEGRADED, "its MCP server does not answer here: presence alone"
+    assert built.tools is not None and (await built.tools.endpoint())[0] == f"{home.url}/api/mcp", "its own, by default"
 
 
 async def test_a_home_assistant_that_does_not_answer_leaves_the_home_unavailable_and_says_how_it_is_tied(
@@ -651,3 +656,68 @@ def test_the_plugin_rejects_an_inconsistent_configuration(tmp_path: Path, change
     raw = {"url": "http://ha.local:8123", "token": TOKEN, "people": {"alice": "person.alice"}, **change}
     with pytest.raises(ContractError, match=message):
         plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+
+
+# -- the server of its actions ---------------------------------------------------------------------------------
+
+OTHER_TOKEN = "another-servers-token"
+
+
+def actions_server() -> MCPServer:
+    """Another MCP server for the home's actions, with its own catalogue."""
+    server = MCPServer("another-home")
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True))
+    def home_state() -> str:
+        return "front door: locked"
+
+    @server.tool()
+    def set_device(name: str, domain: str) -> str:
+        return f"{name} set"
+
+    @server.tool()
+    def reboot() -> str:
+        return "rebooting"
+
+    return server
+
+
+@pytest.fixture
+async def other_server() -> AsyncIterator[Served]:
+    served = Served(lambda: bearer(actions_server().streamable_http_app(), OTHER_TOKEN))
+    await served.start()
+    yield served
+    await served.stop()
+
+
+def home_with(home: FakeHomeAssistant, tmp_path: Path, mcp: object) -> HomeAssistant:
+    raw = {"url": home.url, "token": TOKEN, "people": {"alice": "person.alice"}, "mcp": mcp}
+    built = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+    assert isinstance(built, HomeAssistant)
+    return built
+
+
+async def test_another_actions_server_alone_serves_the_home_with_its_settings_and_the_homes_sensitive_targets(
+    home: FakeHomeAssistant, other_server: Served, started: Any, tmp_path: Path
+) -> None:
+    home.state("person.alice", "home")
+    mcp = {"url": other_server.url(), "token": OTHER_TOKEN, "exclude": ["reboot"], "risks": {"home_state": "write"}}
+    built = await started(home_with(home, tmp_path, mcp))
+    assert built.tools is not None
+    assert {t.name: t.risk for t in built.tools.tools()} == {"home_state": Risk.WRITE, "set_device": Risk.WRITE}
+    assert built.health() is Health.STARTED, "Home Assistant's own server is never asked"
+    set_device = next(t for t in built.tools.tools() if t.name == "set_device")
+    assert set_device.risk_of({"name": "Salon", "domain": "light"}) is Risk.WRITE
+    assert set_device.risk_of({"name": "Entrée", "domain": "lock"}) is Risk.SENSITIVE, "the home's rule still holds"
+    assert people_of(built.presence.presence()) == {ALICE: Whereabouts(home=True)}
+
+
+async def test_a_home_without_actions_tells_presence_only_and_offers_no_tools(
+    home: FakeHomeAssistant, started: Any, tmp_path: Path
+) -> None:
+    home.state("person.alice", "home")
+    built = await started(home_with(home, tmp_path, False))
+    assert built.tools is None
+    assert built.health() is Health.STARTED and built.health_detail() is None, "no server it does not use"
+    assert "tools" not in built.details()
+    assert people_of(built.presence.presence()) == {ALICE: Whereabouts(home=True)}

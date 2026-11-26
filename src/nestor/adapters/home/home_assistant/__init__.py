@@ -1,5 +1,5 @@
-"""Home Assistant as the household's home: its presence over the WebSocket API, its actions through its MCP server
-(Assist's tools, at `<url>/api/mcp`), with one address and one token.
+"""Home Assistant as the household's home: its presence over the WebSocket API, its actions through an MCP server:
+by default its own (Assist's tools, at `<url>/api/mcp`, with the same token), another one, or none.
 
 Configuration (`home`, kind `home-assistant`):
 
@@ -9,9 +9,11 @@ Configuration (`home`, kind `home-assistant`):
     rooms: {alice: sensor.alice_phone_area}  # optional room trackers (Bermuda, ESPresense…)
     occupancy_sensors: [binary_sensor.kitchen_motion]  # optional: overrides discovery
     sensitive: {domains: [lock], device_classes: [garage, door], names: [porte]}  # confirmed by the person first
+    mcp: {url: https://mcp.example/mcp, token: ${HOME_MCP_TOKEN}}  # optional: another server, as under `tools:`;
+                                                                   # `false`: presence only, no actions
 """
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, field_validator, model_validator
 
@@ -20,6 +22,8 @@ from nestor.adapters.home.home_assistant.home import HomeAssistant
 from nestor.adapters.home.home_assistant.installation import PresenceMapping
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
+from nestor.adapters.tools.mcp.settings import McpSettings
+from nestor.adapters.tools.mcp.settings import build as mcp_provider
 from nestor.core import ContractError, PersonId
 from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.modules.system.selfmap import Card, Need
@@ -57,7 +61,9 @@ class HomeAssistantSettings(AdapterSettings):
     sync_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})
     reconnect_min_s: PositiveFloat = Field(default=1.0, json_schema_extra={"advanced": True})
     reconnect_max_s: PositiveFloat = Field(default=60.0, json_schema_extra={"advanced": True})
-    tool_timeout_s: PositiveFloat = Field(default=10.0, json_schema_extra={"advanced": True})
+    tool_timeout_s: PositiveFloat = Field(default=10.0, json_schema_extra={"advanced": True})  # its own server's
+    # the server of its actions: unset, Home Assistant's own; another one; `False`, none (presence only)
+    mcp: McpSettings | Literal[False] | None = None
 
     @field_validator("url")
     @classmethod
@@ -92,15 +98,24 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
         reconnect_max_s=settings.reconnect_max_s,
     )
     presence.name = f"{name}-presence"
-    tools = McpToolProvider(
+    return HomeAssistant(name, presence, _actions(settings, name, services))
+
+
+def _actions(settings: HomeAssistantSettings, name: str, services: Services) -> McpToolProvider | None:
+    """The server of the home's actions, the household's sensitive targets applying to whichever it is."""
+    rule = settings.sensitive.rule()
+    if settings.mcp is False:
+        return None
+    if settings.mcp is not None:
+        return mcp_provider(settings.mcp, name, services, sensitive=[rule])
+    return McpToolProvider(
         f"{settings.url.rstrip('/')}/api/mcp",
         name=name,
-        auth=BearerToken(token),
+        auth=BearerToken(settings.token.get_secret_value()),
         timeout_s=settings.tool_timeout_s,
-        sensitive=[settings.sensitive.rule()],
+        sensitive=[rule],
         negotiation="legacy",  # Home Assistant's server answers the classic handshake only
     )
-    return HomeAssistant(name, presence, tools)
 
 
 plugin = Plugin(

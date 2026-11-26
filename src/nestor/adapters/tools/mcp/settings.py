@@ -1,4 +1,7 @@
-"""Configuration of an MCP tool provider, as written under `tools:` in the Nestor configuration."""
+"""Configuration of an MCP tool provider, as written under `tools:` in the Nestor configuration, or as the server of a
+home's actions (`home.mcp`)."""
+
+from collections.abc import Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, SecretStr
 
@@ -17,7 +20,7 @@ class SensitiveCalls(BaseModel):
 
 
 class McpSettings(AdapterSettings):
-    url: str  # Home Assistant: https://<host>:8123/api/mcp
+    url: str
     transport: McpTransport = McpTransport.STREAMABLE_HTTP
     token: SecretStr | None = None  # sent as `Authorization: Bearer …`
     headers: dict[str, SecretStr] = Field(default_factory=dict)  # values may be credentials: kept secret
@@ -30,7 +33,10 @@ class McpSettings(AdapterSettings):
     negotiation: Negotiation = "auto"  # `legacy` skips the 2026-07-28 discovery probe
 
 
-def build(settings: McpSettings, name: str, services: Services) -> McpToolProvider:
+def build(
+    settings: McpSettings, name: str, services: Services, *, sensitive: Sequence[SensitiveWhen] = ()
+) -> McpToolProvider:
+    """The provider these settings describe; `sensitive` adds rules its owner sets (a home's, over its actions)."""
     return McpToolProvider(
         settings.url,
         name=name,
@@ -41,7 +47,10 @@ def build(settings: McpSettings, name: str, services: Services) -> McpToolProvid
         include=settings.include,
         exclude=settings.exclude,
         risks=settings.risks,
-        sensitive=[SensitiveWhen(r.tool, {k: tuple(v) for k, v in r.arguments.items()}) for r in settings.sensitive],
+        sensitive=[
+            *(SensitiveWhen(r.tool, {k: tuple(v) for k, v in r.arguments.items()}) for r in settings.sensitive),
+            *sensitive,
+        ],
         retry_after_s=settings.retry_after_s,
         negotiation=settings.negotiation,
     )

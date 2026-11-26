@@ -41,7 +41,16 @@ export interface JsonSchema {
     /** what a map's keys and values are picked from: the household's people, the home system's residents */
     suggest_keys?: Suggest | null;
     suggest_values?: Suggest | null;
+    /** the forms a setting takes when it is one of several, in the order of its `anyOf` */
+    variants?: Variant[] | null;
   };
+}
+
+/** One form of a setting that is one of several: `default` when unset, a constant (`false`), a nested model. */
+export interface Variant {
+  key: string;
+  title?: string;
+  help?: string | null;
 }
 
 /**
@@ -178,12 +187,14 @@ export type Control =
   | "object"
   | "map"
   | "json"
-  | "const";
+  | "const"
+  | "variant";
 
 const LONG = new Set(["character", "description", "instructions", "style", "apology"]);
 
 /** The control a property needs. */
 export function controlOf(node: JsonSchema, root: JsonSchema, field = "", value?: unknown): Control {
+  if (node["x-nestor"]?.variants?.length) return "variant";
   if (isSecret(node)) return "secret";
   if (node["x-nestor"]?.reference) return "reference";
   const { schema } = resolve(node, root);
@@ -206,6 +217,28 @@ export function controlOf(node: JsonSchema, root: JsonSchema, field = "", value?
     return "text";
   }
   return "json";
+}
+
+/** The option of a setting that is one of several which its value takes: unset, a constant, or an object. */
+export function variantOf(node: JsonSchema, root: JsonSchema, value: unknown): number {
+  const options = (node.anyOf ?? []).map((o) => deref(o, root));
+  return options.findIndex((o) =>
+    value === undefined || value === null
+      ? o.type === "null"
+      : o.const !== undefined
+        ? o.const === value
+        : isRecord(value) && o.type !== "null",
+  );
+}
+
+/** The value a setting takes when a person picks one of its options: unset, the constant, or the object it has. */
+export function variantValue(node: JsonSchema, root: JsonSchema, index: number, value: unknown): unknown {
+  const option = node.anyOf?.[index];
+  if (!option) return undefined;
+  const { type, const: fixed } = deref(option, root);
+  if (type === "null") return undefined;
+  if (fixed !== undefined) return fixed;
+  return isRecord(value) ? value : {};
 }
 
 export const titleOf = (node: JsonSchema, field: string): string => node["x-nestor"]?.title ?? node.title ?? field;

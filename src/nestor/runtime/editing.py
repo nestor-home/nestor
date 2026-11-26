@@ -13,6 +13,7 @@
 """
 
 import io
+import json
 import re
 import types
 import typing
@@ -144,11 +145,29 @@ def _secret_values(node: Any) -> bool:
     return _secret(node.get("additionalProperties")) or any(_secret_values(o) for o in node.get("anyOf") or ())
 
 
+def _variants(prop: dict[str, Any], title_id: str) -> list[dict[str, Any]] | None:
+    """The forms a setting takes when it is one of several (`McpSettings | Literal[False] | None`), each with its
+    message ids (`<title id>-<key>`): `default` for unset, the value of a constant, a nested model's name."""
+    options = [o for o in prop.get("anyOf") or () if isinstance(o, dict)]
+    if len([o for o in options if o.get("type") != "null"]) < 2:
+        return None
+    keys = [
+        "default"
+        if o.get("type") == "null"
+        else json.dumps(o["const"])
+        if "const" in o
+        else str(o.get("$ref", o.get("type"))).rsplit("/", 1)[-1].lower()
+        for o in options
+    ]
+    return [{"key": key, "title_id": f"{title_id}-{key}", "help_id": f"{title_id}-{key}-help"} for key in keys]
+
+
 def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -> dict[str, Any]:
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
     `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
     whose every value is one), advanced, its group, the named slot whose names it takes (`reference`),
-    the type of model it takes (`model_type`), and the brands it names (`brands`: a host suffix or a value)."""
+    the type of model it takes (`model_type`), the brands it names (`brands`: a host suffix or a value),
+    and the forms it may take when it is one of several (`variants`, in the order of its `anyOf`)."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -168,6 +187,7 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "brands": prop.pop("brands", None),
                         "suggest_keys": prop.pop("suggest_keys", None),
                         "suggest_values": prop.pop("suggest_values", None),
+                        "variants": _variants(prop, f"config-{group}-{name}"),
                     }
             for key, child in node.items():
                 if key == "$defs" and isinstance(child, dict):
