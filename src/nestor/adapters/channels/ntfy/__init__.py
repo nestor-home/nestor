@@ -8,8 +8,18 @@ or use a server with access control and a token.
 """
 
 from nestor.adapters.channels.ntfy.settings import NtfySettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "ntfy", NtfySettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "ntfy",
+    NtfySettings,
+    build,
+    card=Card(
+        summary="Sends Nestor's messages as phone notifications through ntfy, one way: people cannot answer there.",
+        docs="channels#choose-channels",
+    ),
+)
 
 __all__ = ["plugin"]

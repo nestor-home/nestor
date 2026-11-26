@@ -15324,6 +15324,17 @@
             },
             "type": "object",
             "title": "Details"
+          },
+          "docs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs"
           }
         },
         "type": "object",
@@ -15339,7 +15350,8 @@
           "capabilities",
           "health",
           "health_detail",
-          "details"
+          "details",
+          "docs"
         ],
         "title": "ComponentOut"
       },

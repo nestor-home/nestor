@@ -13,8 +13,19 @@ Configuration (family `connector`, kind `google`), every key optional:
 """
 
 from nestor.adapters.connectors.google.settings import GoogleSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["plugin"]
 
-plugin = Plugin(Family.CONNECTOR, "google", GoogleSettings, build)
+plugin = Plugin(
+    Family.CONNECTOR,
+    "google",
+    GoogleSettings,
+    build,
+    card=Card(
+        summary="People connect their Google account: Gmail, Calendar, Drive, Contacts and Tasks; mail rings alerts.",
+        docs="accounts#google",
+        needs=(Need.ACCOUNT, Need.KEY),
+    ),
+)

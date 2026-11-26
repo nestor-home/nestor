@@ -9,8 +9,19 @@ encryption; messages sent while the bot was stopped are skipped at its next star
 """
 
 from nestor.adapters.channels.matrix.settings import MatrixSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "matrix", MatrixSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "matrix",
+    MatrixSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on Matrix, in rooms its bot account is invited to (not encrypted ones).",
+        docs="channels#choose-channels",
+        needs=(Need.ACCOUNT, Need.KEY),
+    ),
+)
 
 __all__ = ["plugin"]

@@ -70,7 +70,7 @@ class PublicWeb:
                 headers=self._headers, timeout=self._timeout_s, follow_redirects=False, transport=_public_transport()
             )
         for _ in range(REDIRECTS + 1):
-            await public(url)
+            await public(url, timeout_s=self._timeout_s)
             try:
                 async with self._client.stream("GET", url, headers=headers) as response:
                     if response.is_redirect and (location := response.headers.get("location")):
@@ -115,7 +115,7 @@ async def readable(fetched: Fetched, reader: DocumentReader) -> Page:
     return Page(title="", text=text)
 
 
-async def public(url: str) -> None:
+async def public(url: str, *, timeout_s: float | None = None) -> None:
     """Refuse an address that is not on the public internet: another scheme, a private, loopback or link-local
     address, or a name that resolves to one."""
     try:
@@ -125,14 +125,16 @@ async def public(url: str) -> None:
         raise WebError(f"{url} is not a web address", transient=False) from None
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise WebError(f"{url} is not a web address", transient=False)
-    await _global(parts.hostname, port)
+    await _global(parts.hostname, port, timeout_s)
 
 
-async def _global(host: str, port: int | None) -> str:
-    """The address to connect to for `host`: one of those it resolves to, all of them on the public internet."""
+async def _global(host: str, port: int | None, timeout_s: float | None) -> str:
+    """The address to connect to for `host`: one of those it resolves to, all of them on the public internet; found
+    within `timeout_s`, as the rest of a connection."""
     try:
-        found = await asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except (OSError, UnicodeError):
+        async with asyncio.timeout(timeout_s):
+            found = await asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError, TimeoutError):
         raise WebError(f"{host} could not be found", transient=True) from None
     addresses = [str(info[4][0]).split("%")[0] for info in found]  # an IPv6 address may carry its interface
     if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
@@ -153,7 +155,7 @@ class _PublicNetwork(AnyIOBackend):
         socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
     ) -> httpcore.AsyncNetworkStream:
         try:
-            address = await _global(host, port)
+            address = await _global(host, port, timeout)
         except WebError as refused:
             raise httpcore.ConnectError(refused.reason) from None
         return await super().connect_tcp(address, port, timeout, local_address, socket_options)

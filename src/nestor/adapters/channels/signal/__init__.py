@@ -8,8 +8,19 @@ message is answered in writing (Signal plays AAC voice notes, the assistant reco
 """
 
 from nestor.adapters.channels.signal.settings import SignalSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "signal", SignalSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "signal",
+    SignalSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on Signal, through a number registered with signal-cli-rest-api.",
+        docs="channels#choose-channels",
+        needs=(Need.SERVER, Need.HARDWARE),
+    ),
+)
 
 __all__ = ["plugin"]

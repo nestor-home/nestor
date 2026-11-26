@@ -13,8 +13,20 @@ instruction and the tools together, and the household layer changes with every m
 
 from nestor.adapters.models.gemini.settings import GeminiLanguageSettings, build_language
 from nestor.modules.cognition import LanguageModel
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-language = Plugin(Family.MODEL, "gemini", GeminiLanguageSettings, build_language, serves=LanguageModel)
+language = Plugin(
+    Family.MODEL,
+    "gemini",
+    GeminiLanguageSettings,
+    build_language,
+    serves=LanguageModel,
+    card=Card(
+        summary="Thinks and answers with Gemini models through Google's own API.",
+        docs="models#choose-a-provider",
+        needs=(Need.KEY,),
+    ),
+)
 
 __all__ = ["language"]

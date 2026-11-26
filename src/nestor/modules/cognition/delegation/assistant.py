@@ -37,7 +37,7 @@ the files you name in `files` from this conversation, voice messages aside, by d
 answer: a file you cannot open yourself, an executor can."""
 
 NO_EXECUTOR = """No executor is plugged in: you cannot carry out long tasks, search or act beyond your own tools. \
-If asked, say so simply."""
+If asked, say so simply, with what could be added (about_nestor)."""
 
 TASK = {"type": "string", "description": "the task's id (task_id)"}
 FILES = {
@@ -73,13 +73,13 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
     def tools(self) -> Sequence[Tool]:
         if not self.tasks.executors:
             return ()
-        start: dict[str, object] = {"title": TITLE, "instruction": INSTRUCTION, "files": FILES, "notify": NOTIFY}
-        chosen: tuple[
-            str, ...
-        ] = ()  # with several, the model names the one: "to claude-code" without it went elsewhere
-        if len(self.tasks.executors) > 1:
-            start["executor"] = {"type": "string", "enum": list(self.tasks.executors)}
-            chosen = ("executor",)
+        # always named, even when there is one: a request no executor covers is refused, never sent to the first
+        executor = {
+            "type": "string",
+            "enum": list(self.tasks.executors),
+            "description": "the one whose skills cover it",
+        }
+        start = {"executor": executor, "title": TITLE, "instruction": INSTRUCTION, "files": FILES, "notify": NOTIFY}
         directed = {"task": TASK, "instruction": INSTRUCTION, "files": FILES, "notify": NOTIFY}
         return (
             Tool(
@@ -87,9 +87,9 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                     "start_task",
                     "Hand a long task over to an executor; it works on it in the background.",
                     start,
+                    "executor",
                     "title",
                     "instruction",
-                    *chosen,
                 ),
                 run=self._start,
                 risk=Risk.WRITE,
@@ -163,8 +163,8 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         executors = "\n".join(f"- {e.name}: {e.description}" for e in self.tasks.executors.values())
         return (
             f"{HOW_TO_DELEGATE}\n\nYour executors and what they can really do:\n{executors}\n"
-            "Nothing else: hand a request over only to an executor whose description covers it; for any other, say "
-            "right away that you cannot, without starting a task."
+            "Nothing else: hand a request over only to an executor whose description covers it; for any other, start "
+            "no task and say you cannot, with what could be added (about_nestor)."
         )
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
@@ -192,8 +192,9 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
     def instruction(self, mentioned: Mentioned) -> str:
         if mentioned.kind is MentionKind.TASK:
             return f"their task {mentioned.id} ({mentioned.label}): direct it with continue_task(task={mentioned.id!r})"
-        which = f" (executor: {mentioned.id})" if len(self.tasks.executors) > 1 else ""
-        return f"the executor {mentioned.id}: hand that part of the work to it with start_task{which}"
+        return (
+            f"the executor {mentioned.id}: hand that part of the work to it with start_task(executor={mentioned.id!r})"
+        )
 
     async def context(self, turn: TurnContext) -> Sections:
         """Their tasks that work or wait on them, and the latest they could take up again: what a follow-up may be
@@ -211,14 +212,13 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         return {Layer.TURN: "Their tasks now:\n" + "\n".join(lines)}
 
     async def _start(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        executor = arguments.get("executor")
         try:
             task = await self.tasks.start_task(
                 str(arguments["instruction"]),
                 title=titled(arguments),
                 origin=context.address,
                 owner=context.person,
-                executor=str(executor) if executor else None,
+                executor=str(arguments.get("executor", "")),
                 exchange=context.exchange,
                 thread=context.thread,
                 given=await self._given(arguments, context),
@@ -293,7 +293,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
 
     def _risk(self, executor: object) -> Risk:
         """Sensitive when the executor acts with real power: confirmed when asked from a shared device."""
-        chosen = self.tasks.executors.get(str(executor)) if executor else self.tasks.default_executor
+        chosen = self.tasks.executors.get(str(executor))
         return Risk.SENSITIVE if chosen is not None and chosen.sensitive else Risk.WRITE
 
     async def _given(self, arguments: Mapping[str, object], context: ToolContext) -> tuple[FileRef, ...]:

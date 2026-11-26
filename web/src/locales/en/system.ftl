@@ -100,6 +100,7 @@ sys-slot-voice = Voice
 sys-fix-down = Nothing goes through it for now. Check that the service behind it answers and that its settings are right.
 sys-fix-degraded = It works in part: what it reports says what is missing.
 sys-configure = Configure
+sys-docs = Documentation
 sys-fact-state = state
 sys-fact-service = service
 sys-fact-type = type

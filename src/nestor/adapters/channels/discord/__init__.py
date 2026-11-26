@@ -11,8 +11,19 @@ gap are missed.
 """
 
 from nestor.adapters.channels.discord.settings import DiscordSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "discord", DiscordSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "discord",
+    DiscordSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on Discord, in direct messages or by mentioning its bot.",
+        docs="channels#choose-channels",
+        needs=(Need.KEY,),
+    ),
+)
 
 __all__ = ["plugin"]

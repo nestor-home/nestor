@@ -1,4 +1,4 @@
-"""The Microsoft 365 connector against a fake of Microsoft Graph: Outlook mail and its feed for watches, the
+"""The Microsoft 365 connector against a fake of Microsoft Graph: Outlook mail and its feed for alerts, the
 calendar, OneDrive and To Do."""
 
 import asyncio
@@ -179,7 +179,7 @@ async def test_mail_is_searched_and_read_with_its_sender_and_recipients() -> Non
     assert 'outlook.body-content-type="text"' in graph.requests[-1].headers["prefer"]
 
 
-# -- the feed for watches ------------------------------------------------------------------------------
+# -- the feed for alerts -------------------------------------------------------------------------------
 
 
 def inbound(graph: FakeGraph, access: FakeAccess) -> OutlookInbound:

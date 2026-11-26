@@ -32,7 +32,7 @@ from nestor.testing.cognition.model import Reply
 from nestor.testing.connectors import FakeProvider, ScriptedConnector
 from nestor.testing.home import StaticHome, StaticPresence
 from nestor.testing.identity import TaggedVoices
-from nestor.testing.system import StaticReleaseFeed
+from nestor.testing.system import DOUBLE, StaticReleaseFeed
 
 PASSWORD = "correct horse battery"
 OWNER = "mathis"  # the owner's login, opened with every harness
@@ -262,6 +262,7 @@ class Harness:
                     NoSettings,
                     lambda s, n, x: ScriptedModel(*self.replies, word_delay_s=self.word_delay_s),
                     serves=LanguageModel,
+                    card=DOUBLE,
                 ),
                 Plugin(
                     Family.MODEL,
@@ -269,6 +270,7 @@ class Harness:
                     NoSettings,
                     lambda s, n, x: ScriptedModel(*self.titles),
                     serves=LanguageModel,
+                    card=DOUBLE,
                 ),
                 Plugin(
                     Family.MODEL,
@@ -276,9 +278,10 @@ class Harness:
                     NoSettings,
                     lambda s, n, x: TaggedVoices(),
                     serves=SpeakerModel,
+                    card=DOUBLE,
                 ),
-                Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
-                Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),
+                Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name), card=DOUBLE),
+                Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name), card=DOUBLE),
                 web.plugin,
                 Plugin(
                     Family.EXECUTOR,
@@ -287,12 +290,13 @@ class Harness:
                     lambda s, n, x: ScriptedRemoteExecutor(
                         self.remote, duration_s=None, confirms_stop=self.confirms_stop
                     ),
+                    card=DOUBLE,
                 ),
-                Plugin(Family.HOME, "static", NoSettings, lambda s, n, x: self.home),
-                Plugin(Family.CONNECTOR, "mailbox", NoSettings, lambda s, n, x: self.mail),
-                Plugin(Family.CONNECTOR, "imap", NoSettings, lambda s, n, x: self.imap),
-                Plugin(Family.CONNECTOR, "servers", NoSettings, lambda s, n, x: self.servers),
-                Plugin(Family.TOOLS, "weather", WeatherSettings, lambda s, n, x: Weather()),
+                Plugin(Family.HOME, "static", NoSettings, lambda s, n, x: self.home, card=DOUBLE),
+                Plugin(Family.CONNECTOR, "mailbox", NoSettings, lambda s, n, x: self.mail, card=DOUBLE),
+                Plugin(Family.CONNECTOR, "imap", NoSettings, lambda s, n, x: self.imap, card=DOUBLE),
+                Plugin(Family.CONNECTOR, "servers", NoSettings, lambda s, n, x: self.servers, card=DOUBLE),
+                Plugin(Family.TOOLS, "weather", WeatherSettings, lambda s, n, x: Weather(), card=DOUBLE),
             ]
         )
 

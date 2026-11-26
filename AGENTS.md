@@ -140,6 +140,13 @@ adapters/<family>/<provider>/
                  tools.py for its tools…
 ```
 
+Every plugin carries its card (`card=Card(summary=..., docs=..., needs=...)`, from `nestor.modules.system.selfmap`):
+one line in English saying what it lets Nestor do, its page of the documentation on nestorhome.dev by slug and section
+(`tools#search`), and what the household provides (a key, an account, a server…). The runtime builds the map of Nestor
+from the cards (`runtime/selfmap.py`: plugged, installed but not configured, missing what it imports, and the packages of
+the ecosystem in `ECOSYSTEM`), and the agent reads it with `about_nestor`, with the section of the page, read online.
+`pytest -m live tests/adapters/docs` checks every card's page and section against the site.
+
 One plugin per provider, `plugin = Plugin(...)` in `<provider>/__init__.py`, declared as
 `<kind> = "nestor.adapters.<family>.<provider>:plugin"`; models declare one per type (see "Models"). Tests mirror the
 packages (`tests/adapters/<family>/<provider>/`), tests of shared code sit at the family's root. A private helper used

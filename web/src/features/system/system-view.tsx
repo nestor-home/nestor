@@ -4,6 +4,7 @@ import {
   AudioLines,
   Brain,
   Download,
+  ExternalLink,
   House,
   type LucideIcon,
   MessagesSquare,
@@ -26,8 +27,9 @@ import { Failure, FormError, Loading } from "@/components/states";
 import { HealthStatus, Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Restarting, useRestart } from "@/features/config/restart";
-import { useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
 import { brandName, brandOf } from "@/lib/brands";
+import { docsUrl } from "@/lib/docs";
 import { modelTypeLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -208,9 +210,22 @@ function ComponentCard({
 /** A component, opened: everything it tells about itself, and the way to its settings. */
 function ComponentSheet({ component: c }: { component: Component }) {
   const t = useT();
+  const { locale } = useLocale();
   const canConfigure = useCan("config:manage");
   const group = groupOf(c);
   const brand = brandOf(c.brand);
+  const docs = c.docs ? (
+    <a href={docsUrl(c.docs, locale)} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "ghost" })}>
+      {t("sys-docs")}
+      <ExternalLink className="size-4" aria-hidden="true" />
+    </a>
+  ) : null;
+  const configure =
+    canConfigure && group.config ? (
+      <Link to="/config/$section" params={{ section: group.config }} className={buttonVariants({ variant: "outline" })}>
+        {t("sys-configure")}
+      </Link>
+    ) : null;
   return (
     <SheetPanel
       icon={group.icon}
@@ -219,14 +234,11 @@ function ComponentSheet({ component: c }: { component: Component }) {
       title={c.name}
       description={c.health_detail ?? undefined}
       actions={
-        canConfigure && group.config ? (
-          <Link
-            to="/config/$section"
-            params={{ section: group.config }}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            {t("sys-configure")}
-          </Link>
+        docs || configure ? (
+          <>
+            {docs}
+            {configure}
+          </>
         ) : undefined
       }
     >

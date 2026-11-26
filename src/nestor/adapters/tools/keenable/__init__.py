@@ -10,8 +10,15 @@ key goes as `Authorization: Bearer`; that path has not been tried with a real ke
 """
 
 from nestor.adapters.tools.keenable.settings import KeenableSettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
-plugin = Plugin(Family.TOOLS, "keenable", KeenableSettings, build)
+plugin = Plugin(
+    Family.TOOLS,
+    "keenable",
+    KeenableSettings,
+    build,
+    card=Card(summary="Web search through Keenable, free without a key.", docs="tools#search"),
+)
 
 __all__ = ["plugin"]

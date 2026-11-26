@@ -16,8 +16,20 @@ proxy that terminates TLS.
 from nestor.adapters.inbound.webhook.hooks import Hook
 from nestor.adapters.inbound.webhook.settings import WebhookSettings, build
 from nestor.adapters.inbound.webhook.source import WebhookSource
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["Hook", "WebhookSettings", "WebhookSource", "build", "plugin"]
 
-plugin = Plugin(Family.INBOUND, "webhook", WebhookSettings, build)
+plugin = Plugin(
+    Family.INBOUND,
+    "webhook",
+    WebhookSettings,
+    build,
+    card=Card(
+        summary="Watches follow JSON other services post to Nestor (GitHub, a camera, a script): Nestor is notified "
+        "by webhook and tells what matters.",
+        docs="tools#feeds-pages-and-webhooks",
+        needs=(Need.PUBLIC_ADDRESS,),
+    ),
+)

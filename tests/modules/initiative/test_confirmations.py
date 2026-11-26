@@ -109,7 +109,7 @@ class Home:
     async def call(
         self, name: str, arguments: Mapping[str, object], speaker: Speaker, at: Address = SALON, live: bool = True
     ) -> Any:
-        """`live`: in a conversation someone takes part in, not a wake-up."""
+        """`live`: in a conversation someone takes part in, not an alert."""
         exchange = Exchange(conversation_id="c", turn_id="t") if live else None
         context = ToolContext(address=at, speaker=speaker, exchange=exchange)
         output = (await self.toolbox.call(ToolCall("c", name, dict(arguments)), context)).output

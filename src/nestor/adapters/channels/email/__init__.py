@@ -13,8 +13,19 @@ in memory only.
 """
 
 from nestor.adapters.channels.email.settings import EmailSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "email", EmailSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "email",
+    EmailSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor by email, at its own mailbox, and it answers in the thread.",
+        docs="channels#choose-channels",
+        needs=(Need.ACCOUNT,),
+    ),
+)
 
 __all__ = ["plugin"]

@@ -26,6 +26,7 @@ from nestor.modules.web import Found, WebSearch
 from nestor.runtime import Backoff, Nestor, Registry
 from nestor.runtime.config import ConfigError, ProblemCode, parse_config
 from nestor.runtime.plugins import Family, Plugin, Services
+from nestor.testing.system import DOUBLE
 
 from .fakes import Fakes, NoSettings
 
@@ -85,7 +86,14 @@ async def test_what_a_message_costs_is_in_the_ledger_on_behalf_of_who_sent_it(tm
 async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: Path) -> None:
     fakes = Fakes()
     delegate = ToolCall(
-        "c1", "start_task", {"title": "Analyse le dépôt", "instruction": "Analyse le dépôt", "notify": "message"}
+        "c1",
+        "start_task",
+        {
+            "executor": "scripted-remote",
+            "title": "Analyse le dépôt",
+            "instruction": "Analyse le dépôt",
+            "notify": "message",
+        },
     )
     fakes.script = [delegate, "Je lance l'analyse."]
     nestor = Nestor(config(tmp_path, []), fakes.registry())
@@ -172,7 +180,7 @@ def test_a_model_an_adapter_names_must_exist_and_serve_what_it_needs(
         raise AssertionError("refused before")
 
     fakes = Fakes()
-    hearing = Plugin(Family.CHANNEL, "hearing", HearingSettings, build)
+    hearing = Plugin(Family.CHANNEL, "hearing", HearingSettings, build, card=DOUBLE)
     registry = Registry([fakes.model_plugin(), fakes.executor_plugin(), fakes.channel_plugin(), hearing])
     text = CONFIG.format(data_dir=tmp_path, replies=[]).replace(
         "[{kind: memory}]", f"[{{kind: memory}}, {{kind: hearing, hears_with: {named}}}]"
@@ -191,7 +199,7 @@ def test_invalid_adapter_settings_name_the_adapter(tmp_path: Path) -> None:
 
 def test_a_plugin_building_the_wrong_component_is_refused(tmp_path: Path) -> None:
     fakes = Fakes()
-    misbuilt = Plugin(Family.CHANNEL, "memory", NoSettings, fakes.executor)
+    misbuilt = Plugin(Family.CHANNEL, "memory", NoSettings, fakes.executor, card=DOUBLE)
     registry = Registry([fakes.model_plugin(), fakes.executor_plugin(), misbuilt])
     with pytest.raises(ContractError, match="not a Channel"):
         Nestor(config(tmp_path, []), registry)
@@ -228,7 +236,7 @@ def test_an_adapter_whose_optional_dependencies_are_missing_names_the_requiremen
         raise AssertionError(nestor_absent_sdk)
 
     fakes = Fakes()
-    needy = Plugin(Family.CHANNEL, "memory", NoSettings, build, requires="nestor-home[voice]")
+    needy = Plugin(Family.CHANNEL, "memory", NoSettings, build, requires="nestor-home[voice]", card=DOUBLE)
     registry = Registry([fakes.model_plugin(), fakes.executor_plugin(), needy])
     with pytest.raises(ContractError) as raised:
         Nestor(config(tmp_path, []), registry)
@@ -246,7 +254,11 @@ def test_a_missing_module_in_an_adapter_without_optional_dependencies_is_a_bug_s
 
     fakes = Fakes()
     registry = Registry(
-        [fakes.model_plugin(), fakes.executor_plugin(), Plugin(Family.CHANNEL, "memory", NoSettings, build)]
+        [
+            fakes.model_plugin(),
+            fakes.executor_plugin(),
+            Plugin(Family.CHANNEL, "memory", NoSettings, build, card=DOUBLE),
+        ]
     )
     with pytest.raises(ModuleNotFoundError):
         Nestor(config(tmp_path, []), registry)
@@ -484,7 +496,7 @@ async def test_what_a_plugged_part_says_of_how_it_runs_reaches_the_agent(tmp_pat
 
     fakes = Fakes()
     registry = fakes.registry()
-    registry.register(Plugin(Family.TOOLS, "noted", NoSettings, lambda s, n, x: Noted()))
+    registry.register(Plugin(Family.TOOLS, "noted", NoSettings, lambda s, n, x: Noted(), card=DOUBLE))
     text = CONFIG.format(data_dir=tmp_path, replies=["Bonjour."]) + "tools: [{kind: noted}]\n"
     async with Nestor(parse_config(text, {}), registry) as nestor:
         serving = asyncio.create_task(nestor.serve())
@@ -502,8 +514,8 @@ def test_the_search_engines_under_tools_give_the_agent_one_web_search(tmp_path: 
 
     fakes = Fakes()
     registry = fakes.registry()
-    registry.register(Plugin(Family.TOOLS, "engine", NoSettings, lambda s, n, x: Engine()))
-    registry.register(Plugin(Family.TOOLS, "lamp", NoSettings, lambda s, n, x: Component()))
+    registry.register(Plugin(Family.TOOLS, "engine", NoSettings, lambda s, n, x: Engine(), card=DOUBLE))
+    registry.register(Plugin(Family.TOOLS, "lamp", NoSettings, lambda s, n, x: Component(), card=DOUBLE))
     text = CONFIG.format(data_dir=tmp_path, replies=[])
     nestor = Nestor(
         parse_config(text + "tools: [{kind: engine, name: exa}, {kind: engine, name: keenable}]\n", {}), registry

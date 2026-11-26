@@ -2348,6 +2348,8 @@ export interface components {
             details: {
                 [key: string]: string;
             };
+            /** Docs */
+            docs: string | null;
         };
         /** ConfigOut */
         ConfigOut: {

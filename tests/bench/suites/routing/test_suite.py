@@ -14,6 +14,7 @@ from nestor.bench.variants import load_variant
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Tool, ToolContext, ToolOutput, ToolProvider
+from nestor.modules.system.selfmap import SelfMap
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Registry
 from nestor.testing.cognition import ScriptedExecutor, ScriptedModel
@@ -117,6 +118,7 @@ def trial(
         localizer=EchoLocalizer(),
         executors=tuple(executors),
         tools=tuple(tools),
+        made_of=SelfMap([]),
     )
 
 
@@ -134,13 +136,18 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
     assert weather.asked == 0
     prompt = model.requests[0].messages[0].text
     assert "hermes: chercher sur le web" in prompt and "write in French" in prompt, "the runtime's instructions"
-    assert {"start_task", "create_alert", "message_person", "weather"} <= {t.name for t in model.requests[0].tools}
+    offered = {t.name for t in model.requests[0].tools}
+    assert {"start_task", "create_alert", "message_person", "weather", "about_nestor"} <= offered
 
     handed = ScriptedModel(
-        ToolCall("c1", "start_task", {"title": "Météo de Lyon demain", "instruction": "météo de Lyon demain"})
+        ToolCall(
+            "c1",
+            "start_task",
+            {"executor": "hermes", "title": "Météo de Lyon demain", "instruction": "météo de Lyon demain"},
+        )
     )
     took = await suite.run(WEATHER, None, trial(config, handed, [hermes], []))
-    assert (took["route"], took["right"]) == ("delegate:hermes", ["delegate:hermes"]), "the only executor, unnamed"
+    assert (took["route"], took["right"]) == ("delegate:hermes", ["delegate:hermes"])
     assert hermes.instructions == []
 
     alone = await suite.run(WEATHER, None, trial(config, ScriptedModel("Je ne peux pas le savoir."), [], []))

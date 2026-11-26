@@ -16,9 +16,21 @@ checked.
 """
 
 from nestor.adapters.connectors.mcp.settings import McpConnectorSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["plugin"]
 
 
-plugin = Plugin(Family.CONNECTOR, "mcp", McpConnectorSettings, build)
+plugin = Plugin(
+    Family.CONNECTOR,
+    "mcp",
+    McpConnectorSettings,
+    build,
+    card=Card(
+        summary="People connect remote MCP servers from the admin (GitHub, Linear, Notion, Todoist…), with the "
+        "service's own sign-in.",
+        docs="tools#mcp-servers",
+        needs=(Need.ACCOUNT,),
+    ),
+)

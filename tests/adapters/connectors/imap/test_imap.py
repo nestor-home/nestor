@@ -380,7 +380,7 @@ def tools(mailbox: FakeMailbox, access: FakeAccess | None = None, **options: Any
     return {t.name: t for t in connector.tools(CONNECTION, access or FakeAccess())}
 
 
-def test_the_connector_declares_typed_secrets_read_only_tools_and_mail_for_watches() -> None:
+def test_the_connector_declares_typed_secrets_read_only_tools_and_mail_for_alerts() -> None:
     assert INFO.auth is AuthKind.SECRET and INFO.inbound == ("mail",)
     assert [f.name for f in INFO.fields if f.secret] == ["password"]
     found = tools(FakeMailbox())

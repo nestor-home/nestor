@@ -23,8 +23,20 @@ A request for an approval or for input that still comes is declined: nobody answ
 from nestor.adapters.executors.codex.executor import CodexExecutor
 from nestor.adapters.executors.codex.protocol import Sandbox
 from nestor.adapters.executors.codex.settings import CodexSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["CodexExecutor", "CodexSettings", "Sandbox", "build", "plugin"]
 
-plugin = Plugin(Family.EXECUTOR, "codex", CodexSettings, build)
+plugin = Plugin(
+    Family.EXECUTOR,
+    "codex",
+    CodexSettings,
+    build,
+    card=Card(
+        summary="Hands long tasks to OpenAI's Codex: writes, runs and fixes code in a folder, on this machine or a "
+        "server.",
+        docs="executors#codex",
+        needs=(Need.PROGRAM, Need.ACCOUNT),
+    ),
+)

@@ -253,7 +253,7 @@ async def test_a_check_that_found_nothing_is_withheld_with_its_reason_in_the_jou
     sender, journal, voice, telegram = courier(StaticPresence(Granularity.HOME).set("mathis", home=False))
     sender.agent.models = ModelChoice.single(ScriptedModel(f"{SILENT} toujours 1 799 €, au-dessus du seuil"))
     async with sender:
-        reminder = Notification("A wake-up is due now: check the price of the TV.", PRICE)
+        reminder = Notification("An alert rang: check the price of the TV.", PRICE)
         assert await sender.deliver(MATHIS, reminder) == Sent(TELEGRAM, said=False)
 
     assert voice.sent == telegram.sent == []

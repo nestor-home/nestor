@@ -620,7 +620,14 @@ class Delegating:
     """A household whose alerts hand their checks to an executor, Hermes, who finds the TV at 1 599 €."""
 
     CHECK = ToolCall(
-        "c", "start_task", {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "notify": "message"}
+        "c",
+        "start_task",
+        {
+            "executor": "hermes",
+            "title": "Prix des télés",
+            "instruction": "Vérifie le prix des télés",
+            "notify": "message",
+        },
     )
 
     def __init__(self, *replies: Reply) -> None:

@@ -8,6 +8,7 @@ from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ConceptEmbedder, FakeRemote, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.cognition.model import Reply
 from nestor.testing.initiative import Inbox, QueuedSource
+from nestor.testing.system import DOUBLE
 
 
 class ModelSettings(AdapterSettings):
@@ -54,22 +55,24 @@ class Fakes:
         self.inbox = Inbox()
 
     def registry(self) -> Registry:
-        flaky = Plugin(Family.CHANNEL, "flaky", FlakySettings, self._flaky)
-        crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name))
-        inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox))
-        concepts = Plugin(Family.MODEL, "concepts", NoSettings, lambda s, n, x: self.embedder, serves=EmbeddingModel)
+        flaky = Plugin(Family.CHANNEL, "flaky", FlakySettings, self._flaky, card=DOUBLE)
+        crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name), card=DOUBLE)
+        inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox), card=DOUBLE)
+        concepts = Plugin(
+            Family.MODEL, "concepts", NoSettings, lambda s, n, x: self.embedder, serves=EmbeddingModel, card=DOUBLE
+        )
         return Registry(
             [self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, flaky, inbox, concepts]
         )
 
     def model_plugin(self) -> Plugin[ModelSettings]:
-        return Plugin(Family.MODEL, "scripted", ModelSettings, self._model, serves=LanguageModel)
+        return Plugin(Family.MODEL, "scripted", ModelSettings, self._model, serves=LanguageModel, card=DOUBLE)
 
     def channel_plugin(self) -> Plugin[NoSettings]:
-        return Plugin(Family.CHANNEL, "memory", NoSettings, self._channel)
+        return Plugin(Family.CHANNEL, "memory", NoSettings, self._channel, card=DOUBLE)
 
     def executor_plugin(self) -> Plugin[NoSettings]:
-        return Plugin(Family.EXECUTOR, "remote", NoSettings, self.executor)
+        return Plugin(Family.EXECUTOR, "remote", NoSettings, self.executor, card=DOUBLE)
 
     def _model(self, settings: ModelSettings, name: str, services: Services) -> ScriptedModel:
         model = ScriptedModel(*(settings.replies or self.script))
