@@ -6,7 +6,7 @@ As Mem0 and ChatGPT do: summarize cold, recall hot, and keep the original at han
 import asyncio
 import contextlib
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -22,7 +22,7 @@ from nestor.modules.memory.episodes.events import EpisodeSummarized
 from nestor.modules.memory.episodes.service import Episodes
 from nestor.modules.memory.episodes.transcript import transcript
 from nestor.modules.memory.episodes.types import Episode, how
-from nestor.modules.memory.service import Memories
+from nestor.modules.memory.service import Memories, filed, placed
 from nestor.modules.memory.types import HOUSEHOLD, Place
 from nestor.modules.usage import CallPurpose, attributed
 
@@ -221,11 +221,10 @@ class Consolidator(Component):
             log.warning("conversation %s not summarized after %d attempts", conversation, ATTEMPTS)
 
     async def _ask(self, lines: Sequence[str], seen: _Open, known: str) -> Consolidation | None:
-        people = {p.id: p for p in self.household.people}
         system = INSTRUCTIONS.format(
             assistant=self.assistant,
             language=self.language,
-            people=", ".join(f"{p.id} ({p.name})" for p in people.values()),
+            people=", ".join(f"{p.id} ({p.name})" for p in self.household.people),
             known=known,
         )
         when = seen.started_at.astimezone(ZoneInfo(self.timezone))
@@ -236,13 +235,13 @@ class Consolidator(Component):
             )
         )
         try:
-            return _consolidation(await json_answer(self.model, request), people)
+            return _consolidation(await json_answer(self.model, request), self.household)
         except ProviderError as error:
             log.warning("conversation not summarized: %s", error)
             return None
 
 
-def _consolidation(answer: dict[str, Any] | None, people: Mapping[PersonId, object]) -> Consolidation | None:
+def _consolidation(answer: dict[str, Any] | None, household: Household) -> Consolidation | None:
     """What the model wrote; None when it cannot be read. A fact filed with someone unknown, or nowhere that exists,
     goes to the household."""
     if answer is None or not isinstance(answer.get("summary"), str):
@@ -250,16 +249,16 @@ def _consolidation(answer: dict[str, Any] | None, people: Mapping[PersonId, obje
     summary = answer["summary"].strip()
     topics = tuple(t for t in (str(t).strip() for t in answer.get("topics") or ()) if t) if summary else ()
     facts = tuple(
-        (text, _filed(f.get("place"), people))
+        (text, _filed(f.get("place"), household))
         for f in answer.get("facts") or ()
         if isinstance(f, dict) and (text := str(f.get("text", "")).strip())
     )
     return Consolidation(summary, topics, facts)
 
 
-def _filed(value: object, people: Mapping[PersonId, object]) -> Place:
+def _filed(value: object, household: Household) -> Place:
+    """Where the model filed a fact; the household's when it named no place a memory can be filed in."""
     try:
-        place = Place.parse(str(value or ""))
+        return filed(placed(str(value or ""), household))
     except ContractError:
         return HOUSEHOLD
-    return HOUSEHOLD if place.person is not None and place.person not in people else place

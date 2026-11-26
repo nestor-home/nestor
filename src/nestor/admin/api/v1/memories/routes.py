@@ -20,7 +20,7 @@ from nestor.admin.api.v1.shared import ADMIN_CHANNEL, People
 from nestor.admin.state import state
 from nestor.core import ContractError, PersonId
 from nestor.modules.accounts import Scope
-from nestor.modules.memory import Place
+from nestor.modules.memory import Place, filed, placed
 from nestor.modules.usage import CallPurpose, attributed
 
 router = APIRouter(tags=["memories"])
@@ -67,8 +67,8 @@ async def list_retired(
     by the nightly upkeep."""
     admin = state(request)
     people = People(admin.nestor.household)
-    shown = [RetiredOut.of(event, position, people) for event, position in await retired(admin, limit)]
-    return [r for r in shown if reads_place(caller, Place.parse(r.place.path))]
+    found = await retired(admin, limit, lambda place: reads_place(caller, place))
+    return [RetiredOut.of(event, position, people) for event, position in found]
 
 
 @router.patch("/memories/{memory_id}")
@@ -86,17 +86,12 @@ async def move_memory(request: Request, caller: Keeper, memory_id: str, body: Mo
     admin = state(request)
     memory = await editable_memory(admin, caller, memory_id)
     try:
-        place = Place.parse(body.place)
-        if place.person is not None:
-            admin.nestor.household.person(place.person)
+        place = filed(placed(body.place, admin.nestor.household))
     except ContractError:
         raise ApiError(400, "unknown_place") from None
     if not reads_place(caller, place):
         raise ApiError(403, "memory_shared")
-    try:
-        moved = await admin.nestor.memories.move(memory.id, place, by=caller.person)
-    except ContractError:
-        raise ApiError(400, "unknown_place") from None
+    moved = await admin.nestor.memories.move(memory.id, place, by=caller.person)
     return MemoryOut.of(moved, caller, People(admin.nestor.household), await recorded(admin))
 
 

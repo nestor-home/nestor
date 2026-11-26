@@ -1420,7 +1420,6 @@ export function memories(): Memory[] {
       id,
       text,
       place: filed,
-      about: filed.person,
       told_by: told_by ? ref(told_by) : null,
       tied_to,
       learnt_in,
@@ -1551,8 +1550,24 @@ export function retired(): Retired[] {
     where: string,
     reason: Retirement,
     ago: number,
-    { why = null, tied_to = null, into = null }: Partial<Pick<Retired, "why" | "tied_to" | "into">> = {},
-  ): Retired => ({ memory_id, text, place: place(where), reason, why, tied_to, into, at: minutes(ago), event: 0 });
+    {
+      why = null,
+      tied_to = null,
+      into = null,
+      merged_text = null,
+    }: Partial<Pick<Retired, "why" | "tied_to" | "into" | "merged_text">> = {},
+  ): Retired => ({
+    memory_id,
+    text,
+    place: place(where),
+    reason,
+    why,
+    tied_to,
+    into,
+    merged_text,
+    at: minutes(ago),
+    event: 0,
+  });
   return [
     r(
       "m-r3",
@@ -1584,7 +1599,7 @@ export function retired(): Retired[] {
       "people/jules",
       "merged",
       529.9,
-      { into: "m-07" },
+      { into: "m-07", merged_text: HANDBALL },
     ),
   ];
 }

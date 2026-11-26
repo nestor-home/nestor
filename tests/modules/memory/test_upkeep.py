@@ -91,11 +91,13 @@ async def test_each_place_is_tidied_only_as_far_as_it_holds_and_every_change_is_
         "m5": "Léa court un semi-marathon en mars.",  # no date that passed: kept
         "h1": "La chaudière est révisée chaque septembre.",
     }
-    retired = {e.memory_id: (e.reason, e.why, e.into, e.text) for e in await journal.history(MemoryRetired)}
+    retired = {
+        e.memory_id: (e.reason, e.why, e.into, e.merged_text, e.text) for e in await journal.history(MemoryRetired)
+    }
     assert retired == {
-        "m3": (Retirement.MERGED, None, "m4", "Léa aime le thé."),
-        "m1": (Retirement.STALE, "elle remange du poisson", None, "Léa est végétarienne."),
-        "r1": (Retirement.STALE, "le couvreur est passé", None, "Le couvreur passe le 3 mars 2026."),
+        "m3": (Retirement.MERGED, None, "m4", "Léa aime le thé et en boit chaque jour.", "Léa aime le thé."),
+        "m1": (Retirement.STALE, "elle remange du poisson", None, None, "Léa est végétarienne."),
+        "r1": (Retirement.STALE, "le couvreur est passé", None, None, "Le couvreur passe le 3 mars 2026."),
     }
     (merged,) = await journal.history(MemoryCorrected)
     assert (merged.memory_id, merged.merged) == ("m4", ("m3",))

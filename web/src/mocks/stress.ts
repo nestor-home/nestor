@@ -188,7 +188,6 @@ export function stress(db: Db, now = Date.now()): void {
     id: "m-stress",
     text: `${LONG_NAME} keeps her papers at ${LONG_URL} and calls it ${LONG_WORD}.`,
     place: { path: `people/${MARIE.id}`, shelf: "people", name: MARIE.id, person: MARIE },
-    about: MARIE,
     told_by: MARIE,
     tied_to: null,
     learnt_in: "web",
@@ -210,7 +209,6 @@ export function stress(db: Db, now = Date.now()): void {
     id: "m-stress-project",
     text: LONG_SENTENCE,
     place: renovation,
-    about: null,
     told_by: MARIE,
     tied_to: `task:${"0123456789abcdef".repeat(2)}`,
     learnt_in: "web",
@@ -228,6 +226,7 @@ export function stress(db: Db, now = Date.now()): void {
     why: LONG_SENTENCE,
     tied_to: null,
     into: null,
+    merged_text: null,
     at: at(15),
     event: 1,
   });

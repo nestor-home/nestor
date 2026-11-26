@@ -42,6 +42,7 @@ SUMMARY = json.dumps(
         "facts": [
             {"text": "Léa et Hugo fêtent leur anniversaire de mariage le 14 novembre.", "place": "household"},
             {"text": "Da Marco est rue Mercière.", "place": "Projects/Anniversaire de mariage"},
+            {"text": "Le jardin est en pente.", "place": "topics"},
             {"text": "Le voisin aime le vin.", "place": "people/voisin"},
         ],
     }
@@ -126,6 +127,7 @@ async def test_a_conversation_is_summarized_once_its_silence_has_passed_and_its_
     assert [(f.place, f.episode, f.learnt_in) for f in facts] == [
         ("household", "c1", CHAT),
         ("projects/anniversaire-de-mariage", "c1", CHAT),
+        ("household", "c1", CHAT),  # a whole shelf: shared, and the facts after it kept
         ("household", "c1", CHAT),  # nobody of the household: shared
     ]
     asked = home.model.requests[0]

@@ -104,7 +104,6 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
 function Tidied() {
   const t = useT();
   const retired = useQuery(retiredQuery);
-  const memories = useQuery(memoriesQuery({}));
   const body = retired.isPending ? (
     <Loading lines={2} />
   ) : retired.isError ? (
@@ -114,7 +113,7 @@ function Tidied() {
   ) : (
     <RowList aria-label={t("mem-tidied")}>
       {retired.data.map((r) => (
-        <TidiedRow key={`${r.event}`} retired={r} into={memories.data?.find((m) => m.id === r.into)} />
+        <TidiedRow key={`${r.event}`} retired={r} />
       ))}
     </RowList>
   );
@@ -125,12 +124,12 @@ function Tidied() {
   );
 }
 
-function TidiedRow({ retired: r, into }: { retired: Retired; into: Memory | undefined }) {
+function TidiedRow({ retired: r }: { retired: Retired }) {
   const t = useT();
   const where = placeName(t, r.place);
   const what =
-    r.reason === "merged" && into
-      ? t("mem-retired-into", { text: into.text })
+    r.merged_text !== null
+      ? t("mem-retired-into", { text: r.merged_text })
       : t("mem-retired", { reason: r.reason, tie: tieOf(r.tied_to)?.kind ?? "" });
   return (
     <li>

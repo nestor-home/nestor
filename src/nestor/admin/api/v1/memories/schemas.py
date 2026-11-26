@@ -26,7 +26,6 @@ class MemoryOut(BaseModel):
     id: str
     text: str
     place: PlaceOut
-    about: PersonRef | None  # None: shared by the household
     told_by: PersonRef | None
     tied_to: str | None  # task:<id> or alert:<id>: retired when that ends
     learnt_in: str | None  # the conversation it was learnt in
@@ -42,7 +41,6 @@ class MemoryOut(BaseModel):
             id=memory.id,
             text=memory.text,
             place=PlaceOut.of(memory.place, people),
-            about=people.ref(memory.about),
             told_by=people.ref(memory.told_by),
             tied_to=memory.tied_to,
             learnt_in=str(memory.source) if memory.source else None,
@@ -65,6 +63,7 @@ class RetiredOut(BaseModel):
     why: str | None  # the consolidation model's words
     tied_to: str | None
     into: str | None  # the memory it was merged into
+    merged_text: str | None  # what that one said once merged
     at: datetime
     event: int  # its journal position
 
@@ -78,6 +77,7 @@ class RetiredOut(BaseModel):
             why=retired.why,
             tied_to=retired.tied_to,
             into=retired.into,
+            merged_text=retired.merged_text,
             at=retired.at,
             event=position,
         )

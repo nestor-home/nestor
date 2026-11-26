@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Collection
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.embedding import Vector
+from nestor.modules.household import Household
 from nestor.modules.journal import Journal
 from nestor.modules.memory.events import (
     MemoryCorrected,
@@ -97,7 +98,7 @@ class Memories:
         return memory
 
     async def retire(
-        self, memory_id: str, reason: Retirement, *, why: str | None = None, into: str | None = None
+        self, memory_id: str, reason: Retirement, *, why: str | None = None, into: Memory | None = None
     ) -> Memory:
         """No longer used, and journaled with what it said and why: never erased without trace."""
         memory = await self._existing(memory_id)
@@ -110,7 +111,8 @@ class Memories:
                 reason=reason,
                 why=why,
                 tied_to=memory.tied_to,
-                into=into,
+                into=into.id if into else None,
+                merged_text=into.text if into else None,
             )
         )
         await self._dropped(memory_id)
@@ -173,3 +175,17 @@ def filed(place: Place) -> Place:
     if place.whole:
         raise ContractError(f"a memory is filed in one of the {place.shelf.value}: {place.shelf.value}/<name>")
     return place
+
+
+def placed(text: str, household: Household) -> Place:
+    """The place `text` names (see `Place.parse`), a person's only for a member of the household."""
+    place = Place.parse(text)
+    if place.person is not None:
+        household.person(place.person)
+    return place
+
+
+def named(place: Place, household: Household) -> str:
+    """A place as the model reads it: a person's with their name (`people/lea (Léa)`)."""
+    person = place.person
+    return f"{place} ({household.name_of(person, person)})" if person else str(place)

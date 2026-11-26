@@ -94,12 +94,12 @@ async def test_a_member_reads_memories_about_them_and_the_household_but_edits_on
         (filed,) = (await api.get("/api/v1/memories", place="projects")).json()
         assert filed["text"] == "Mathilde est végane"
 
-        await memories.retire(his.id, Retirement.STALE, why="le rendez-vous est passé")
         await memories.retire(shared.id, Retirement.STALE, why="nouveau code")
-        retired = (await api.get("/api/v1/memories/retired")).json()
+        await memories.retire(his.id, Retirement.STALE, why="le rendez-vous est passé")
+        retired = (await api.get("/api/v1/memories/retired", limit=1)).json()
         assert [(r["text"], r["reason"], r["why"]) for r in retired] == [
             ("Le code du portail est 1234", "stale", "nouveau code")
-        ], "never what was another's"
+        ], "never what was another's, even when it is the latest"
         assert (await api.delete(f"/api/v1/memories/{hers.id}")).status_code == 403, "shared once moved there"
 
 
@@ -108,7 +108,7 @@ async def test_the_household_manages_every_memory(tmp_path: Path) -> None:
         memory = await admin.nestor.memories.remember("Mathis aime le café", place=Place.of(MATHIS), told_by=MATHIS)
         api = await admin.api()
         (listed,) = (await api.get("/api/v1/memories", q="café", about="mathis")).json()
-        assert listed["about"] == {"id": "mathis", "name": "Mathis"} and listed["editable"]
+        assert listed["place"]["person"] == {"id": "mathis", "name": "Mathis"} and listed["editable"]
         assert (await api.delete(f"/api/v1/memories/{memory.id}")).status_code == 204
         assert (await api.delete(f"/api/v1/memories/{memory.id}")).status_code == 404
 

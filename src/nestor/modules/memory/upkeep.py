@@ -21,7 +21,7 @@ from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest,
 from nestor.modules.household import Household
 from nestor.modules.journal import Journal
 from nestor.modules.memory.events import MemoryUpkept
-from nestor.modules.memory.service import Memories
+from nestor.modules.memory.service import Memories, named
 from nestor.modules.memory.types import Memory, Place, Retirement
 from nestor.modules.usage import CallPurpose, attributed
 
@@ -122,9 +122,9 @@ class Upkeep(Component):
                     failed.append(str(place))
                     continue
                 for merge in tidying.merges:
-                    await self.memories.correct(merge.keep, merge.text, merged=merge.drop)
+                    kept = await self.memories.correct(merge.keep, merge.text, merged=merge.drop)
                     for dropped in merge.drop:
-                        await self.memories.retire(dropped, Retirement.MERGED, into=merge.keep)
+                        await self.memories.retire(dropped, Retirement.MERGED, into=kept)
                     merged += len(merge.drop)
                 for memory_id, why in tidying.retired:
                     await self.memories.retire(memory_id, Retirement.STALE, why=why)
@@ -134,12 +134,9 @@ class Upkeep(Component):
         return done
 
     async def _ask(self, place: Place, memories: Sequence[Memory]) -> Tidying | None:
-        named = str(place)
-        if person := place.person:
-            named += f" ({self.household.name_of(person, person)})"
         system = INSTRUCTIONS.format(
             assistant=self.assistant,
-            place=named,
+            place=named(place, self.household),
             today=f"{self._clock().astimezone(self.zone):%A %d %B %Y}",
             language=self.language,
         )

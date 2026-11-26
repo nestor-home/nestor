@@ -101,9 +101,9 @@ def _within(about: PersonId | None, place: Place | None) -> tuple[str, list[obje
     if about is not None:
         where.append("(m.place = ? OR m.place NOT LIKE ?)")
         params += [f"{_PEOPLE}{about}", f"{_PEOPLE}%"]
-    if place is not None and place.name is None:
-        where.append("(m.place = ? OR m.place LIKE ?)")
-        params += [place.shelf.value, f"{place.shelf.value}/%"]
+    if place is not None and place.whole:
+        where.append("m.place LIKE ?")
+        params.append(f"{place.shelf.value}/%")
     elif place is not None:
         where.append("m.place = ?")
         params.append(str(place))

@@ -18,7 +18,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory.episodes import Episode, Episodes
 from nestor.modules.memory.episodes.transcript import transcript
 from nestor.modules.memory.recall import RecallSettings, for_turn
-from nestor.modules.memory.service import Memories
+from nestor.modules.memory.service import Memories, named, placed
 from nestor.modules.memory.ties import Ties
 from nestor.modules.memory.types import Memory, Place, Shelf
 
@@ -215,8 +215,7 @@ class MemoryTools(ToolProvider, ContextProvider):
         )
 
     def _place(self, place: Place) -> str:
-        person = place.person
-        return f"{place} ({self.household.name_of(person, person)})" if person else str(place)
+        return named(place, self.household)
 
     def _episodes(self, episodes: Sequence[Episode]) -> str:
         zone = ZoneInfo(self.timezone)
@@ -353,12 +352,9 @@ class MemoryTools(ToolProvider, ContextProvider):
     def _placed(self, value: object) -> Place:
         """A place the model named, checked: a person's must be a member of the household."""
         try:
-            place = Place.parse(str(value or ""))
-            if place.person is not None:
-                self.household.person(place.person)
+            return placed(str(value or ""), self.household)
         except ContractError as error:
             raise ToolFailed(f"{value!r} is not a place: {error}") from None
-        return place
 
     def _tied(self, value: object) -> str | None:
         if not value:

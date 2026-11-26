@@ -17992,16 +17992,6 @@
           "place": {
             "$ref": "#/components/schemas/PlaceOut"
           },
-          "about": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "told_by": {
             "anyOf": [
               {
@@ -18076,7 +18066,6 @@
           "id",
           "text",
           "place",
-          "about",
           "told_by",
           "tied_to",
           "learnt_in",
@@ -19381,6 +19370,17 @@
             ],
             "title": "Into"
           },
+          "merged_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merged Text"
+          },
           "at": {
             "type": "string",
             "format": "date-time",
@@ -19400,6 +19400,7 @@
           "why",
           "tied_to",
           "into",
+          "merged_text",
           "at",
           "event"
         ],

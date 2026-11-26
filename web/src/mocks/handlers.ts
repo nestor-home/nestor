@@ -1604,7 +1604,10 @@ export const handlers = [
     };
     return json(
       db.memories.filter(
-        (m) => (!q || m.text.toLowerCase().includes(q)) && (!about || m.about?.id === about) && holds(m),
+        (m) =>
+          (!q || m.text.toLowerCase().includes(q)) &&
+          (!about || !m.place.person || m.place.person.id === about) &&
+          holds(m),
       ),
     );
   }),
@@ -1626,7 +1629,6 @@ export const handlers = [
     const filed = placeOf(place);
     if (!filed) return fail(400, "unknown_place");
     memory.place = filed;
-    memory.about = filed.person;
     memory.updated_at = new Date().toISOString();
     save();
     return json(memory);

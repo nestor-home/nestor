@@ -311,7 +311,7 @@ class MemoryRecall(Suite[Remembered, RecallKnobs]):
         by_kind = tuple(
             metric(f"recall-{kind}", ratio(reached[kind], wanted[kind]), Unit.RATIO, Better.HIGHER)
             for kind in KINDS
-            if kind not in UNSCORED or kind in ("obsolete", "note")
+            if kind not in ("none", "private")
         )
         return Summary(
             metrics=(

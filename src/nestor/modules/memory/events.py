@@ -50,7 +50,8 @@ class MemoryForgotten(Event, event_type="memory.forgotten"):
 
 class MemoryRetired(Event, event_type="memory.retired"):
     """No longer used, and kept here with what it said: its task or alert ended (`tied_to`), or the nightly upkeep
-    found it outdated or merged it `into` another, `why` in the consolidation model's words."""
+    found it outdated or merged it `into` another (`merged_text`: what that one says now), `why` in the consolidation
+    model's words."""
 
     memory_id: str
     text: str
@@ -59,6 +60,7 @@ class MemoryRetired(Event, event_type="memory.retired"):
     why: str | None = None
     tied_to: str | None = None
     into: str | None = None
+    merged_text: str | None = None
 
 
 class MemoryUpkept(Event, event_type="memory.upkept"):

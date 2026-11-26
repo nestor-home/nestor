@@ -3165,7 +3165,6 @@ export interface components {
             /** Text */
             text: string;
             place: components["schemas"]["PlaceOut"];
-            about: components["schemas"]["PersonRef"] | null;
             told_by: components["schemas"]["PersonRef"] | null;
             /** Tied To */
             tied_to: string | null;
@@ -3653,6 +3652,8 @@ export interface components {
             tied_to: string | null;
             /** Into */
             into: string | null;
+            /** Merged Text */
+            merged_text: string | null;
             /**
              * At
              * Format: date-time

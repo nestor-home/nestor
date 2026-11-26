@@ -15,7 +15,7 @@ from nestor.modules.memory.events import (
 )
 from nestor.modules.memory.index import SearchIndex
 from nestor.modules.memory.ports import MemoryStore
-from nestor.modules.memory.service import Memories
+from nestor.modules.memory.service import Memories, filed, named, placed
 from nestor.modules.memory.ties import Tie, Ties
 from nestor.modules.memory.types import HOME, HOUSEHOLD, Memory, Place, Retirement, Shelf
 from nestor.modules.memory.upkeep import Upkeep
@@ -39,4 +39,7 @@ __all__ = [
     "Tie",
     "Ties",
     "Upkeep",
+    "filed",
+    "named",
+    "placed",
 ]
