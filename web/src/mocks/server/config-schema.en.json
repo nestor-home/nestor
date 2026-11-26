@@ -756,6 +756,36 @@
             "title": "Embedding timeout (seconds)",
             "help": "Past it, the search uses keywords only."
           }
+        },
+        "upkeep_at": {
+          "anyOf": [
+            {
+              "format": "time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "03:30:00",
+          "title": "Upkeep At",
+          "x-nestor": {
+            "field": "upkeep_at",
+            "title_id": "config-memory-upkeep_at",
+            "help_id": "config-memory-upkeep_at-help",
+            "fallback_title_id": "config-field-upkeep_at",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Upkeep at",
+            "help": null
+          }
         }
       },
       "title": "MemoryConfig",

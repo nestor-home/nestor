@@ -86,7 +86,15 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested
 from nestor.modules.journal import Entry, FileRef
-from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.memory import (
+    MemoryCorrected,
+    MemoryForgotten,
+    MemoryMoved,
+    MemoryRecorded,
+    MemoryRetired,
+    MemoryUpkept,
+    Place,
+)
 from nestor.modules.memory.episodes import EpisodeSummarized
 from nestor.modules.satellites import (
     MediaEnd,
@@ -196,7 +204,15 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
     ),
     Kind.WATCH: (WatchCreated, WatchSorted, WatchTriggered, WatchEnded),
     Kind.SCHEDULE: (ScheduleCreated, ScheduleFired, ScheduleCancelled),
-    Kind.MEMORY: (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized),
+    Kind.MEMORY: (
+        MemoryRecorded,
+        MemoryCorrected,
+        MemoryMoved,
+        MemoryForgotten,
+        MemoryRetired,
+        MemoryUpkept,
+        EpisodeSummarized,
+    ),
     Kind.CONNECTION: (ConnectionCreated, ConnectionChanged, ConnectionRemoved),
     Kind.PRESENCE: (PresenceChanged,),
     Kind.SATELLITE: (
@@ -501,15 +517,35 @@ class EventDescriber:
             WatchEnded: lambda e: self._line(e, Message.of("journal-watch-ended", watch=e.watch_id, reason=e.reason)),
             MemoryRecorded: lambda e: self._line(
                 e,
-                Message.of("journal-memory-recorded", drawn=_yes(e.episode is not None)),
+                Message.of(
+                    "journal-memory-recorded",
+                    drawn=_yes(e.episode is not None),
+                    kept=_yes(e.task is not None),
+                    place=e.place,
+                ),
                 detail=e.text,
-                people=[e.about, e.told_by],
+                people=[Place.parse(e.place).person, e.told_by],
                 channels=[e.learnt_in],
             ),
             MemoryCorrected: lambda e: self._line(
-                e, Message.of("journal-memory-corrected"), detail=e.text, people=[e.by]
+                e,
+                Message.of("journal-memory-corrected", merged=len(e.merged)),
+                detail=e.text,
+                people=[e.by],
             ),
+            MemoryMoved: lambda e: self._line(e, Message.of("journal-memory-moved", place=e.place), people=[e.by]),
             MemoryForgotten: lambda e: self._line(e, Message.of("journal-memory-forgotten"), people=[e.by]),
+            MemoryRetired: lambda e: self._line(
+                e,
+                Message.of("journal-memory-retired", reason=e.reason.value, tie=e.tied_to or ""),
+                detail=f"{e.text} ({e.why})" if e.why else e.text,
+                people=[Place.parse(e.place).person],
+            ),
+            MemoryUpkept: lambda e: self._line(
+                e,
+                Message.of("journal-memory-upkept", merged=e.merged, retired=e.retired, failed=len(e.failed)),
+                tone=Tone.WARNING if e.failed else Tone.NORMAL,
+            ),
             EpisodeSummarized: lambda e: self._line(
                 e,
                 Message.of("journal-episode-summarized", kept=_yes(bool(e.summary))),

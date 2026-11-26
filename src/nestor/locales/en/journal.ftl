@@ -152,11 +152,28 @@ journal-watch-ended = Watch { $watch } { $reason ->
 }
 
 journal-memory-recorded = { $drawn ->
-    [yes] Memory drawn from a conversation
-   *[no] Memory recorded
+    [yes] Memory drawn from a conversation, in { $place }
+   *[no] { $kept ->
+        [yes] Task note kept as a memory, in { $place }
+       *[no] Memory recorded in { $place }
+    }
 }
-journal-memory-corrected = Memory corrected
+journal-memory-corrected = { $merged ->
+    [0] Memory corrected
+    [one] Memory merged with another during the nightly upkeep
+   *[other] Memory merged with { $merged } others during the nightly upkeep
+}
+journal-memory-moved = Memory moved to { $place }
 journal-memory-forgotten = Memory forgotten
+journal-memory-retired = { $reason ->
+    [ended] Memory retired: { $tie } ended
+    [merged] Memory merged into another
+   *[stale] Memory retired as outdated
+}
+journal-memory-upkept = { $failed ->
+    [0] Nightly upkeep of the memories: { $merged } merged, { $retired } retired
+   *[other] Nightly upkeep of the memories: { $merged } merged, { $retired } retired, { $failed } places not read
+}
 journal-episode-summarized = { $kept ->
     [yes] Conversation summarized
    *[no] Conversation with nothing to keep

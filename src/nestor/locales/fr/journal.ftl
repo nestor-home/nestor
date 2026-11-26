@@ -154,11 +154,28 @@ journal-watch-ended = Veille { $watch } { $reason ->
 }
 
 journal-memory-recorded = { $drawn ->
-    [yes] Souvenir tiré d'une conversation
-   *[no] Souvenir enregistré
+    [yes] Souvenir tiré d'une conversation, dans { $place }
+   *[no] { $kept ->
+        [yes] Note de tâche gardée comme souvenir, dans { $place }
+       *[no] Souvenir enregistré dans { $place }
+    }
 }
-journal-memory-corrected = Souvenir corrigé
+journal-memory-corrected = { $merged ->
+    [0] Souvenir corrigé
+    [one] Souvenir fusionné avec un autre pendant l'entretien de la nuit
+   *[other] Souvenir fusionné avec { $merged } autres pendant l'entretien de la nuit
+}
+journal-memory-moved = Souvenir déplacé dans { $place }
 journal-memory-forgotten = Souvenir oublié
+journal-memory-retired = { $reason ->
+    [ended] Souvenir retiré : { $tie } est terminé
+    [merged] Souvenir fusionné dans un autre
+   *[stale] Souvenir retiré car périmé
+}
+journal-memory-upkept = { $failed ->
+    [0] Entretien des souvenirs de la nuit : { $merged } fusionnés, { $retired } retirés
+   *[other] Entretien des souvenirs de la nuit : { $merged } fusionnés, { $retired } retirés, { $failed } places non lues
+}
 journal-episode-summarized = { $kept ->
     [yes] Conversation résumée
    *[no] Conversation sans rien à retenir
