@@ -423,14 +423,14 @@ function Knows() {
   return (
     <Section title={t("home-knows")} aside={<MoreLink to="/memories">{t("home-all-memories")}</MoreLink>}>
       <ul className="grid gap-5">
-        {latest.map((m) => (
+        {latest.map(({ place: { person }, ...m }) => (
           <li key={m.id}>
-            <Link to="/memories" search={m.about ? { about: m.about.id } : {}} className="group flex gap-3">
-              {m.about ? <Avatar name={m.about.name} className="mt-1" /> : null}
+            <Link to="/memories" search={person ? { about: person.id } : {}} className="group flex gap-3">
+              {person ? <Avatar name={person.name} className="mt-1" /> : null}
               <span className="min-w-0">
                 <span className="block title-sub text-ink group-hover:underline">{m.text}</span>
                 <span className="mt-1 block text-meta text-ink-muted">
-                  {m.about ? `${m.about.name} · ` : ""}
+                  {person ? `${person.name} · ` : ""}
                   {m.updated_at >= today ? (
                     t("home-learnt-today", { time: hourMinute(m.updated_at) })
                   ) : (

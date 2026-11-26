@@ -68,7 +68,7 @@ async def test_an_account_without_the_agents_scope_gets_entries_but_no_activity(
             assert await stream.frame() == "retry: 3000"
             await admin.nestor.journal.publish(heard(True))
             await admin.nestor.journal.publish(
-                MemoryRecorded(source="memory", memory_id="m1", text="Lucie aime le thé", about=PersonId("lucie"))
+                MemoryRecorded(source="memory", memory_id="m1", text="Lucie aime le thé", place="people/lucie")
             )
             frame = dict(line.split(": ", 1) for line in (await stream.frame()).splitlines())
             assert frame["event"] == "item" and json.loads(frame["data"])["detail"] == "Lucie aime le thé"

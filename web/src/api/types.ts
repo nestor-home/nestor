@@ -116,6 +116,10 @@ export type Messages = S["MessagesOut"];
 export type Confirmation = S["ConfirmationOut"];
 export type Memory = S["MemoryOut"];
 export type MemoryQuery = NonNullable<Query<"/api/v1/memories">>;
+export type Place = S["PlaceOut"];
+export type Shelf = S["Shelf"];
+export type Retired = S["RetiredOut"];
+export type Retirement = S["Retirement"];
 
 // -- system ---------------------------------------------------------------------------------------
 

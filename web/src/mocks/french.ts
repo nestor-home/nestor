@@ -13,7 +13,21 @@ export function fr(english: string, french: string): string {
 }
 
 /** Codes, never words: an `owner` role or a `completed` status stays as the API defines it. */
-const CODES = new Set(["id", "role", "status", "risk", "kind", "type", "health", "tone", "subject", "auth", "slot"]);
+const CODES = new Set([
+  "id",
+  "role",
+  "status",
+  "risk",
+  "kind",
+  "type",
+  "health",
+  "tone",
+  "subject",
+  "auth",
+  "slot",
+  "shelf",
+  "reason",
+]);
 
 /** A value as the mock server sends it to a French reader. */
 export function inFrench<T>(value: T): T {

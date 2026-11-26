@@ -241,8 +241,18 @@ def test_a_line_the_dot_env_cannot_parse_is_skipped_with_its_line_named(
         (VALID.replace('"voice:salon"', '"voice:*"'), "not anyone"),
         (VALID.replace("channels:\n  - kind: telegram\n    token: ${TELEGRAM_TOKEN}", "channels: []"), "channels"),
         (VALID + "initiative: {quiet_hours: late}\n", "initiative.quiet_hours: .*HH:MM-HH:MM"),
+        (VALID + "memory: {upkeep_at: 23:15}\n", 'memory.upkeep_at: .*quoted: "03:30"'),
     ],
-    ids=["yaml", "missing-section", "unknown-key", "bad-account", "anyone-account", "no-channel", "quiet-hours"],
+    ids=[
+        "yaml",
+        "missing-section",
+        "unknown-key",
+        "bad-account",
+        "anyone-account",
+        "no-channel",
+        "quiet-hours",
+        "unquoted-time",
+    ],
 )
 def test_an_invalid_file_says_where_and_why(text: str, reason: str) -> None:
     with pytest.raises(ConfigError, match=reason):

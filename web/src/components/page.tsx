@@ -51,8 +51,11 @@ export function Section({
   className,
   id,
   level = 2,
+  mark,
 }: {
   title: string;
+  /** what the section holds, drawn before its title: an icon tile */
+  mark?: ReactNode;
   count?: number;
   aside?: ReactNode;
   children: ReactNode;
@@ -69,6 +72,7 @@ export function Section({
           id={headingId}
           className={cn("flex items-baseline gap-2.5 text-ink", level === 2 ? "display-3" : "title-sub")}
         >
+          {mark ? <span className="self-center">{mark}</span> : null}
           {title}
           {count ? <Count n={count} /> : null}
         </Heading>

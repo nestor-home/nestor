@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from nestor.core import PersonId
 from nestor.modules.channels import Address, Medium
-from nestor.modules.memory import Memory, MemoryStore
+from nestor.modules.memory import HOME, Memory, MemoryStore, Place
 from nestor.modules.memory.episodes import Episode, EpisodeStore
 from nestor.testing.text import folded_words
 
@@ -33,21 +33,30 @@ class InMemoryMemoryStore(MemoryStore):
     async def delete(self, memory_id: str) -> None:
         self.memories.pop(memory_id, None)
 
-    async def search(self, query: str, *, about: PersonId | None = None, limit: int = 10) -> list[Memory]:
+    async def search(
+        self, query: str, *, about: PersonId | None = None, place: Place | None = None, limit: int = 10
+    ) -> list[Memory]:
         wanted = words(query)
-        scored = [
-            (len(wanted & words(m.text)), m)
-            for m in self.memories.values()
-            if about is None or m.about in (about, None)
-        ]
+        scored = [(len(wanted & words(f"{m.text} {m.place.label}")), m) for m in self._within(about, place)]
         return [m for score, m in sorted(scored, key=lambda s: -s[0]) if score][:limit]
 
-    async def recent(self, *, about: PersonId | None = None, limit: int = 20) -> list[Memory]:
-        kept = [m for m in self.memories.values() if about is None or m.about in (about, None)]
-        return sorted(kept, key=lambda m: m.updated_at, reverse=True)[:limit]
+    async def recent(
+        self, *, about: PersonId | None = None, place: Place | None = None, limit: int = 20
+    ) -> list[Memory]:
+        return sorted(self._within(about, place), key=lambda m: m.updated_at, reverse=True)[:limit]
 
     async def everything(self) -> list[Memory]:
         return list(self.memories.values())
+
+    async def tied(self, tie: str) -> list[Memory]:
+        return [m for m in self.memories.values() if m.tied_to == tie]
+
+    def _within(self, about: PersonId | None, place: Place | None) -> list[Memory]:
+        return [
+            m
+            for m in self.memories.values()
+            if (about is None or m.about in (about, None)) and (place is None or place.holds(m.place))
+        ]
 
 
 class MemoryStoreContract:
@@ -59,19 +68,46 @@ class MemoryStoreContract:
     async def test_a_memory_is_found_by_its_words_whatever_the_accents(self) -> None:
         mathilde = PersonId("mathilde")
         async with self.store() as store:
-            await store.put(Memory(text="Mathilde est végétarienne", about=mathilde))
+            await store.put(Memory(text="Mathilde est végétarienne", place=Place.of(mathilde)))
             await store.put(Memory(text="Le code du portail est 1234"))
             found = await store.search("menu VEGETARIENNE ce soir")  # its only word in common, without accents
         assert [m.text for m in found][:1] == ["Mathilde est végétarienne"]
 
-    async def test_a_search_about_someone_keeps_their_memories_and_the_household_ones(self) -> None:
+    async def test_a_search_about_someone_keeps_their_memories_and_the_shared_ones(self) -> None:
         mathis, mathilde = PersonId("mathis"), PersonId("mathilde")
         async with self.store() as store:
-            await store.put(Memory(text="aime le café serré", about=mathis))
-            await store.put(Memory(text="aime le café au lait", about=mathilde))
+            await store.put(Memory(text="aime le café serré", place=Place.of(mathis)))
+            await store.put(Memory(text="aime le café au lait", place=Place.of(mathilde)))
             await store.put(Memory(text="le café est dans le placard"))
+            await store.put(Memory(text="la machine à café est détartrée", place=HOME))
             found = await store.search("café", about=mathis)
-        assert sorted(m.text for m in found) == ["aime le café serré", "le café est dans le placard"]
+            latest = await store.recent(about=mathis)
+        expected = ["aime le café serré", "la machine à café est détartrée", "le café est dans le placard"]
+        assert sorted(m.text for m in found) == expected
+        assert sorted(m.text for m in latest) == expected
+
+    async def test_a_memory_is_found_by_the_name_of_its_project_and_kept_to_its_place_or_shelf(self) -> None:
+        roof, garden = Place.parse("projects/roof-works"), Place.parse("topics/garden")
+        async with self.store() as store:
+            await store.put(Memory(text="Le couvreur a chiffré 4 200 €", place=roof))
+            await store.put(Memory(text="Les tomates se plantent fin mars", place=garden))
+            await store.put(Memory(text="Le devis des fenêtres est arrivé", place=Place.parse("projects/windows")))
+            assert [m.text for m in await store.search("where are the ROOF works?")] == [
+                "Le couvreur a chiffré 4 200 €"
+            ]
+            assert [m.place for m in await store.recent(place=garden)] == [garden]
+            in_projects = await store.recent(place=Place.parse("projects"))
+            assert sorted(str(m.place) for m in in_projects) == ["projects/roof-works", "projects/windows"]
+            assert await store.search("tomates", place=roof) == []
+
+    async def test_a_memory_keeps_its_place_and_tie_and_is_found_by_its_tie(self) -> None:
+        async with self.store() as store:
+            tied = Memory(text="Léa veut savoir si la télé baisse", place=Place.of(PersonId("lea")), tied_to="task:t1")
+            await store.put(tied)
+            await store.put(Memory(text="autre chose", tied_to="task:t2"))
+            await store.put(tied.moved(HOME))
+            assert [(m.id, m.place, m.tied_to) for m in await store.tied("task:t1")] == [(tied.id, HOME, "task:t1")]
+            assert await store.tied("task:absent") == []
 
     async def test_a_memory_is_replaced_then_deleted(self) -> None:
         async with self.store() as store:

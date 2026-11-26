@@ -63,6 +63,7 @@ error-watch-unknown = Cette veille n'existe pas ou est déjà terminée.
 error-schedule-unknown = Ce rappel n'existe pas ou est déjà passé.
 error-confirmation-unknown = Cette demande n'attend plus votre accord : déjà répondue, ou expirée.
 error-memory-unknown = Souvenir introuvable.
+error-unknown-place = Cette place n'existe pas : people/<personne>, home, household, projects/<nom> ou topics/<nom>.
 error-memory-shared = Seuls les administrateurs modifient les souvenirs communs.
 error-empty-memory = Un souvenir ne peut pas être vide. Pour l'effacer, oubliez-le.
 error-attachment-unknown = Ce fichier n'est pas disponible.

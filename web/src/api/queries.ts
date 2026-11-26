@@ -44,6 +44,7 @@ export const keys = {
   configVersion: (id: Id) => ["config", "history", id] as const,
   secrets: ["config", "secrets"] as const,
   memories: (query: MemoryQuery) => ["memories", query] as const,
+  retired: ["memories", "retired"] as const,
   chats: ["chats"] as const,
   chat: (id: Id) => ["chats", id] as const,
   mentions: ["chats", "mentions"] as const,
@@ -169,6 +170,8 @@ export const confirmationsQuery = queryOptions({
 export const homeQuery = queryOptions({ queryKey: keys.home, queryFn: api.home, refetchInterval: 60_000 });
 export const memoriesQuery = (query: MemoryQuery) =>
   queryOptions({ queryKey: keys.memories(query), queryFn: () => api.memories(query) });
+/** What the nightly upkeep and the ends of tasks retired lately; under `memories`, so a change to one refreshes it. */
+export const retiredQuery = queryOptions({ queryKey: keys.retired, queryFn: api.retiredMemories });
 
 /** Kept current by the stream's `activity` events; fetched once, and again after a reconnect. */
 export const activityQuery = queryOptions({

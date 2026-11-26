@@ -1,30 +1,37 @@
 /**
- * What the agent knows about the household, by person: a memory opens in a sheet (where it comes from,
- * correcting it, forgetting it), and searching is a dialog opened from the page's heading.
+ * What the agent knows about the household, by where it is filed: each person, the house, the household's shared
+ * life, then the projects and the topics the agent named. A memory opens in a sheet (where it comes from,
+ * correcting, moving or forgetting it), searching is a dialog opened from the page's heading, and what the nightly
+ * upkeep or an ending tidied away closes the page.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Search, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { type Memory, type MemoryQuery, memoriesQuery, peopleQuery } from "@/api";
+import { type Memory, type MemoryQuery, memoriesQuery, peopleQuery, type Retired, retiredQuery } from "@/api";
+import { Ago } from "@/components/ago";
 import { Chips } from "@/components/chips";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { FormActions } from "@/components/form-actions";
-import { Avatar } from "@/components/marks";
+import { Avatar, IconTile } from "@/components/marks";
 import { FormDialog, SideSheet } from "@/components/overlay-form";
-import { PageHeader, Section } from "@/components/page";
+import { PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
+import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
+import { RETIREMENT_ICON, SHELF_ICON } from "@/lib/icons";
 import { useCan, useMe } from "@/lib/session";
-import { MemoryCard, MemoryPanel } from "./memory-card";
+import { MemoryCard, MemoryPanel, tieOf } from "./memory-card";
+import { byPlace, named, PlaceIcon, placeName } from "./places";
 
-/** The memories a query brings, as cards that open in place; `grouped` sorts them under whom they are about. */
+/** The memories a query brings, as cards that open in place; `grouped` files them under their place. */
 export function MemoryList({ query, grouped = false }: { query: MemoryQuery; grouped?: boolean }) {
   const t = useT();
   const memories = useQuery(memoriesQuery(query));
+  const people = useQuery({ ...peopleQuery, enabled: useCan("people:read") && grouped });
   const editable = useCan("memories:write");
   const [open, setOpen] = useState<string | null>(null);
   if (memories.isPending) return <Loading lines={4} />;
@@ -38,7 +45,7 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
   const cards = (list: readonly Memory[]) => (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {list.map((m) => (
-        <MemoryCard key={m.id} memory={m} about={!grouped} onOpen={() => setOpen(m.id)} />
+        <MemoryCard key={m.id} memory={m} place={!grouped} onOpen={() => setOpen(m.id)} />
       ))}
     </ul>
   );
@@ -46,28 +53,42 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
     <>
       {grouped ? (
         <div className="grid gap-10">
-          {groupsOf(memories.data).map(({ about, list }) => (
-            <Section
-              key={about?.id ?? ""}
-              title={about?.name ?? t("household-everyone-capital")}
-              count={list.length}
-              aside={
-                about ? (
-                  <Link
-                    to="/people/$personId"
-                    params={{ personId: about.id }}
-                    className="inline-flex shrink-0 items-center gap-2 text-body text-ink-muted hover:text-ink"
-                    aria-label={t("mem-open-person", { name: about.name })}
-                  >
-                    <Avatar name={about.name} />
-                    <ArrowRight className="size-3.5" aria-hidden="true" />
-                  </Link>
-                ) : undefined
-              }
-            >
-              {cards(list)}
-            </Section>
-          ))}
+          {byPlace(
+            memories.data,
+            (people.data ?? []).map((p) => p.id),
+          ).map(({ place, list }) => {
+            const name = placeName(t, place);
+            return (
+              <Section
+                key={place.path}
+                id={`place-${place.path.replace(/[^a-z0-9]+/gi, "-")}`}
+                title={name}
+                count={list.length}
+                mark={
+                  place.shelf === "people" ? undefined : (
+                    <IconTile icon={SHELF_ICON[place.shelf]} size="sm" tone="sage" />
+                  )
+                }
+                aside={
+                  place.person ? (
+                    <Link
+                      to="/people/$personId"
+                      params={{ personId: place.person.id }}
+                      className="inline-flex shrink-0 items-center gap-2 text-body text-ink-muted hover:text-ink"
+                      aria-label={t("mem-open-person", { name })}
+                    >
+                      <Avatar name={name} />
+                      <ArrowRight className="size-3.5" aria-hidden="true" />
+                    </Link>
+                  ) : named(place.shelf) ? (
+                    <Tag className="shrink-0">{t("mem-shelf-kind", { shelf: place.shelf })}</Tag>
+                  ) : undefined
+                }
+              >
+                {cards(list)}
+              </Section>
+            );
+          })}
         </div>
       ) : (
         cards(memories.data)
@@ -79,16 +100,65 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
   );
 }
 
-/** Memories under whom they are about, in the order they came: the whole household's first. */
-function groupsOf(memories: readonly Memory[]): { about: Memory["about"]; list: Memory[] }[] {
-  const groups = new Map<string, { about: Memory["about"]; list: Memory[] }>();
-  for (const m of memories) {
-    const key = m.about?.id ?? "";
-    const group = groups.get(key) ?? { about: m.about, list: [] };
-    group.list.push(m);
-    groups.set(key, group);
-  }
-  return [...groups.values()].sort((a, b) => Number(Boolean(a.about)) - Number(Boolean(b.about)));
+/** What the nightly upkeep merged or set aside, and what went when its task ended: each opens its journal entry. */
+function Tidied() {
+  const t = useT();
+  const retired = useQuery(retiredQuery);
+  const body = retired.isPending ? (
+    <Loading lines={2} />
+  ) : retired.isError ? (
+    <Failure error={retired.error} retry={() => void retired.refetch()} />
+  ) : retired.data.length === 0 ? (
+    <Empty hint={t("mem-tidied-empty-hint")}>{t("mem-tidied-empty")}</Empty>
+  ) : (
+    <RowList aria-label={t("mem-tidied")}>
+      {retired.data.map((r) => (
+        <TidiedRow key={`${r.event}`} retired={r} />
+      ))}
+    </RowList>
+  );
+  return (
+    <Section title={t("mem-tidied")} count={retired.data?.length} id="memories-tidied">
+      {body}
+    </Section>
+  );
+}
+
+function TidiedRow({ retired: r }: { retired: Retired }) {
+  const t = useT();
+  const where = placeName(t, r.place);
+  const what =
+    r.merged_text !== null
+      ? t("mem-retired-into", { text: r.merged_text })
+      : t("mem-retired", { reason: r.reason, tie: tieOf(r.tied_to)?.kind ?? "" });
+  return (
+    <li>
+      <Link
+        to="/journal"
+        search={{ event: r.event }}
+        className="grid grid-cols-[auto_1fr] gap-x-3.5 px-4 py-3 hover:bg-paper-sunken/60"
+      >
+        <IconTile icon={RETIREMENT_ICON[r.reason]} size="sm" />
+        <span className="grid min-w-0 gap-1 [overflow-wrap:break-word]">
+          <span className="text-body text-ink">{what}</span>
+          <span className="text-meta text-ink-muted line-through decoration-rule-strong">{r.text}</span>
+          {r.why ? (
+            <span className="text-meta text-ink-muted">
+              <span className="text-ember">{t("jr-why-label")} </span>
+              {r.why}
+            </span>
+          ) : null}
+          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-meta text-ink-muted">
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <PlaceIcon place={r.place} name={where} />
+              {where}
+            </span>
+            <Ago iso={r.at} />
+          </span>
+        </span>
+      </Link>
+    </li>
+  );
 }
 
 export function MemoriesView({ query, onQuery }: { query: MemoryQuery; onQuery: (next: MemoryQuery) => void }) {
@@ -100,6 +170,7 @@ export function MemoriesView({ query, onQuery }: { query: MemoryQuery; onQuery: 
     { id: "", label: t("mem-about-everyone") },
     ...(people.data ?? []).map((p) => ({ id: p.id, label: p.name })),
   ];
+  const filtered = Boolean(query.q || query.about);
   return (
     <div className="grid gap-10">
       <div>
@@ -145,6 +216,7 @@ export function MemoriesView({ query, onQuery }: { query: MemoryQuery; onQuery: 
         ) : null}
       </div>
       <MemoryList query={query} grouped={!query.about} />
+      {filtered ? null : <Tidied />}
     </div>
   );
 }

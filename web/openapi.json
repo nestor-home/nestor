@@ -9154,7 +9154,7 @@
           "memories"
         ],
         "summary": "List Memories",
-        "description": "The latest memories, or those matching `q`; `about` keeps one person's (and the household's).",
+        "description": "The latest memories, or those matching `q`; `about` keeps one person's (and the shared ones), `place` those of\na place or a shelf (`projects`).",
         "operationId": "listMemories",
         "parameters": [
           {
@@ -9175,6 +9175,16 @@
               "type": "string",
               "default": "",
               "title": "About"
+            }
+          },
+          {
+            "name": "place",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Place"
             }
           },
           {
@@ -9201,6 +9211,126 @@
                     "$ref": "#/components/schemas/MemoryOut"
                   },
                   "title": "Response Listmemories"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memories/retired": {
+      "get": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "List Retired",
+        "description": "The memories retired lately, newest first: tied to what ended, or merged or found outdated\nby the nightly upkeep.",
+        "operationId": "listRetired",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RetiredOut"
+                  },
+                  "title": "Response Listretired"
                 }
               }
             }
@@ -9429,6 +9559,128 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memories/{memory_id}/move": {
+      "post": {
+        "tags": [
+          "memories"
+        ],
+        "summary": "Move Memory",
+        "operationId": "moveMemory",
+        "parameters": [
+          {
+            "name": "memory_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryOut"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -16084,6 +16336,7 @@
               "last_owner",
               "memory_shared",
               "memory_unknown",
+              "unknown_place",
               "method_not_allowed",
               "no_connectors",
               "no_secret_key",
@@ -17748,15 +18001,8 @@
             "type": "string",
             "title": "Text"
           },
-          "about": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "place": {
+            "$ref": "#/components/schemas/PlaceOut"
           },
           "told_by": {
             "anyOf": [
@@ -17767,6 +18013,17 @@
                 "type": "null"
               }
             ]
+          },
+          "tied_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tied To"
           },
           "learnt_in": {
             "anyOf": [
@@ -17820,8 +18077,9 @@
         "required": [
           "id",
           "text",
-          "about",
+          "place",
           "told_by",
+          "tied_to",
           "learnt_in",
           "session",
           "learnt_event",
@@ -18005,6 +18263,20 @@
           "image"
         ],
         "title": "ModelType"
+      },
+      "MoveIn": {
+        "properties": {
+          "place": {
+            "type": "string",
+            "title": "Place"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "place"
+        ],
+        "title": "MoveIn"
       },
       "NestorOut": {
         "properties": {
@@ -18403,6 +18675,46 @@
           "total"
         ],
         "title": "PhraseOut"
+      },
+      "PlaceOut": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "shelf": {
+            "$ref": "#/components/schemas/Shelf"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "shelf",
+          "name",
+          "person"
+        ],
+        "title": "PlaceOut"
       },
       "PointOut": {
         "properties": {
@@ -19020,6 +19332,102 @@
           "restarting"
         ],
         "title": "RestartOut"
+      },
+      "RetiredOut": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "place": {
+            "$ref": "#/components/schemas/PlaceOut"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/Retirement"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why"
+          },
+          "tied_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tied To"
+          },
+          "into": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Into"
+          },
+          "merged_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merged Text"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "event": {
+            "type": "integer",
+            "title": "Event"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "text",
+          "place",
+          "reason",
+          "why",
+          "tied_to",
+          "into",
+          "merged_text",
+          "at",
+          "event"
+        ],
+        "title": "RetiredOut",
+        "description": "A memory no longer used, and why: what it was tied to ended, or the nightly upkeep merged it or found it\noutdated."
+      },
+      "Retirement": {
+        "type": "string",
+        "enum": [
+          "ended",
+          "stale",
+          "merged"
+        ],
+        "title": "Retirement",
+        "description": "Why a memory was retired: no longer used, its record kept in the journal."
       },
       "RhythmOut": {
         "properties": {
@@ -19642,6 +20050,18 @@
           "named"
         ],
         "title": "Shape"
+      },
+      "Shelf": {
+        "type": "string",
+        "enum": [
+          "people",
+          "home",
+          "household",
+          "projects",
+          "topics"
+        ],
+        "title": "Shelf",
+        "description": "The first level of a place: fixed."
       },
       "SlotOut": {
         "properties": {

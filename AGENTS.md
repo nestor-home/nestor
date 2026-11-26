@@ -34,7 +34,7 @@ src/nestor/
 │   │   └── delegation/   executors, durable tasks rebuilt from the journal, delegation tools
 │   ├── household/        people and their accounts on channels
 │   ├── home/             the home system plugged once (`Home`): its presence, its actions as tools, its rooms
-│   ├── memory/           memories per person: journaled changes, searchable store, agent tools
+│   ├── memory/           memories filed by place, tied to what they hold for, tidied every night: journaled changes, searchable store, agent tools
 │   ├── identity/         diarization and speaker identification ports (opt-in, never authorisation)
 │   ├── connectors/       third-party services plugged in from the admin: OAuth, vault, tools, inbound
 │   ├── satellites/       pairing, additions, manifests, the `nestor.satellite/1` wire format and its JSON Schemas

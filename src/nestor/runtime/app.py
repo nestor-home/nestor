@@ -38,7 +38,7 @@ from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
 from nestor.modules.cognition import Executor, FallingBack, LanguageModel, ToolCall
-from nestor.modules.cognition.delegation import ExecutorKeys, NestorTools
+from nestor.modules.cognition.delegation import ExecutorKeys, NestorTools, TaskArchived
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import EmbeddingModel
@@ -79,7 +79,7 @@ from nestor.modules.initiative import (
 from nestor.modules.initiative.confirmations import Confirmations
 from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories, SearchIndex
+from nestor.modules.memory import Memories, SearchIndex, Tie, Ties, Upkeep
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost
@@ -312,6 +312,9 @@ class Nestor:
             self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
         )
         recall = config.memory.recall()
+        self.memory_ties = Ties(
+            self.journal, self.memories, [Tie("task", TaskArchived, lambda e: e.task_id, self.tasks.running)]
+        )
         self.memory_tools = memory = MemoryTools(
             self.memories,
             self.episodes,
@@ -320,6 +323,8 @@ class Nestor:
             assistant=config.persona.name,
             timezone=config.persona.timezone,
             recall=recall,
+            ties=self.memory_ties,
+            notes=lambda task, person: found.notes if (found := self.tasks.theirs(task, person)) else None,
         )
         self.watch_book = WatchBook(self.journal, self.sources)
         watch_tools = WatchTools(self.watch_book)
@@ -439,6 +444,20 @@ class Nestor:
             timezone=config.persona.timezone,
             known=config.memory.recent,
         )
+        self.upkeep = (
+            Upkeep(
+                self.journal,
+                model("memory.consolidation", roles["consolidation"]),
+                self.memories,
+                self.household,
+                at=config.memory.upkeep_at,
+                assistant=config.persona.name,
+                language=config.persona.language,
+                timezone=config.persona.timezone,
+            )
+            if config.memory.upkeep_at is not None
+            else None
+        )
         self.titles = ConversationTitles(
             self.journal,
             model("agent.titles", roles["titles"]),
@@ -513,6 +532,7 @@ class Nestor:
             self.documentation,  # read by about_nestor
             self.toolbox,  # after its tools: its calls in the background stop first
             self.tasks,
+            self.memory_ties,  # after the tasks it reads
             *self.channels,
             self.courier,
             self.returns,
@@ -527,6 +547,7 @@ class Nestor:
             self.activity,
             self.titles,
             self.consolidator,
+            *([self.upkeep] if self.upkeep else []),
             *updates,
         ]
 

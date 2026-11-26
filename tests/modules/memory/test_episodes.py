@@ -8,7 +8,7 @@ import pytest
 
 from nestor.core import PersonId, new_id
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.cognition.tools import ToolContext, ToolFailed
+from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolContext, ToolFailed
 from nestor.modules.conversation import (
     About,
     AnswerCut,
@@ -33,13 +33,18 @@ from nestor.testing.memory import EpisodeStoreContract, InMemoryEpisodeStore, In
 
 LEA = Person(id=PersonId("lea"), name="Léa", accounts=(Account.parse("telegram:7"),))
 HUGO = Person(id=PersonId("hugo"), name="Hugo", accounts=(Account.parse("telegram:42"),))
-CHAT = Address("telegram", "7")
+CHAT, SALON = Address("telegram", "7"), Address("satellites", "salon")
 START = datetime(2026, 11, 2, 18, 0, tzinfo=UTC)
 SUMMARY = json.dumps(
     {
         "summary": "Léa a parlé du restaurant Da Marco pour l'anniversaire de mariage.",
         "topics": ["restaurant", "anniversaire"],
-        "facts": [{"text": "Léa et Hugo fêtent leur anniversaire de mariage le 14 novembre.", "about": "household"}],
+        "facts": [
+            {"text": "Léa et Hugo fêtent leur anniversaire de mariage le 14 novembre.", "place": "household"},
+            {"text": "Da Marco est rue Mercière.", "place": "Projects/Anniversaire de mariage"},
+            {"text": "Le jardin est en pente.", "place": "topics"},
+            {"text": "Le voisin aime le vin.", "place": "people/voisin"},
+        ],
     }
 )
 
@@ -82,13 +87,15 @@ class Home:
             clock=self.clock,
         )
 
-    async def exchange(self, conversation: str, said: str, answer: str, *, at: datetime, person: Person = LEA) -> None:
+    async def exchange(
+        self, conversation: str, said: str, answer: str, *, at: datetime, person: Person = LEA, address: Address = CHAT
+    ) -> Exchange:
         turn = Exchange(conversation_id=conversation, turn_id=new_id())
         await self.journal.publish(
             UserTurn(
                 source="test",
-                session=CHAT.session,
-                address=CHAT,
+                session=address.session,
+                address=address,
                 text=said,
                 medium=Medium.WRITTEN,
                 speaker=Speaker.account(person.id),
@@ -97,8 +104,9 @@ class Home:
             )
         )
         await self.journal.publish(
-            AssistantTurn(source="test", session=CHAT.session, address=CHAT, text=answer, exchange=turn, at=at)
+            AssistantTurn(source="test", session=address.session, address=address, text=answer, exchange=turn, at=at)
         )
+        return turn
 
 
 async def test_a_conversation_is_summarized_once_its_silence_has_passed_and_its_facts_are_kept() -> None:
@@ -115,8 +123,13 @@ async def test_a_conversation_is_summarized_once_its_silence_has_passed_and_its_
     (summarized,) = await home.journal.history(EpisodeSummarized)
     assert (summarized.conversation_id, summarized.participants, summarized.medium) == ("c1", ("lea",), Medium.WRITTEN)
     assert summarized.summary.startswith("Léa a parlé du restaurant Da Marco")
-    (fact,) = await home.journal.history(MemoryRecorded)
-    assert (fact.episode, fact.about, fact.learnt_in) == ("c1", None, CHAT)
+    facts = await home.journal.history(MemoryRecorded)
+    assert [(f.place, f.episode, f.learnt_in) for f in facts] == [
+        ("household", "c1", CHAT),
+        ("projects/anniversaire-de-mariage", "c1", CHAT),
+        ("household", "c1", CHAT),  # a whole shelf: shared, and the facts after it kept
+        ("household", "c1", CHAT),  # nobody of the household: shared
+    ]
     asked = home.model.requests[0]
     transcript = asked.messages[-1].content
     assert "[19:00] Léa: Tu connais Da Marco ?" in transcript and "[19:00] Richie: Oui, rue Mercière." in transcript
@@ -174,6 +187,13 @@ async def test_a_conversation_with_nothing_to_keep_is_summarized_but_never_broug
         await home.consolidator.consolidate_due()
     assert len(await home.journal.history(EpisodeSummarized)) == 1
     assert await home.episodes.recent(LEA.id, limit=5) == []
+    lea = ToolContext(address=CHAT, speaker=Speaker.account(LEA.id))
+    reread = await {t.spec.name: t for t in tools(home).tools()}["read_conversation"].run(
+        {"conversation_id": "c1"}, lea
+    )
+    assert reread == {"conversation": "[19:00] Léa: Allume le salon.\n[19:00] Richie: C'est fait."}, (
+        "reread all the same"
+    )
 
 
 async def test_a_summary_that_cannot_be_written_is_tried_again_then_waits_for_the_next_start() -> None:
@@ -191,7 +211,7 @@ async def test_a_summary_that_cannot_be_written_is_tried_again_then_waits_for_th
 
 
 async def test_an_odd_answer_and_a_broken_memory_never_make_a_conversation_kept_twice() -> None:
-    odd = json.dumps({"summary": "Da Marco.", "facts": [{"text": "Léa aime Da Marco.", "about": ["lea"]}]})
+    odd = json.dumps({"summary": "Da Marco.", "facts": [{"text": "Léa aime Da Marco.", "place": ["lea"]}]})
     home = Home(odd, odd)
 
     class Broken(InMemoryMemoryStore):
@@ -217,6 +237,40 @@ async def test_a_turn_published_after_a_later_one_is_still_read() -> None:
         await home.exchange("c1", "Et pour le 14 ?", "Je réserve.", at=START + timedelta(minutes=48))
         home.clock.now = START + timedelta(minutes=70)
         assert await home.consolidator.consolidate_due() == 0, "its silence counts from the late turn"
+
+
+async def test_a_summary_reads_the_tools_used_and_every_turn_of_its_conversation_wherever_and_whenever_written() -> (
+    None
+):
+    home = Home(SUMMARY)
+    async with home.consolidator:
+        asked = await home.exchange("c1", "Il fait combien au salon ?", "21 degrés.", at=START + timedelta(minutes=10))
+        at, session = START + timedelta(minutes=10), CHAT.session
+        called = ToolCalled(
+            source="t", session=session, call_id="k1", name="home_state", exchange=asked, at=at, address=CHAT,
+            arguments={"room": "salon"},
+        )  # fmt: skip
+        done = ToolCompleted(
+            source="t", session=session, call_id="k1", name="home_state", exchange=asked, at=at,
+            output="salon: 21,4 °C", ok=True, duration_s=0.2,
+        )  # fmt: skip
+        await home.journal.publish(called)
+        await home.journal.publish(done)
+        await home.consolidator.consolidate_due()  # follows c1 from its first turn read
+        await home.exchange("c1", "Bonsoir Richie", "Bonsoir Léa.", at=START)  # stamped earlier, published later
+        await home.exchange("c1", "Et dehors ?", "12 degrés.", at=START + timedelta(minutes=12), address=SALON)
+        home.clock.now = START + timedelta(hours=2)
+        assert await home.consolidator.consolidate_due() == 1
+    transcript = home.model.requests[0].messages[-1].content.splitlines()
+    assert transcript[1:] == [
+        "[19:00] Léa: Bonsoir Richie",
+        "[19:00] Richie: Bonsoir Léa.",
+        "[19:10] Léa: Il fait combien au salon ?",
+        "[19:10] Richie: 21 degrés.",
+        '[19:10] (Richie\'s tool): [home_state {"room": "salon"}] salon: 21,4 °C',
+        "[19:12] Léa: Et dehors ?",
+        "[19:12] Richie: 12 degrés.",
+    ]
 
 
 async def test_an_answer_cut_short_is_summarized_as_it_was_heard() -> None:

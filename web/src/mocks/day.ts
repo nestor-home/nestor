@@ -649,7 +649,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 149.4,
     type: "memory.recorded",
-    title: "Memory recorded",
+    title: "Memory recorded in Jules",
     detail: HANDBALL,
     people: [ref("jules")],
     channels: [VOICE],
@@ -1337,6 +1337,45 @@ export function day(now = Date.now()): JournalEvent[] {
     people: [ref("jules")],
     channels: ["ntfy"],
     links: { delivery: "schedule:sc-bins" },
+  });
+
+  // the nightly upkeep of the memories: a duplicate merged, an outdated one set aside
+  const upkeep = ev({
+    ago: 530,
+    type: "memory.upkept",
+    title: "Nightly upkeep of the memories: 1 merged, 1 retired",
+  });
+  ev({
+    ago: 529.9,
+    type: "memory.retired",
+    title: "Memory merged into another",
+    detail: fr("Jules has handball on Wednesday afternoons.", "Jules a handball le mercredi après-midi."),
+    people: [ref("jules")],
+    links: { memory: "m-r1" },
+    cause: upkeep,
+  });
+  ev({
+    ago: 529.8,
+    type: "memory.retired",
+    title: "Memory retired as outdated",
+    detail: fr(
+      "The boiler's next service is on 14 October.",
+      "La prochaine révision de la chaudière est le 14 octobre.",
+    ),
+    links: { memory: "m-r2" },
+    cause: upkeep,
+  });
+  // what Mathis wanted of the dependency update only held while it ran
+  ev({
+    ago: 520.7,
+    type: "memory.retired",
+    title: "Memory retired: its task ended",
+    detail: fr(
+      "Mathis wants the dependency update to keep Node 22.",
+      "Mathis veut que la mise à jour des dépendances garde Node 22.",
+    ),
+    people: [ref("mathis")],
+    links: { memory: "m-r3", task: "t-c1a9de" },
   });
 
   // the washing machine's webhook, and the message posted to Home Assistant's automation

@@ -33,6 +33,13 @@ HOUSEHOLD = [
      "kind": "episode"},
     {"case": "c-private", "speaker": "lea", "said": "Et le restaurant japonais de Hugo ?", "avoid": ["e-hugo"],
      "kind": "private"},
+    {"memory": "m-roof", "place": "projects/toiture", "text": "Le couvreur a chiffré 4 200 €."},
+    {"memory": "m-tv", "place": "people/lea", "text": "Léa veut savoir si la télé baisse.", "tied_to": "alert:tv",
+     "ended": "prévenue"},
+    {"note": "n-tv", "task": "t-tv", "requester": "lea", "text": "La télé est suivie sur trois sites."},
+    {"case": "c-place", "speaker": "lea", "said": "Et la toiture ?", "expected": ["m-roof"], "kind": "place"},
+    {"case": "c-ended", "speaker": "lea", "said": "La télé a baissé ?", "stale": ["m-tv"], "kind": "obsolete"},
+    {"case": "c-note", "speaker": "lea", "said": "La télé est suivie où ?", "avoid": ["n-tv"], "kind": "note"},
 ]  # fmt: skip
 
 
@@ -73,12 +80,14 @@ async def test_a_turn_finds_what_matters_never_someone_elses_conversation_and_a_
     assert (got["recall"], got["complete"]) == (1.0, 1.0)
     assert got["recall-paraphrase"] == 1.0, "found by meaning: no word in common"
     assert got["others-conversations-injected"] == 0, "Hugo's conversation never reaches Léa's turn"
+    assert got["recall-place"] == 1.0, "found by the name of its project"
+    assert (got["obsolete-injected"], got["notes-injected"]) == (0, 0), "its alert ended; a note is the task's"
     assert searching.summary.findings == ()
 
     blind = await bench(tmp_path, "blind", BLIND)
     got = {m.id: m.value for m in blind.summary.metrics}
     assert got["recall"] == 0.0
-    assert {f.case for f in blind.summary.findings} == {"c-direct", "c-meaning", "c-episode"}
+    assert {f.case for f in blind.summary.findings} == {"c-direct", "c-meaning", "c-episode", "c-place"}
 
     words = FluentLocalizer(catalogue_dirs(["nestor"]))
     shown = [Message.of(m.label) for m in searching.summary.metrics]
