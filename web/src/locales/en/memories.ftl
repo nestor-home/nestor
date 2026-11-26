@@ -9,7 +9,6 @@ mem-search-placeholder = handball, boiler…
 mem-search-submit = Search
 mem-about = Whom it is about
 mem-about-everyone = Everyone
-mem-about-label = About
 mem-told-by = told by { $name }
 mem-learnt-where = Where it was learnt
 mem-correct = Correct…
@@ -34,3 +33,43 @@ mem-told-by-label = Told by
 mem-learnt-in = Learnt on
 mem-kept-since = Kept since
 mem-changed = Corrected
+mem-place = Place
+mem-shelf-home = Home
+mem-shelf-household = Household
+mem-shelf-kind = { $shelf ->
+    [projects] project
+    [topics] topic
+   *[other] { $shelf }
+}
+mem-place-option = { $shelf ->
+    [projects] { $name } (project)
+    [topics] { $name } (topic)
+   *[other] { $name }
+}
+mem-tied = Kept until
+mem-tied-to = { $kind ->
+    [task] its task ends
+    [alert] its watch ends
+   *[other] { $kind } ends
+}
+mem-move = Move…
+mem-move-title = Move the memory
+mem-move-where = Where it belongs
+mem-move-new-project = New project…
+mem-move-new-topic = New topic…
+mem-move-name = Name
+mem-move-name-placeholder = roof works, garden…
+mem-move-submit = Move
+mem-moved = Memory moved.
+mem-tidied = Tidied lately
+mem-tidied-empty = Nothing tidied lately.
+mem-tidied-empty-hint = Each night I merge duplicates and set aside what no longer holds. A memory tied to a task goes when the task ends.
+mem-retired = { $reason ->
+    [merged] Merged into another memory
+    [stale] Set aside as outdated
+   *[ended] { $tie ->
+        [alert] Set aside: its watch ended
+       *[task] Set aside: its task ended
+    }
+}
+mem-retired-into = Merged into “{ $text }”

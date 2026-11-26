@@ -3,7 +3,8 @@
  * its state and every answer typed as the API's generated schemas, so the mocks cannot drift from it.
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
-import { type components, dayValues } from "@/api/schema.gen";
+import { type components, dayValues, shelfValues } from "@/api/schema.gen";
+import { oneOf } from "@/lib/enums";
 import { answerTo, chatMessage, MENTIONS, type MockChat, mentionedIn } from "./chats";
 import * as config from "./config";
 import { LIVE } from "./day";
@@ -256,6 +257,44 @@ const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(sequen
 /** A person of the mock household as the API names them: `{id, name}`. */
 const refOf = (id: string): In<"PersonRef"> => ({ id, name: db.people.find((p) => p.id === id)?.name ?? id });
 
+/** A place path as the reader sees it: a French reader gets the French names of the mock's projects and topics. */
+const shown = (path: string) => (lang === "fr" ? inFrench(path) : path);
+
+/** A name as places keep it (Nestor's `slug`): lowercase words joined by hyphens. */
+const slug = (text: string) =>
+  text
+    .normalize("NFC")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_/]+/g, "-")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "")
+    .split("-")
+    .filter(Boolean)
+    .join("-");
+
+/**
+ * Where a memory may be filed, as Nestor parses a place: `people/<a person of the household>`, `home`, `household`,
+ * `projects/<name>` or `topics/<name>`; a place a memory already has, as the reader saw it, is that place.
+ */
+function placeOf(text: string): In<"PlaceOut"> | null {
+  const known = db.memories.map((m) => m.place).find((p) => shown(p.path) === text.trim());
+  if (known) return known;
+  const [head = "", ...rest] = text
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .split("/");
+  const shelf = head.trim().toLowerCase();
+  const name = rest.join("/").trim();
+  if (!oneOf(shelfValues, shelf)) return null;
+  if (shelf === "home" || shelf === "household") return name ? null : { path: shelf, shelf, name: null, person: null };
+  if (shelf === "people") {
+    if (!db.people.some((p) => p.id === name)) return null;
+    return { path: `people/${name}`, shelf, name, person: refOf(name) };
+  }
+  const named = slug(name);
+  return named ? { path: `${shelf}/${named}`, shelf, name: named, person: null } : null;
+}
+
 const itemOut = (item: In<"JournalItem">) => localize(item, lang);
 
 /** The tasks the signed-in account reaches: all of them with `tasks.manage`, else its person's. */
@@ -282,6 +321,21 @@ function stopWorking(task: In<"TaskThreadOut">): boolean {
   });
   return true;
 }
+
+/** What changing a memory writes in the journal, as the server does: by whom, linked to the memory. */
+function journalizeMemory(type: "memory.corrected" | "memory.moved" | "memory.forgotten", id: string, title: string) {
+  const person = signedIn()?.person;
+  journalize({ type, title, people: person ? [person] : [], links: { memory: id } });
+}
+
+/** A memory's place as the journal names it (messages.ts reads it back). */
+const whereOf = (place: In<"PlaceOut">) =>
+  place.person?.name ??
+  (place.shelf === "home"
+    ? "the house"
+    : place.shelf === "household"
+      ? "the household"
+      : (place.name ?? "").replaceAll("-", " "));
 
 /** A new journal entry at the next position, as the stream and the list will send it. */
 function journalize(draft: Draft): In<"JournalItem"> {
@@ -1545,9 +1599,45 @@ export const handlers = [
     const query = new URL(request.url).searchParams;
     const q = query.get("q")?.toLowerCase().trim();
     const about = query.get("about");
+    const within = query
+      .get("place")
+      ?.trim()
+      .replace(/^\/+|\/+$/g, "");
+    if (within && !oneOf(shelfValues, within.split("/")[0])) return fail(400, "unknown_place");
+    const holds = (m: In<"MemoryOut">) => {
+      const path = shown(m.place.path);
+      return !within || path === within || (!within.includes("/") && m.place.shelf === within);
+    };
     return json(
-      db.memories.filter((m) => (!q || m.text.toLowerCase().includes(q)) && (!about || m.about?.id === about)),
+      db.memories.filter(
+        (m) =>
+          (!q || m.text.toLowerCase().includes(q)) &&
+          (!about || !m.place.person || m.place.person.id === about) &&
+          holds(m),
+      ),
     );
+  }),
+
+  http.get(`${API}/memories/retired`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(db.retired);
+  }),
+
+  http.post(`${API}/memories/:id/move`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    await delay(200);
+    const memory = db.memories.find((m) => m.id === params.id);
+    if (!memory) return notFound("memory");
+    if (!memory.editable) return fail(403, "memory_shared");
+    const { place } = (await request.json()) as In<"MoveIn">;
+    const filed = placeOf(place);
+    if (!filed) return fail(400, "unknown_place");
+    memory.place = filed;
+    memory.updated_at = new Date().toISOString();
+    journalizeMemory("memory.moved", memory.id, `Memory moved to ${whereOf(filed)}`);
+    return json(memory);
   }),
 
   http.patch(`${API}/memories/:id`, async ({ request, params }) => {
@@ -1560,15 +1650,18 @@ export const handlers = [
     if (!text.trim()) return fail(400, "empty_memory");
     memory.text = text.trim();
     memory.updated_at = new Date().toISOString();
-    save();
+    journalizeMemory("memory.corrected", memory.id, "Memory corrected");
     return json(memory);
   }),
 
   http.delete(`${API}/memories/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    db.memories = db.memories.filter((m) => m.id !== params.id);
-    save();
+    const forgotten = db.memories.find((m) => m.id === params.id);
+    if (!forgotten) return notFound("memory");
+    if (!forgotten.editable) return fail(403, "memory_shared");
+    db.memories = db.memories.filter((m) => m.id !== forgotten.id);
+    journalizeMemory("memory.forgotten", forgotten.id, "Memory forgotten");
     return noContent();
   }),
   // -- the agent --------------------------------------------------------------------------------

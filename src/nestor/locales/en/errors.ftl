@@ -62,6 +62,7 @@ error-executor-unavailable = This task's executor is no longer plugged in: it ca
 error-alert-unknown = This alert does not exist or has already ended.
 error-confirmation-unknown = This request no longer waits for your go-ahead: it was answered, or it expired.
 error-memory-unknown = Memory not found.
+error-unknown-place = No such place: people/<person>, home, household, projects/<name> or topics/<name>.
 error-memory-shared = Only administrators change shared memories.
 error-empty-memory = A memory cannot be empty. To erase it, forget it.
 error-attachment-unknown = This file is not available.

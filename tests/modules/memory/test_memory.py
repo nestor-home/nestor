@@ -12,7 +12,7 @@ from nestor.modules.conversation import Agent, Attachments, Layer, ModelChoice, 
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded, Place
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Episodes
 from nestor.modules.memory.recall import RecallSettings
@@ -36,7 +36,7 @@ async def test_the_contract_rejects_a_store_that_ignores_accents_badly() -> None
     class AccentBound(InMemoryMemoryStore):
         """Matches words whatever their case, but only with the same accents."""
 
-        async def search(self, query: str, *, about: PersonId | None = None, limit: int = 10) -> list:
+        async def search(self, query: str, *, about=None, place=None, limit: int = 10) -> list:  # type: ignore[override]
             wanted = set(query.casefold().split())
             return [m for m in self.memories.values() if wanted & set(m.text.casefold().split())]
 
@@ -54,15 +54,17 @@ def memories() -> Memories:
 
 
 async def test_every_change_is_logged(memories: Memories) -> None:
-    memory = await memories.remember(" Mathilde est végétarienne ", about=MATHILDE.id, source=VOICE, told_by=MATHIS.id)
+    memory = await memories.remember(
+        " Mathilde est végétarienne ", place=Place.of(MATHILDE.id), source=VOICE, told_by=MATHIS.id
+    )
     await memories.correct(memory.id, "Mathilde est végane", by=MATHIS.id)
     await memories.forget(memory.id, by=MATHIS.id)
 
     journal = memories.journal
     recorded = (await journal.history(MemoryRecorded))[0]
-    assert (recorded.text, recorded.about, recorded.learnt_in, recorded.told_by) == (
+    assert (recorded.text, recorded.place, recorded.learnt_in, recorded.told_by) == (
         "Mathilde est végétarienne",
-        "mathilde",
+        "people/mathilde",
         VOICE,
         "mathis",
     )
@@ -124,7 +126,7 @@ def memory_tools(memories: Memories, journal: Journal, recall: RecallSettings | 
 async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
     journal = Journal(MemoryEventLog())
     tools = memory_tools(Memories(journal, InMemoryMemoryStore()), journal)
-    remember = ToolCall("c1", "remember", {"text": "Mathilde est végétarienne", "about": "mathilde"})
+    remember = ToolCall("c1", "remember", {"text": "Mathilde est végétarienne", "place": "people/mathilde"})
     told = agent(journal, tools, ScriptedModel(remember, "C'est noté."))
     await told.respond(
         InboundMessage(address=VOICE, sender=Sender("mic"), text="Retiens que Mathilde est végétarienne")
@@ -135,7 +137,7 @@ async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
     said = "Je cuisine quoi ce soir ?"  # no word in common: every memory is there while the budget allows
     await later.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text=said)).collect()
 
-    assert "(about Mathilde) Mathilde est végétarienne" in model.requests[0].messages[0].text
+    assert "people/mathilde (Mathilde):\n- [" in model.requests[0].messages[0].text, "filed with her"
     assert [m.content for m in model.requests[0].messages[1:]] == [said]
 
 
@@ -149,12 +151,13 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
         return output
 
     saved = data(
-        await tools["remember"].run({"text": "Le portail s'ouvre avec le code 1234", "about": "household"}, context)
+        await tools["remember"].run({"text": "Le portail s'ouvre avec le code 1234", "place": "home"}, context)
     )
+    hers = data(await tools["remember"].run({"text": "Mathilde garde un secret", "place": "people/mathilde"}, context))
     found = data(await tools["recall"].run({"query": "code du portail"}, context))
     today = f"{utc_now():%Y-%m-%d}"
     assert found["memories"] == [
-        {"memory_id": saved["memory_id"], "text": f"{today} Le portail s'ouvre avec le code 1234"}
+        {"memory_id": saved["memory_id"], "text": f"{today} Le portail s'ouvre avec le code 1234 (home)"}
     ], "dated, so that the later of two memories that disagree is told apart"
 
     await tools["correct_memory"].run({"memory_id": saved["memory_id"], "text": "Le code du portail est 4321"}, context)
@@ -164,7 +167,10 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
     for name, arguments in [
         ("forget", {"memory_id": "nope"}),
         ("correct_memory", {"memory_id": "nope", "text": "x"}),
-        ("remember", {"text": "x", "about": "voisin"}),
+        ("remember", {"text": "x", "place": "people/voisin"}),
+        ("remember", {"text": "x", "place": "garage"}),
+        ("move_memory", {"memory_id": saved["memory_id"], "place": "projects/"}),
+        ("move_memory", {"memory_id": hers["memory_id"], "place": "household"}),  # hers, only she shares it
     ]:
         with pytest.raises(ToolFailed):
             await tools[name].run(arguments, context)
@@ -173,7 +179,7 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
 async def test_beyond_its_budget_a_turn_adds_what_its_words_find_to_the_latest() -> None:
     memories = Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
     await memories.remember("Le portail s'ouvre avec le code 1234")
-    await memories.remember("Mathilde est végétarienne", about=MATHILDE.id)
+    await memories.remember("Mathilde est végétarienne", place=Place.of(MATHILDE.id))
     tools = memory_tools(memories, memories.journal, recall=RecallSettings(recent=1))
 
     def turn(said: str | None) -> TurnContext:

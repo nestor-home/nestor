@@ -9,6 +9,7 @@ are the process environment's, completed by the `.env` next to the file (`enviro
 import os
 import re
 from collections.abc import Callable, Collection, Mapping
+from datetime import time
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -283,6 +284,17 @@ class MemoryConfig(Section):
     embedder: str | None = Field(default=None, json_schema_extra=EMBEDDING_MODEL)
     # how long a turn waits for the question's vector before searching by words only
     query_timeout_s: float = Field(default=1.0, gt=0, json_schema_extra=ADVANCED)
+    # when the consolidation model tidies the memories every night (merges duplicates, retires the outdated), in the
+    # persona's timezone; none to never
+    upkeep_at: time | None = time(3, 30)
+
+    @field_validator("upkeep_at", mode="before")
+    @classmethod
+    def _upkeep_at(cls, value: object) -> object:
+        # YAML reads an unquoted 23:15 as the number 1395, which pydantic would take for seconds
+        if isinstance(value, int | float):
+            raise ValueError('a time of day, quoted: "03:30"')
+        return value
 
     def recall(self) -> RecallSettings:
         return RecallSettings(

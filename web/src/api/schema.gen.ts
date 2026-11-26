@@ -1334,9 +1334,31 @@ export interface paths {
         };
         /**
          * List Memories
-         * @description The latest memories, or those matching `q`; `about` keeps one person's (and the household's).
+         * @description The latest memories, or those matching `q`; `about` keeps one person's (and the shared ones), `place` those of
+         *     a place or a shelf (`projects`).
          */
         get: operations["listMemories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/memories/retired": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Retired
+         * @description The memories retired lately, newest first: tied to what ended, or merged or found outdated
+         *     by the nightly upkeep.
+         */
+        get: operations["listRetired"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1361,6 +1383,23 @@ export interface paths {
         head?: never;
         /** Correct Memory */
         patch: operations["correctMemory"];
+        trace?: never;
+    };
+    "/api/v1/memories/{memory_id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move Memory */
+        post: operations["moveMemory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/system": {
@@ -2571,7 +2610,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unavailable" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_not_stopped" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "alert_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unavailable" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "unknown_place" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_not_stopped" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "alert_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -3142,8 +3181,10 @@ export interface components {
             id: string;
             /** Text */
             text: string;
-            about: components["schemas"]["PersonRef"] | null;
+            place: components["schemas"]["PlaceOut"];
             told_by: components["schemas"]["PersonRef"] | null;
+            /** Tied To */
+            tied_to: string | null;
             /** Learnt In */
             learnt_in: string | null;
             /** Session */
@@ -3228,6 +3269,11 @@ export interface components {
          * @enum {string}
          */
         ModelType: "language" | "embedding" | "speaker" | "transcription" | "speech" | "image";
+        /** MoveIn */
+        MoveIn: {
+            /** Place */
+            place: string;
+        };
         /** NestorOut */
         NestorOut: {
             /** Version */
@@ -3368,6 +3414,15 @@ export interface components {
             taken: number;
             /** Total */
             total: number;
+        };
+        /** PlaceOut */
+        PlaceOut: {
+            /** Path */
+            path: string;
+            shelf: components["schemas"]["Shelf"];
+            /** Name */
+            name: string | null;
+            person: components["schemas"]["PersonRef"] | null;
         };
         /** PointOut */
         PointOut: {
@@ -3596,6 +3651,40 @@ export interface components {
             /** Restarting */
             restarting: boolean;
         };
+        /**
+         * RetiredOut
+         * @description A memory no longer used, and why: what it was tied to ended, or the nightly upkeep merged it or found it
+         *     outdated.
+         */
+        RetiredOut: {
+            /** Memory Id */
+            memory_id: string;
+            /** Text */
+            text: string;
+            place: components["schemas"]["PlaceOut"];
+            reason: components["schemas"]["Retirement"];
+            /** Why */
+            why: string | null;
+            /** Tied To */
+            tied_to: string | null;
+            /** Into */
+            into: string | null;
+            /** Merged Text */
+            merged_text: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Event */
+            event: number;
+        };
+        /**
+         * Retirement
+         * @description Why a memory was retired: no longer used, its record kept in the journal.
+         * @enum {string}
+         */
+        Retirement: "ended" | "stale" | "merged";
         /** RhythmOut */
         RhythmOut: {
             /** Beats */
@@ -3773,6 +3862,12 @@ export interface components {
          * @enum {string}
          */
         Shape: "one" | "list" | "named";
+        /**
+         * Shelf
+         * @description The first level of a place: fixed.
+         * @enum {string}
+         */
+        Shelf: "people" | "home" | "household" | "projects" | "topics";
         /** SlotOut */
         SlotOut: {
             /** Family */
@@ -11363,6 +11458,7 @@ export interface operations {
             query?: {
                 q?: string;
                 about?: string;
+                place?: string;
                 limit?: number;
             };
             header?: never;
@@ -11378,6 +11474,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemoryOut"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    listRetired: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetiredOut"][];
                 };
             };
             /** @description Bad Request */
@@ -11558,6 +11748,104 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CorrectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    moveMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveIn"];
             };
         };
         responses: {
@@ -14466,7 +14754,7 @@ export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<compon
 export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "nothing", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
-export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unavailable", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_not_stopped", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "alert_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unavailable", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "unknown_place", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_not_stopped", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "alert_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const frequencyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Frequency"]> = ["once", "every_time", "until_rung"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
@@ -14487,11 +14775,13 @@ export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["sch
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
 export const purposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Purpose"]> = ["view", "call"];
+export const retirementValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Retirement"]> = ["ended", "stale", "merged"];
 export const ringCauseValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["RingCause"]> = ["due", "event", "match"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
 export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "alerts.manage.all", "alerts.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all", "usage.read.all", "usage.read.own"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
+export const shelfValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shelf"]> = ["people", "home", "household", "projects", "topics"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];
 export const suggestValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Suggest"]> = ["people", "residents"];

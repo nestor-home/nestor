@@ -21,6 +21,7 @@ from nestor.modules.cognition.delegation import TaskCreated, TurnDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
+from nestor.modules.memory import MemoryRetired, Retirement
 from nestor.modules.usage import CallPurpose, CostBasis, Counted, UsageFilter
 from nestor.modules.web import Found, WebSearch
 from nestor.runtime import Backoff, Nestor, Registry
@@ -450,13 +451,102 @@ async def test_the_command_line_serves_until_stopped(tmp_path: Path) -> None:
 
 async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
     fakes = Fakes()
-    fakes.script = [ToolCall("c1", "remember", {"text": "Le chat s'appelle Biscotte", "about": "household"}), "Noté."]
+    fakes.script = [ToolCall("c1", "remember", {"text": "Le chat s'appelle Biscotte", "place": "household"}), "Noté."]
     async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
         serving = asyncio.create_task(nestor.serve())
         await fakes.channels[0].ask("Retiens que le chat s'appelle Biscotte")
         serving.cancel()
     async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
         assert [m.text for m in await restarted.memories.recall("chat", vector=None)] == ["Le chat s'appelle Biscotte"]
+
+
+async def test_a_memory_tied_to_a_task_is_retired_when_the_task_is_archived(tmp_path: Path) -> None:
+    fakes, started = Fakes(), {}
+    fakes.script = [
+        ToolCall(
+            "c1",
+            "start_task",
+            {
+                "executor": "scripted-remote",
+                "title": "Vélo cargo",
+                "instruction": "Trouve un vélo cargo",
+                "notify": "message",
+            },
+        ),
+        "Je cherche.",
+        lambda _: ToolCall(
+            "c2",
+            "remember",
+            {
+                "text": "Mathis veut un vélo cargo à moins de 2 000 €",
+                "place": "people/mathis",
+                "tied_to": started["id"],
+            },
+        ),
+        "Noté.",
+    ]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Trouve-moi un vélo cargo")
+        (task,) = await nestor.journal.history(TaskCreated)
+        started["id"] = f"task:{task.task_id}"
+        await fakes.channels[0].ask("Seulement sous 2 000 €, le temps de la recherche")
+        (memory,) = await nestor.memories.recent()
+        retired = nestor.journal.subscribe(MemoryRetired)
+
+        await nestor.tasks.archive(task.task_id)
+
+        event = await retired.next(timeout_s=2)
+        serving.cancel()
+        assert await nestor.memories.recent() == []
+    assert isinstance(event, MemoryRetired)
+    assert (event.memory_id, event.reason, event.tied_to) == (memory.id, Retirement.ENDED, started["id"])
+
+
+async def test_a_memory_tied_to_an_alert_outlives_a_restart_and_is_retired_when_the_alert_is_cancelled(
+    tmp_path: Path,
+) -> None:
+    fakes, set_ = Fakes(), {}
+    fakes.script = [
+        ToolCall(
+            "c1",
+            "create_alert",
+            {
+                "title": "Prix de la télé",
+                "instruction": "Regarde le prix de la télé",
+                "times": ["09:00"],
+                "condition": "the TV is under 1 000 €",
+                "frequency": "until_rung",
+            },
+        ),
+        "C'est noté.",
+        lambda _: ToolCall(
+            "c2",
+            "remember",
+            {"text": "Mathis guette la télé sous 1 000 €", "place": "people/mathis", "tied_to": set_["id"]},
+        ),
+        "Noté.",
+    ]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Dis-moi quand la télé passe sous 1 000 €")
+        (alert,) = nestor.alert_book.alerts
+        set_["id"] = f"alert:{alert}"
+        await fakes.channels[0].ask("Retiens-le le temps que ça dure")
+        serving.cancel()
+    fakes.script = [ToolCall("c3", "cancel_alert", {"alert_id": alert}), "Annulée."]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as restarted:
+        serving = asyncio.create_task(restarted.serve())
+        (memory,) = await restarted.memories.recent()  # its alert still goes on
+        retired = restarted.journal.subscribe(MemoryRetired)
+
+        await fakes.channels[-1].ask("Laisse tomber la télé")  # the restarted one
+
+        event = await retired.next(timeout_s=2)
+        serving.cancel()
+        assert await restarted.memories.recent() == []
+    assert isinstance(event, MemoryRetired)
+    assert (event.memory_id, event.reason, event.tied_to) == (memory.id, Retirement.ENDED, set_["id"])
 
 
 async def test_an_alert_created_in_conversation_rings_when_its_mail_arrives(tmp_path: Path) -> None:

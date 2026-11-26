@@ -38,6 +38,25 @@ class Episodes:
             if self.index:
                 self.index.refresh(episode.id)
 
+    async def find(self, conversation: str) -> Episode | None:
+        """A conversation that ended, whether or not its summary was worth keeping (the journal has those)."""
+        (kept,) = await self.store.get_many([conversation]) or (None,)
+        if kept is not None:
+            return kept
+        for summarized in await self.journal.history(EpisodeSummarized, newest_first=True):
+            if summarized.conversation_id == conversation:
+                return Episode(
+                    id=conversation,
+                    address=summarized.address,
+                    medium=summarized.medium,
+                    participants=summarized.participants,
+                    started_at=summarized.started_at,
+                    ended_at=summarized.ended_at,
+                    summary=summarized.summary,
+                    topics=summarized.topics,
+                )
+        return None
+
     async def recent(
         self, person: PersonId, *, limit: int, since: datetime | None = None, until: datetime | None = None
     ) -> list[Episode]:

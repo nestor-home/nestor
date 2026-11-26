@@ -14,7 +14,7 @@ from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.connectors import Connection, Connections
 from nestor.modules.initiative import Alert
-from nestor.modules.memory import Memory
+from nestor.modules.memory import Memory, Place
 from nestor.modules.usage import Dimension
 
 
@@ -95,9 +95,14 @@ def connection_owner(admin: AdminState, caller: Caller, person: str | None) -> P
 
 
 def reads_memory(caller: Caller, memory: Memory) -> bool:
-    """`memory.manage.own` reads the memories about the account's person and the household-wide ones."""
+    """`memory.manage.own` reads the memories about the account's person and those every member shares."""
+    return reads_place(caller, memory.place)
+
+
+def reads_place(caller: Caller, place: Place) -> bool:
+    """Whether the caller reads what is filed in `place`: a person's place is theirs, the others are shared."""
     return caller.principal.reaches(
-        memory.about, every=Scope.MEMORY_MANAGE_ALL, own=Scope.MEMORY_MANAGE_OWN, shared=True
+        place.person, every=Scope.MEMORY_MANAGE_ALL, own=Scope.MEMORY_MANAGE_OWN, shared=True
     )
 
 

@@ -65,6 +65,21 @@
 {"memory": "m64", "about": "odile", "text": "Odile conduit de nouveau la nuit depuis son opération de la cataracte.", "at": "2026-10-02"}
 {"memory": "m65", "about": "lea", "text": "Léa était allergique aux arachides enfant, ça lui est passé.", "at": "2026-06-11"}
 {"memory": "m66", "about": "odile", "text": "Odile n'aime pas qu'on l'appelle Mamie devant ses amies.", "at": "2026-04-03"}
+{"memory": "m67", "place": "projects/toiture", "text": "Le couvreur Martin a chiffré la réfection à 4 200 €, devis valable jusqu'en janvier.", "at": "2026-10-20"}
+{"memory": "m68", "place": "projects/toiture", "text": "Les tuiles choisies sont plates, en terre cuite, couleur ardoise.", "at": "2026-10-22"}
+{"memory": "m69", "place": "topics/jardin", "text": "Les tomates se plantent sous serre fin mars, en pleine terre après les Saints de glace."}
+{"memory": "m70", "place": "projects/cuisine", "text": "Le plan de travail sera en chêne massif, huilé et non verni.", "at": "2026-09-30"}
+{"memory": "m71", "place": "home", "text": "Le disjoncteur du garage saute quand le sèche-linge et le four tournent ensemble."}
+{"memory": "m72", "place": "topics/cave", "text": "Les bouteilles de Saint-Joseph sont gardées pour les grandes occasions."}
+{"memory": "m73", "place": "people/hugo", "text": "Hugo ne boit que du thé vert après le dîner.", "at": "2026-10-10"}
+{"memory": "m74", "place": "household", "text": "La poubelle jaune, c'est le jeudi soir.", "at": "2026-10-12"}
+{"memory": "m75", "place": "people/odile", "text": "Odile fait les mots croisés de Télérama chaque semaine.", "at": "2026-09-30"}
+{"memory": "m76", "place": "people/hugo", "text": "Hugo veut qu'on lui trouve un vélo cargo d'occasion à moins de 2 000 €.", "at": "2026-09-01", "tied_to": "task:velo-cargo", "ended": "Hugo a acheté son vélo cargo, la recherche est finie."}
+{"memory": "m77", "place": "people/lea", "text": "Léa veut être prévenue si la télé OLED 55 pouces passe sous 1 000 €.", "at": "2026-10-01", "tied_to": "alert:prix-tele", "ended": "Le prix est passé sous 1 000 €, Léa a été prévenue."}
+{"memory": "m78", "place": "projects/toiture", "text": "Il faut relancer le couvreur si son devis n'arrive pas avant vendredi.", "at": "2026-10-14", "tied_to": "task:devis-toiture", "ended": "Le devis est arrivé."}
+{"note": "n01", "task": "t-plex", "requester": "hugo", "text": "Serveur Plex : conteneur plexinc/pms-docker:1.41.3 sur le port 32400, volume /srv/media monté en lecture seule, image sha256:9f2c41d0, transcodage matériel désactivé faute de /dev/dri, redémarrage automatique unless-stopped."}
+{"note": "n02", "task": "t-volcans", "requester": "jules", "text": "Exposé sur les volcans : PDF de 12 pages, sources Wikipédia et Larousse, police Arial 14, exporté dans /work/t-volcans/expose.pdf, images libres de droits de Wikimedia."}
+{"note": "n03", "task": "t-velo", "requester": "hugo", "text": "Recherche vélo cargo : 14 annonces Leboncoin lues, filtres prix < 2000 et rayon 30 km, trois vendeurs contactés par messagerie, réponses attendues sous 48 h."}
 {"episode": "e01", "people": ["lea"], "ended": "2026-10-18T20:10", "address": "telegram:7", "medium": "written", "summary": "Léa a parlé d'un restaurant italien, Da Marco, rue Mercière, où elle veut emmener Hugo pour leur anniversaire de mariage.", "topics": ["restaurant", "anniversaire"]}
 {"episode": "e02", "people": ["lea"], "ended": "2026-10-21T08:05", "address": "satellites:cuisine", "medium": "spoken", "summary": "Léa et Nestor ont cherché un cadeau pour les dix ans de Jules : un télescope d'initiation, budget 150 euros.", "topics": ["cadeau", "Jules", "télescope"]}
 {"episode": "e03", "people": ["lea"], "ended": "2026-10-24T18:40", "address": "telegram:7", "medium": "written", "summary": "Le plombier, M. Dufour, passera jeudi 6 novembre à 9 h pour la fuite sous l'évier ; Léa laissera la clé à la voisine.", "topics": ["plombier", "fuite"]}
@@ -140,3 +155,16 @@
 {"case": "c61", "speaker": "odile", "said": "On avait parlé de quoi dimanche ?", "expected": ["e12"], "kind": "episode"}
 {"case": "c62", "speaker": "hugo", "said": "Le resto italien que Léa voulait, c'est lequel ?", "expected": [], "kind": "private", "avoid": ["e01"]}
 {"case": "c63", "speaker": "jules", "said": "Papa a choisi quel vélo cargo ?", "expected": ["m35"], "kind": "private", "avoid": ["e08"]}
+{"case": "c64", "speaker": "lea", "said": "Où on en est pour la toiture ?", "expected": ["m67", "m68"], "kind": "place"}
+{"case": "c65", "speaker": "hugo", "said": "Quand est-ce que je m'occupe du jardin cette année ?", "expected": ["m69"], "kind": "place"}
+{"case": "c66", "speaker": "lea", "said": "Pour la cuisine, on avait choisi quel bois ?", "expected": ["m70"], "kind": "place"}
+{"case": "c67", "speaker": "hugo", "said": "Qu'est-ce qu'on sort de la cave pour fêter ça ?", "expected": ["m72"], "kind": "place"}
+{"case": "c68", "speaker": "lea", "said": "Je fais une infusion pour Hugo après manger ?", "expected": ["m73"], "kind": "duplicate", "duplicates": ["m17"]}
+{"case": "c69", "speaker": "hugo", "said": "Je sors quelle poubelle jeudi ?", "expected": ["m74"], "kind": "duplicate", "duplicates": ["m11"]}
+{"case": "c70", "speaker": "lea", "said": "Qu'est-ce que je rapporte du kiosque pour Odile ?", "expected": ["m75"], "kind": "duplicate", "duplicates": ["m14"]}
+{"case": "c71", "speaker": "hugo", "said": "Tu cherches toujours un vélo pour moi ?", "expected": [], "kind": "obsolete", "stale": ["m76"]}
+{"case": "c72", "speaker": "lea", "said": "La télé, tu surveilles encore son prix ?", "expected": [], "kind": "obsolete", "stale": ["m77"]}
+{"case": "c73", "speaker": "lea", "said": "Le couvreur a envoyé son devis ?", "expected": ["m67"], "kind": "obsolete", "stale": ["m78"]}
+{"case": "c74", "speaker": "hugo", "said": "Le serveur Plex tourne sur quel port ?", "expected": [], "kind": "note", "avoid": ["n01"]}
+{"case": "c75", "speaker": "jules", "said": "Mon exposé sur les volcans, il est prêt ?", "expected": ["m26"], "kind": "note", "avoid": ["n02"]}
+{"case": "c76", "speaker": "hugo", "said": "Tu as trouvé des annonces de vélo cargo ?", "expected": ["m35"], "kind": "note", "avoid": ["n03"]}

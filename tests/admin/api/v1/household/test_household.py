@@ -8,6 +8,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskState
 from nestor.modules.initiative import Alert, Frequency, RingCause
+from nestor.modules.memory import Place, Retirement
 from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
 from ....harness import Harness
@@ -52,9 +53,9 @@ async def test_a_member_reads_memories_about_them_and_the_household_but_edits_on
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         memories = admin.nestor.memories
-        hers = await memories.remember("Mathilde est végétarienne", about=MATHILDE)
+        hers = await memories.remember("Mathilde est végétarienne", place=Place.of(MATHILDE))
         shared = await memories.remember("Le code du portail est 1234")
-        his = await memories.remember("Mathis a un rendez-vous secret", about=MATHIS)
+        his = await memories.remember("Mathis a un rendez-vous secret", place=Place.of(MATHIS))
         api = await admin.api("mathilde")
         listed = {m["text"]: m["editable"] for m in (await api.get("/api/v1/memories")).json()}
         assert listed == {"Mathilde est végétarienne": True, "Le code du portail est 1234": False}
@@ -68,16 +69,33 @@ async def test_a_member_reads_memories_about_them_and_the_household_but_edits_on
         corrected = await api.patch(f"/api/v1/memories/{hers.id}", {"text": "Mathilde est végane"})
         assert corrected.json()["text"] == "Mathilde est végane"
         assert (await api.patch(f"/api/v1/memories/{hers.id}", {"text": " "})).json()["error"]["code"] == "empty_memory"
-        assert (await api.delete(f"/api/v1/memories/{hers.id}")).status_code == 204
-        assert await memories.store.get(hers.id) is None and await memories.store.get(his.id) is not None
+        mine = await memories.remember("Mathilde lit des polars", place=Place.of(MATHILDE))
+        assert (await api.delete(f"/api/v1/memories/{mine.id}")).status_code == 204
+        assert await memories.store.get(mine.id) is None and await memories.store.get(his.id) is not None
+        move = f"/api/v1/memories/{hers.id}/move"
+        assert (await api.post(move, {"place": "people/mathis"})).status_code == 403, "never into another's place"
+        for wrong in ("garage", "projects/", "people/voisin"):
+            assert (await api.post(move, {"place": wrong})).json()["error"]["code"] == "unknown_place"
+        moved = (await api.post(move, {"place": "Projects/Menus de Noël"})).json()["place"]
+        assert (moved["path"], moved["shelf"], moved["person"]) == ("projects/menus-de-noël", "projects", None)
+        (filed,) = (await api.get("/api/v1/memories", place="projects")).json()
+        assert filed["text"] == "Mathilde est végane"
+
+        await memories.retire(shared.id, Retirement.STALE, why="nouveau code")
+        await memories.retire(his.id, Retirement.STALE, why="le rendez-vous est passé")
+        retired = (await api.get("/api/v1/memories/retired", limit=1)).json()
+        assert [(r["text"], r["reason"], r["why"]) for r in retired] == [
+            ("Le code du portail est 1234", "stale", "nouveau code")
+        ], "never what was another's, even when it is the latest"
+        assert (await api.delete(f"/api/v1/memories/{hers.id}")).status_code == 403, "shared once moved there"
 
 
 async def test_the_household_manages_every_memory(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
-        memory = await admin.nestor.memories.remember("Mathis aime le café", about=MATHIS, told_by=MATHIS)
+        memory = await admin.nestor.memories.remember("Mathis aime le café", place=Place.of(MATHIS), told_by=MATHIS)
         api = await admin.api()
         (listed,) = (await api.get("/api/v1/memories", q="café", about="mathis")).json()
-        assert listed["about"] == {"id": "mathis", "name": "Mathis"} and listed["editable"]
+        assert listed["place"]["person"] == {"id": "mathis", "name": "Mathis"} and listed["editable"]
         assert (await api.delete(f"/api/v1/memories/{memory.id}")).status_code == 204
         assert (await api.delete(f"/api/v1/memories/{memory.id}")).status_code == 404
 
@@ -138,7 +156,7 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         )
         for _ in range(2):
             await nestor.alert_book.ring(alert, RingCause.MATCH, summary="Le colis est livré")
-        memory = await nestor.memories.remember("Mathis aime le thé", about=MATHIS, source=TELEGRAM)
+        memory = await nestor.memories.remember("Mathis aime le thé", place=Place.of(MATHIS), source=TELEGRAM)
         assert nestor.connections
         connection = await nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
         await nestor.journal.publish(

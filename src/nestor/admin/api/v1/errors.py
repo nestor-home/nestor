@@ -80,6 +80,7 @@ ErrorCode = Literal[
     "last_owner",
     "memory_shared",
     "memory_unknown",
+    "unknown_place",
     "method_not_allowed",
     "no_connectors",
     "no_secret_key",

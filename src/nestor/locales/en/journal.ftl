@@ -150,12 +150,37 @@ journal-alert-ended = Alert { $alert } { $reason ->
    *[done] ended: nothing left to ring it
 }
 
-journal-memory-recorded = { $drawn ->
-    [yes] Memory drawn from a conversation
-   *[no] Memory recorded
+journal-memory-place = { $shelf ->
+    [home] the house
+    [household] the household
+   *[other] { $name }
 }
-journal-memory-corrected = Memory corrected
+journal-memory-recorded = { $drawn ->
+    [yes] Memory drawn from a conversation, in { journal-memory-place }
+   *[no] { $kept ->
+        [yes] Task note kept as a memory, in { journal-memory-place }
+       *[no] Memory recorded in { journal-memory-place }
+    }
+}
+journal-memory-corrected = { $merged ->
+    [0] Memory corrected
+    [one] Memory merged with another during the nightly upkeep
+   *[other] Memory merged with { $merged } others during the nightly upkeep
+}
+journal-memory-moved = Memory moved to { journal-memory-place }
 journal-memory-forgotten = Memory forgotten
+journal-memory-retired = { $reason ->
+    [ended] { $tie ->
+        [task] Memory retired: its task ended
+       *[other] Memory retired: what it was tied to ended
+    }
+    [merged] Memory merged into another
+   *[stale] Memory retired as outdated
+}
+journal-memory-upkept = { $failed ->
+    [0] Nightly upkeep of the memories: { $merged } merged, { $retired } retired
+   *[other] Nightly upkeep of the memories: { $merged } merged, { $retired } retired, { $failed } places not read
+}
 journal-episode-summarized = { $kept ->
     [yes] Conversation summarized
    *[no] Conversation with nothing to keep

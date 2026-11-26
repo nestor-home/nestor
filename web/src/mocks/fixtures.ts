@@ -21,6 +21,9 @@ import type {
   PairingRequest,
   Person,
   PersonRef,
+  Place,
+  Retired,
+  Retirement,
   Role,
   Satellite,
   Scope,
@@ -32,7 +35,7 @@ import type {
   Updates,
   Voice,
 } from "@/api";
-import { scopeValues } from "@/api/schema.gen";
+import { scopeValues, shelfValues } from "@/api/schema.gen";
 import { isRecord } from "@/features/config/schema";
 import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
@@ -1449,33 +1452,53 @@ export const HANDBALL = fr(
 /** Where m-07 was learnt: replaced by the journal position of the turn that taught it (db.ts). */
 export const LEARNT = -1;
 
+/** A place as the server sends it, from its path: `people/jules`, `home`, `projects/roof-works`. */
+export function place(path: string): Place {
+  const [shelf = "", name = null] = path.split("/") as [string, string?];
+  if (!oneOf(shelfValues, shelf)) throw new Error(`no shelf ${shelf}`);
+  return { path, shelf, name, person: shelf === "people" && name ? ref(name) : null };
+}
+
+/** The roof works and the garden, named by the agent: their French beside them, as a French household's would be. */
+const ROOF = fr("projects/roof-works", "projects/travaux-toiture");
+fr("roof-works", "travaux-toiture");
+const GARDEN = fr("topics/garden", "topics/jardin");
+fr("garden", "jardin");
+
 export function memories(): Memory[] {
   const m = (
     id: string,
     text: string,
-    about: string | null,
+    where: string,
     told_by: string | null,
     learnt_in: string | null,
     ago: number,
-    learnt_event: number | null = null,
-    session: string | null = null,
-  ): Memory => ({
-    id,
-    text,
-    about: about ? ref(about) : null,
-    told_by: told_by ? ref(told_by) : null,
-    learnt_in,
-    created_at: minutes(ago),
-    updated_at: minutes(ago),
-    learnt_event,
-    session,
-    editable: true,
-  });
+    {
+      learnt_event = null,
+      session = null,
+      tied_to = null,
+    }: Partial<Pick<Memory, "learnt_event" | "session" | "tied_to">> = {},
+  ): Memory => {
+    const filed = place(where);
+    return {
+      id,
+      text,
+      place: filed,
+      told_by: told_by ? ref(told_by) : null,
+      tied_to,
+      learnt_in,
+      created_at: minutes(ago),
+      updated_at: minutes(ago),
+      learnt_event,
+      session,
+      editable: true,
+    };
+  };
   return [
     m(
       "m-01",
       fr("Jules is allergic to peanuts.", "Jules est allergique aux arachides."),
-      "jules",
+      "people/jules",
       "lea",
       "voice",
       60 * 24 * 18,
@@ -1486,7 +1509,7 @@ export function memories(): Memory[] {
         "Mathis would rather not be spoken to before 8 am, unless it is urgent.",
         "Mathis préfère qu'on ne lui parle pas avant 8 h, sauf urgence.",
       ),
-      "mathis",
+      "people/mathis",
       "mathis",
       "telegram",
       60 * 24 * 7,
@@ -1497,7 +1520,7 @@ export function memories(): Memory[] {
         "The gate code is only ever given out loud, never in writing.",
         "Le code du portail est donné de vive voix uniquement, jamais par écrit.",
       ),
-      null,
+      "home",
       "mathis",
       "voice",
       60 * 24 * 30,
@@ -1508,7 +1531,7 @@ export function memories(): Memory[] {
         "Odile comes for lunch on the first Sunday of every month.",
         "Odile vient déjeuner le premier dimanche de chaque mois.",
       ),
-      "odile",
+      "people/odile",
       "lea",
       "voice",
       60 * 30,
@@ -1516,7 +1539,7 @@ export function memories(): Memory[] {
     m(
       "m-05",
       fr("Léa does yoga on Tuesday evenings, from 7 to 8:30 pm.", "Léa fait du yoga le mardi soir, de 19 h à 20 h 30."),
-      "lea",
+      "people/lea",
       "lea",
       "telegram",
       60 * 24 * 4,
@@ -1524,12 +1547,124 @@ export function memories(): Memory[] {
     m(
       "m-06",
       fr("The boiler is serviced every year in October.", "La chaudière est révisée chaque année en octobre."),
-      null,
+      "home",
       "mathis",
       "voice",
       60 * 24 * 60,
     ),
-    m("m-07", HANDBALL, "jules", "jules", "voice", 149.4, LEARNT, "s-jules"),
+    m("m-07", HANDBALL, "people/jules", "jules", "voice", 149.4, { learnt_event: LEARNT, session: "s-jules" }),
+    m(
+      "m-08",
+      fr("The roofer comes back on Thursday to finish the north side.", "Le couvreur revient jeudi finir le pan nord."),
+      ROOF,
+      "mathis",
+      "telegram",
+      60 * 24 * 2,
+    ),
+    m(
+      "m-09",
+      fr("The roof quote is 8,400 €, gutters included.", "Le devis du toit est de 8 400 €, gouttières comprises."),
+      ROOF,
+      "mathis",
+      "telegram",
+      60 * 24 * 9,
+    ),
+    m(
+      "m-10",
+      fr(
+        "The tomatoes go in after the last frost, around mid-May.",
+        "Les tomates se plantent après les dernières gelées, vers la mi-mai.",
+      ),
+      GARDEN,
+      "lea",
+      "voice",
+      60 * 24 * 40,
+    ),
+    m(
+      "m-11",
+      fr("Sunday mornings are for the market, all together.", "Le dimanche matin, c'est marché, tous ensemble."),
+      "household",
+      "lea",
+      "voice",
+      60 * 24 * 21,
+    ),
+    m(
+      "m-12",
+      fr(
+        "Léa wants oat milk, not soy, in this week's shopping.",
+        "Léa veut du lait d'avoine, pas de soja, dans les courses de la semaine.",
+      ),
+      "people/lea",
+      "lea",
+      "web",
+      11.5,
+      { session: "s-courses", tied_to: "task:t-88b07e" },
+    ),
+  ];
+}
+
+/**
+ * What the nightly upkeep merged and set aside, and the memory that went when its task ended, newest first; their
+ * journal positions are the day's (db.ts).
+ */
+export function retired(): Retired[] {
+  const r = (
+    memory_id: string,
+    text: string,
+    where: string,
+    reason: Retirement,
+    ago: number,
+    {
+      why = null,
+      tied_to = null,
+      into = null,
+      merged_text = null,
+    }: Partial<Pick<Retired, "why" | "tied_to" | "into" | "merged_text">> = {},
+  ): Retired => ({
+    memory_id,
+    text,
+    place: place(where),
+    reason,
+    why,
+    tied_to,
+    into,
+    merged_text,
+    at: minutes(ago),
+    event: 0,
+  });
+  return [
+    r(
+      "m-r3",
+      fr(
+        "Mathis wants the dependency update to keep Node 22.",
+        "Mathis veut que la mise à jour des dépendances garde Node 22.",
+      ),
+      "people/mathis",
+      "ended",
+      520.7,
+      { tied_to: "task:t-c1a9de" },
+    ),
+    r(
+      "m-r2",
+      fr("The boiler's next service is on 14 October.", "La prochaine révision de la chaudière est le 14 octobre."),
+      "home",
+      "stale",
+      529.8,
+      {
+        why: fr(
+          "That service is past; the yearly one in October stays.",
+          "Cette révision est passée ; celle de chaque mois d'octobre reste.",
+        ),
+      },
+    ),
+    r(
+      "m-r1",
+      fr("Jules has handball on Wednesday afternoons.", "Jules a handball le mercredi après-midi."),
+      "people/jules",
+      "merged",
+      529.9,
+      { into: "m-07", merged_text: HANDBALL },
+    ),
   ];
 }
 

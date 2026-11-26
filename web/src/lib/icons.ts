@@ -4,6 +4,7 @@
  */
 import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
   AudioLines,
   BellRing,
   BookMarked,
@@ -15,6 +16,9 @@ import {
   CircleSlash,
   Coins,
   Ear,
+  Flag,
+  FolderKanban,
+  Hash,
   Heading,
   Hourglass,
   House,
@@ -24,6 +28,7 @@ import {
   Lightbulb,
   ListFilter,
   Megaphone,
+  Merge,
   MessageSquareText,
   MessagesSquare,
   Mic,
@@ -37,13 +42,15 @@ import {
   Smile,
   Sparkles,
   Speech,
+  UserRound,
+  Users,
   Video,
   Volume2,
   Waypoints,
   Workflow,
   Wrench,
 } from "lucide-react";
-import type { Kind, ModelType } from "@/api";
+import type { Kind, ModelType, Retirement, Shelf } from "@/api";
 
 export interface KindStyle {
   icon: LucideIcon;
@@ -132,3 +139,19 @@ const ROLE_ICON: Record<string, LucideIcon> = {
 };
 
 export const roleIcon = (field: string): LucideIcon => ROLE_ICON[field] ?? Sparkles;
+
+/** Where a memory is filed, by its shelf: a new shelf fails the typecheck here until it has its look. */
+export const SHELF_ICON: Record<Shelf, LucideIcon> = {
+  people: UserRound,
+  home: House,
+  household: Users,
+  projects: FolderKanban,
+  topics: Hash,
+};
+
+/** Why a memory was retired: merged into another, found outdated, or its task ended. */
+export const RETIREMENT_ICON: Record<Retirement, LucideIcon> = {
+  merged: Merge,
+  stale: Archive,
+  ended: Flag,
+};
