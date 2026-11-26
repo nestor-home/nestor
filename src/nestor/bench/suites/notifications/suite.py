@@ -4,14 +4,16 @@ Its dataset (`cases.jsonl`) starts with a header, then notifications with the an
 
     {"dataset": "notifications", "version": 1}
     {"case": "n01", "source": "task", "objective": "…", "result": "…", "expected": "silent"}
-    {"case": "n19", "source": "watch", "what": "les mails de ma banque", "summary": "…", "item": "…",
+    {"case": "n19", "source": "alert", "title": "Mails de la banque", "instruction": "Préviens Mathis",
+     "condition": "les mails de ma banque", "summary": "…", "from": "…", "subject": "…", "body": "…",
      "expected": "tell"}
     {"case": "n21", "source": "message", "text": "Léa asked you to pass this on…", "must_tell": true,
      "expected": "tell"}
 
-A task's notification (`objective`, then `result`, or `error` with `status` "failed"; `written` unless false), a
-watch's (`what`, `summary`, `item`) and a wake-up's (`instruction`, due now) are written by the code that writes them
-in the house; other sources give their `text`. `expected` is `tell` or `silent`.
+A task's notification (`objective`, then `result`, or `error` with `status` "failed"; `written` unless false) and an
+alert's (`title`, `instruction`, and `condition` with the mail that rang it, `from`, `subject`, `body`, matched as
+`summary` says; due now without a mail) are written by the code that writes them in the house; other sources give
+their `text`. `expected` is `tell` or `silent`.
 
 Each is composed for the household's first person, in writing, by the agent the runtime builds (persona and prompt
 layers), with the variant's written model, no tools and no history: what is measured is the decision on what the
@@ -47,9 +49,9 @@ from nestor.modules.conversation import (
     Source,
 )
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.initiative import Alert, Incoming, Ring, RingCause
+from nestor.modules.initiative.alerts import ring_instruction
 from nestor.modules.initiative.returns import turn_instruction
-from nestor.modules.initiative.schedules.scheduler import wake_up_instruction
-from nestor.modules.initiative.watches.keeper import ANNOUNCE
 from nestor.modules.journal import Journal
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -187,13 +189,44 @@ def _text(data: Mapping[str, Any], timezone: str = "UTC") -> str:
             last_activity=now,
         )
         return turn_instruction(task, str(data["objective"]), ended, written=bool(data.get("written", True)))
-    if source is Source.WATCH:
-        return ANNOUNCE.format(who="Mathis", what=data["what"], summary=data["summary"], item=data["item"])
-    if source is Source.SCHEDULE:  # due now: a wake-up dated otherwise reads as late
-        return wake_up_instruction(str(data["instruction"]), datetime.now(ZoneInfo(timezone)), PERSON)
+    if source is Source.ALERT:
+        return _rang(data, timezone)
     if not isinstance(data["text"], str):
         raise TypeError("text")
     return data["text"]
+
+
+def _rang(data: Mapping[str, Any], timezone: str) -> str:
+    """An alert ringing now: on a mail the triage matched when the case gives one, else at its time (due now: an
+    alert dated otherwise reads as late)."""
+    now = datetime.now(ZoneInfo(timezone))
+    condition = data.get("condition")
+    title, instruction = str(data["title"]), str(data["instruction"])
+    if "subject" not in data:
+        alert = Alert(title=title, instruction=instruction, condition=condition, at=now, owner=PERSON.id)
+        return ring_instruction(
+            alert, Ring(id="bench", at=now, cause=RingCause.DUE, due_at=now), PERSON, timezone, None
+        )
+    alert = Alert(title=title, instruction=instruction, condition=condition, kinds=("mail",), owner=PERSON.id)
+    mail = Incoming(
+        source="gmail-mathis",
+        kind="mail",
+        title=str(data["subject"]),
+        body=str(data.get("body", "")),
+        sender=str(data["from"]),
+        owner=PERSON.id,
+    )
+    ring = Ring(
+        id="bench",
+        at=now,
+        cause=RingCause.MATCH,
+        item_id=mail.id,
+        item_title=mail.title,
+        item_kind=mail.kind,
+        item_source=mail.source,
+        summary=str(data["summary"]),
+    )
+    return ring_instruction(alert, ring, PERSON, timezone, mail)
 
 
 PERSON = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("bench:chat"),), reach=CHAT)

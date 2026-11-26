@@ -23,7 +23,7 @@ from nestor.core.contracts import (
 )
 from nestor.core.events import Event, Record
 from nestor.core.exceptions import CapabilityMissing, ContractError, NestorError, ProviderError
-from nestor.core.shared import PersonId, SessionId, byte_size, new_id, shorten, utc_now
+from nestor.core.shared import Day, PersonId, SessionId, byte_size, new_id, shorten, utc_now
 
 __all__ = [
     "Capabilities",
@@ -31,6 +31,7 @@ __all__ = [
     "CapabilityMissing",
     "Component",
     "ContractError",
+    "Day",
     "Event",
     "Health",
     "Model",

@@ -97,7 +97,7 @@ export type Privacy = S["PrivacyOut"];
 export type QuietHours = S["QuietHoursIO"];
 export type CameraOff = S["Off"];
 
-// -- tasks, watches, memories ---------------------------------------------------------------------
+// -- tasks, alerts, memories ---------------------------------------------------------------------
 
 export type TaskState = S["TaskState"];
 export type TurnStatus = S["TurnStatus"];
@@ -107,10 +107,12 @@ export type TaskTurn = S["TurnOut"];
 export type TaskSteer = S["SteeredOut"];
 export type TaskFile = S["TaskFileOut"];
 export type Tasks = S["TasksOut"];
-export type Watch = S["WatchOut"];
-export type Watches = S["WatchesOut"];
+export type Alert = S["AlertOut"];
+export type Alerts = S["AlertsOut"];
+export type Ring = S["RingOut"];
+export type Frequency = S["Frequency"];
+export type Trigger = S["Trigger"];
 export type Day = S["Day"];
-export type Schedule = S["ScheduleOut"];
 export type PassedMessage = S["PassedMessageOut"];
 export type Messages = S["MessagesOut"];
 export type Confirmation = S["ConfirmationOut"];

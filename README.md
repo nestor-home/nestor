@@ -42,8 +42,8 @@ the right place. Every word it says is in a journal you can read.
   reach the same agent, with the same memory. Satellites can type, talk, film, or all three.
 - **Native Home Assistant.** Presence, rooms and devices come from Home Assistant, and Nestor acts
   through its MCP server. Locks, alarms and garage doors wait for a confirmation in writing.
-- **It speaks first when it matters.** Watches on your mail, reminders and recurring checks, messages
-  between members of the household. The courier says it aloud in your room or writes to you when you
+- **It speaks first when it matters.** Alerts on your mail, a webhook or the clock, reminders and checks
+  that stop once they found it, messages between members of the household. The courier says it aloud in your room or writes to you when you
   are out, respects quiet hours, and stays silent when a check finds nothing.
 - **Memory you can read.** Dated, sourced facts and summaries of past conversations, found by words and
   by meaning, all visible and editable in the admin.
@@ -117,7 +117,7 @@ flowchart LR
 ```
 
 The central agent stays fast: what is long goes to an executor, and what comes back later (a task's
-result, a watch, a reminder) enters the conversation as a notification that the courier delivers where
+result, an alert that rang) enters the conversation as a notification that the courier delivers where
 the person is. [How it works](https://nestorhome.dev/docs/agent/) goes further.
 
 ## Integrations
@@ -183,8 +183,8 @@ small model sorts your mail best and at what cost:
 
 ```bash
 nestor bench list
-nestor bench run watch-triage --variant a.yaml --variant b.yaml --repeat 3
-nestor bench report bench-results/watch-triage/<run>
+nestor bench run alert-triage --variant a.yaml --variant b.yaml --repeat 3
+nestor bench report bench-results/alert-triage/<run>
 ```
 
 How the code is laid out and the rules it follows are in [AGENTS.md](AGENTS.md); how pull requests and

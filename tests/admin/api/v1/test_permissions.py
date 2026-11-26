@@ -46,7 +46,7 @@ ROUTES: list[tuple[str, str, object, set[Role], int | tuple[int, str]]] = [
     ("GET", "/api/v1/journal", None, EVERYONE, 200),
     ("GET", "/api/v1/journal/facets", None, EVERYONE, 200),
     ("GET", "/api/v1/tasks", None, HOUSEHOLD, 200),
-    ("GET", "/api/v1/watches", None, HOUSEHOLD, 200),
+    ("GET", "/api/v1/alerts", None, HOUSEHOLD, 200),
     ("GET", "/api/v1/memories", None, EVERYONE, 200),
     ("GET", "/api/v1/usage/summary", None, HOUSEHOLD, 200),
     ("GET", "/api/v1/usage/series", None, HOUSEHOLD, 200),

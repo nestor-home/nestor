@@ -69,7 +69,7 @@ class ConnectionOut(BaseModel):
     created_at: datetime
     last_used_at: datetime | None  # the last call of one of its tools
     calls_today: int  # calls of its tools since midnight, in the household's timezone
-    watches: int  # active watches fed by what it brings in (its person's, or everyone's for a shared one)
+    alerts: int  # active alerts what it brings in may ring: its person's and the household's (all for a shared one)
 
     @classmethod
     def of(cls, admin: AdminState, connection: Connection, words: Phrasebook, usage: Usage) -> "ConnectionOut":
@@ -91,10 +91,9 @@ class ConnectionOut(BaseModel):
             created_at=connection.created_at,
             last_used_at=usage.last.get(connection.id),
             calls_today=usage.today[connection.id],
-            watches=sum(
-                1
-                for w in admin.nestor.watch_book.watches.values()
-                if set(w.kinds) & inbound and (connection.owner is None or w.owner == connection.owner)
+            alerts=sum(
+                any(a.concerns(kind, connection.owner) for kind in inbound)
+                for a in admin.nestor.alert_book.alerts.values()
             ),
         )
 

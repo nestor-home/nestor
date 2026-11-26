@@ -61,6 +61,10 @@ from nestor.modules.home import Home, PresenceSource, RoomMentions
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
+    AlertBook,
+    AlertEnded,
+    AlertKeeper,
+    AlertTools,
     Courier,
     DeliveryPolicy,
     InboundEventSource,
@@ -69,15 +73,9 @@ from nestor.modules.initiative import (
     Messenger,
     QuietHours,
     Returns,
-    ScheduleBook,
-    Scheduler,
-    ScheduleTools,
     Triage,
-    WatchBook,
-    WatchKeeper,
 )
 from nestor.modules.initiative.confirmations import Confirmations
-from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, SearchIndex, Tie, Ties, Upkeep
 from nestor.modules.memory.assistant import MemoryTools
@@ -312,8 +310,14 @@ class Nestor:
             self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
         )
         recall = config.memory.recall()
+        self.alert_book = AlertBook(self.journal, self.sources, timezone=config.persona.timezone)
         self.memory_ties = Ties(
-            self.journal, self.memories, [Tie("task", TaskArchived, lambda e: e.task_id, self.tasks.running)]
+            self.journal,
+            self.memories,
+            [
+                Tie("task", TaskArchived, lambda e: e.task_id, self.tasks.running),
+                Tie("alert", AlertEnded, lambda e: e.alert_id, lambda alert_id: alert_id in self.alert_book.alerts),
+            ],
         )
         self.memory_tools = memory = MemoryTools(
             self.memories,
@@ -326,12 +330,9 @@ class Nestor:
             ties=self.memory_ties,
             notes=lambda task, person: found.notes if (found := self.tasks.theirs(task, person)) else None,
         )
-        self.watch_book = WatchBook(self.journal, self.sources)
-        watch_tools = WatchTools(self.watch_book)
+        alert_tools = AlertTools(self.alert_book)
         self.message_book = MessageBook(self.journal)
         message_tools = MessageTools(self.message_book, self.household)
-        self.schedule_book = ScheduleBook(self.journal, timezone=config.persona.timezone)
-        schedule_tools = ScheduleTools(self.schedule_book)
         self.connector_tools = connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.confirmations = Confirmations(self.journal, self.household, self.message_book)
         # what it is made of, read online where its documentation is
@@ -343,9 +344,8 @@ class Nestor:
                 self.speakers,
                 delegation,
                 memory,
-                watch_tools,
+                alert_tools,
                 message_tools,
-                schedule_tools,
                 self.confirmations,
                 about,
                 *offered,
@@ -378,9 +378,8 @@ class Nestor:
             context=[
                 delegation,
                 memory,
-                watch_tools,
+                alert_tools,
                 message_tools,
-                schedule_tools,
                 self.confirmations,
                 about,
                 RunningNotes(
@@ -424,12 +423,11 @@ class Nestor:
         self.confirmations.attach(self.courier, confirmed)
         self.returns = Returns(self.journal, self.household, self.courier, self.tasks)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
-        self.scheduler = Scheduler(self.schedule_book, self.household, self.courier)
-        self.watches = WatchKeeper(
-            self.watch_book,
+        self.alerts = AlertKeeper(
+            self.alert_book,
             self.household,
             self.courier,
-            Triage(model("watches.model", roles["watches"]), language=config.persona.language),
+            Triage(model("alerts.model", roles["alerts"]), language=config.persona.language),
             self.sources,
         )
         self.consolidator = Consolidator(
@@ -532,18 +530,16 @@ class Nestor:
             self.documentation,  # read by about_nestor
             self.toolbox,  # after its tools: its calls in the background stop first
             self.tasks,
-            self.memory_ties,  # after the tasks it reads
             *self.channels,
             self.courier,
             self.returns,
             self.message_book,
             self.messenger,
             self.confirmations,
-            self.schedule_book,
-            self.scheduler,
-            self.watch_book,
+            self.alert_book,
+            self.memory_ties,  # after the tasks and the alerts it reads
             *self.sources,
-            self.watches,
+            self.alerts,
             self.activity,
             self.titles,
             self.consolidator,

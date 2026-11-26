@@ -265,7 +265,7 @@ async def test_a_message_that_cannot_be_read_yet_is_retried_rather_than_skipped(
         assert [i.title for i in await take(source, 1)] == ["lu au second essai"]
 
 
-async def test_the_connector_feeds_watches_with_its_poll_interval() -> None:
+async def test_the_connector_feeds_alerts_with_its_poll_interval() -> None:
     gmail, access = FakeGmail(), FakeAccess()
     async with GoogleConnector(poll_interval_s=0.01, transport=gmail.transport) as google:
         source = google.inbound(CONNECTION, access)
@@ -396,7 +396,7 @@ def tools(gmail: FakeGmail, access: Access | None = None, **options: Any) -> dic
     return {t.name: t for t in connector.tools(CONNECTION, access or FakeAccess())}
 
 
-def test_the_connector_declares_its_oauth_scopes_services_and_mail_for_watches() -> None:
+def test_the_connector_declares_its_oauth_scopes_services_and_mail_for_alerts() -> None:
     assert INFO.auth is AuthKind.OAUTH2 and INFO.oauth is not None
     assert "https://www.googleapis.com/auth/gmail.readonly" in INFO.oauth.scopes
     assert not any("gmail.send" in s or "gmail.modify" in s or s.endswith("/drive") for s in INFO.oauth.scopes)

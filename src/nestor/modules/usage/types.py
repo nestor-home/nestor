@@ -14,9 +14,9 @@ class CallPurpose(StrEnum):
     """Why Nestor called: what the call serves, whichever model type answers it."""
 
     TURN = "turn"  # answering a person, whatever it takes (transcribing their voice, a picture they asked for)
-    NOTIFICATION = "notification"  # telling someone of a task, a reminder, a watch, a message
+    NOTIFICATION = "notification"  # telling someone of a task, an alert, a message
     TITLE = "title"  # naming a conversation
-    WATCH = "watch"  # sorting what came in for the watches
+    ALERT = "alert"  # sorting what came in for the alerts
     CONSOLIDATION = "consolidation"  # summing up a conversation that ended into memory
     INDEXING = "indexing"  # embedding memories and episodes to find them by meaning
     ENROLLMENT = "enrollment"  # recording a person's voice
@@ -117,7 +117,7 @@ class Attribution:
     session: SessionId | None = None  # the address the work belongs to
     conversation: str | None = None
     turn: str | None = None
-    origin: str | None = None  # what the work comes from: `watch:<id>`, `schedule:<id>`, `task:<id>`
+    origin: str | None = None  # what the work comes from: `alert:<id>`, `task:<id>`
 
 
 class Dimension(StrEnum):

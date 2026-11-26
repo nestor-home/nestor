@@ -48,7 +48,7 @@ def test_something_that_is_not_a_run_is_refused(tmp_path: Path, content: str) ->
 
 async def test_the_table_aligns_runs_side_by_side_and_marks_the_best(runs: list[Run]) -> None:
     lines = table(runs, render).splitlines()
-    accuracy = next(line for line in lines if line.startswith("bench-watch-triage-matches-f1"))
+    accuracy = next(line for line in lines if line.startswith("bench-alert-triage-matches-f1"))
     assert accuracy.split()[1:] == ["1.000*", "0.000"]
     assert len({len(line) for line in lines[2:5]}) == 1, "header, rule and rows have the same width"
     assert any(line.startswith("bench-table-best") for line in lines)

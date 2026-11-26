@@ -1,4 +1,4 @@
-"""New messages of an IMAP folder as watch items.
+"""New messages of an IMAP folder as items for alerts.
 
 Cursor (kept in the connection's `Access` state): the folder's UIDVALIDITY and the highest UID yielded.
 New messages are those with a greater UID; the server is asked with `UID SEARCH UID n:*` (which always

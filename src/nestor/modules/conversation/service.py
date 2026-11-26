@@ -216,7 +216,7 @@ class Agent(Assistant):
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
     ) -> Draft | Silence:
-        """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
+        """The answer to a notification (a task's result, an alert, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
         history, the model's final words only (what it wrote before calling tools is left out), with the files that
         go with it (the notification's, and what tools made meanwhile). `Silence`: it chose to tell nothing, opening

@@ -30,9 +30,8 @@ export const keys = {
   tasks: ["tasks"] as const,
   archivedTasks: ["tasks", "archived"] as const,
   task: (id: Id) => ["tasks", id] as const,
-  watches: ["watches"] as const,
-  watch: (id: Id) => ["watches", id] as const,
-  schedules: ["schedules"] as const,
+  alerts: ["alerts"] as const,
+  alert: (id: Id) => ["alerts", id] as const,
   messages: ["messages"] as const,
   confirmations: ["confirmations"] as const,
   home: ["home"] as const,
@@ -150,13 +149,8 @@ export const taskQuery = (id: Id) =>
     queryFn: () => api.task(id),
     refetchInterval: (q) => (q.state.data?.state === "working" ? 5_000 : false),
   });
-export const watchesQuery = queryOptions({ queryKey: keys.watches, queryFn: api.watches });
-export const watchQuery = (id: Id) => queryOptions({ queryKey: keys.watch(id), queryFn: () => api.watch(id) });
-export const schedulesQuery = queryOptions({
-  queryKey: keys.schedules,
-  queryFn: api.schedules,
-  refetchInterval: 60_000,
-});
+export const alertsQuery = queryOptions({ queryKey: keys.alerts, queryFn: api.alerts, refetchInterval: 60_000 });
+export const alertQuery = (id: Id) => queryOptions({ queryKey: keys.alert(id), queryFn: () => api.alert(id) });
 export const chatsQuery = queryOptions({ queryKey: keys.chats, queryFn: api.chats, retry: false });
 export const mentionsQuery = queryOptions({ queryKey: keys.mentions, queryFn: api.mentions, staleTime: 300_000 });
 export const chatQuery = (id: Id) => queryOptions({ queryKey: keys.chat(id), queryFn: () => api.chat(id) });

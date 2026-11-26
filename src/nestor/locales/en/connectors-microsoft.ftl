@@ -1,7 +1,7 @@
 # The Microsoft 365 connector: its name, description and the guide shown before connecting it.
 
 connector-microsoft-title = Microsoft 365
-connector-microsoft-description = Outlook mail (read only, new mail feeds watches) and calendar, OneDrive (read only) and To Do, for a work or personal account.
+connector-microsoft-description = Outlook mail (read only, new mail can ring alerts) and calendar, OneDrive (read only) and To Do, for a work or personal account.
 connector-microsoft-setup =
     Nestor connects to Microsoft with your own app registration. Allow about ten minutes, once per
     household.

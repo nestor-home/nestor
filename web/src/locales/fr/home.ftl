@@ -76,9 +76,9 @@ today-all-activity = Tout ce qui est en cours
 today-nothing-next = Rien de prévu.
 today-follow-up = Relance à { $person } sur { $channel }
 today-follow-up-someone = Relance sur { $channel }
-today-watching = { $count ->
-    [one] Une veille active
-   *[other] { $count } veilles actives
+today-alerts = { $count ->
+    [one] Une alerte attend que quelque chose arrive
+   *[other] { $count } alertes attendent que quelque chose arrive
 }
 room-with = { $count ->
     [one] { $people } s'y trouve.

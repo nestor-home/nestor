@@ -503,27 +503,74 @@ async def test_a_memory_tied_to_a_task_is_retired_when_the_task_is_archived(tmp_
     assert (event.memory_id, event.reason, event.tied_to) == (memory.id, Retirement.ENDED, started["id"])
 
 
-async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:
-    from nestor.modules.initiative import Incoming, WatchTriggered
+async def test_a_memory_tied_to_an_alert_outlives_a_restart_and_is_retired_when_the_alert_is_cancelled(
+    tmp_path: Path,
+) -> None:
+    fakes, set_ = Fakes(), {}
+    fakes.script = [
+        ToolCall(
+            "c1",
+            "create_alert",
+            {
+                "title": "Prix de la télé",
+                "instruction": "Regarde le prix de la télé",
+                "times": ["09:00"],
+                "condition": "the TV is under 1 000 €",
+                "frequency": "until_rung",
+            },
+        ),
+        "C'est noté.",
+        lambda _: ToolCall(
+            "c2",
+            "remember",
+            {"text": "Mathis guette la télé sous 1 000 €", "place": "people/mathis", "tied_to": set_["id"]},
+        ),
+        "Noté.",
+    ]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Dis-moi quand la télé passe sous 1 000 €")
+        (alert,) = nestor.alert_book.alerts
+        set_["id"] = f"alert:{alert}"
+        await fakes.channels[0].ask("Retiens-le le temps que ça dure")
+        serving.cancel()
+    fakes.script = [ToolCall("c3", "cancel_alert", {"alert_id": alert}), "Annulée."]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as restarted:
+        serving = asyncio.create_task(restarted.serve())
+        (memory,) = await restarted.memories.recent()  # its alert still goes on
+        retired = restarted.journal.subscribe(MemoryRetired)
 
-    def every_listed_watch(request: ModelRequest) -> str:
+        await fakes.channels[-1].ask("Laisse tomber la télé")  # the restarted one
+
+        event = await retired.next(timeout_s=2)
+        serving.cancel()
+        assert await restarted.memories.recent() == []
+    assert isinstance(event, MemoryRetired)
+    assert (event.memory_id, event.reason, event.tied_to) == (memory.id, Retirement.ENDED, set_["id"])
+
+
+async def test_an_alert_created_in_conversation_rings_when_its_mail_arrives(tmp_path: Path) -> None:
+    from nestor.modules.initiative import AlertRang, Incoming
+
+    def every_listed_alert(request: ModelRequest) -> str:
         ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].text, re.MULTILINE)
-        return json.dumps({"matches": [{"watch": id, "summary": "Colis livré."} for id in ids]})
+        return json.dumps({"matches": [{"alert": id, "summary": "Colis livré."} for id in ids]})
 
     fakes = Fakes()
+    created = {"title": "Le colis", "instruction": "Préviens-moi", "condition": "le colis", "frequency": "once"}
     fakes.script = [
-        ToolCall("c1", "create_watch", {"title": "Le colis", "what": "le colis"}),
+        ToolCall("c1", "create_alert", {**created, "kinds": ["mail"]}),
         "Je te préviens.",
-        every_listed_watch,
+        every_listed_alert,
         "Ton colis est arrivé.",
     ]
     text = CONFIG.format(data_dir=tmp_path, replies=[]) + "inbound: [{kind: inbox}]\n"
     async with Nestor(parse_config(text, {}), fakes.registry()) as nestor:
         serving = asyncio.create_task(nestor.serve())
         assert await fakes.channels[0].ask("Préviens-moi quand le colis arrive") == ("Je te préviens.",)
-        triggered = nestor.journal.subscribe(WatchTriggered)
+        rang = nestor.journal.subscribe(AlertRang)
         fakes.inbox.deliver(Incoming(source="inbox", kind="mail", title="Votre colis Colissimo est livré"))
-        await triggered.next(timeout_s=2)
+        await rang.next(timeout_s=2)
         await asyncio.sleep(0.05)
         serving.cancel()
     assert fakes.channels[0].sent == [(Address("memory", "main"), "Ton colis est arrivé.")]

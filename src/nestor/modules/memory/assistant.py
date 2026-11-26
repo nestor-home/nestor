@@ -40,8 +40,8 @@ HOW_TO_REMEMBER = (
     "a memory."
 )
 HOW_TO_TIE = (
-    "When a memory only holds while a {kinds} runs (a price to watch, a search going on), tie it to it: it is retired "
-    "when that ends."
+    "When a memory only holds while a {kinds} goes on (a price an alert watches, a search a task runs), tie it to it: "
+    "it is retired when that ends."
 )
 HOW_TO_KEEP_NOTES = (
     "An executor's notes belong to its task: keep one as a memory with keep_note only when it matters beyond the task."

@@ -52,7 +52,7 @@ const placed = (where = ""): Message["args"] =>
       ? { shelf: "household", name: "" }
       : { shelf: "people", name: where };
 
-/** "task 3f2a completed", "schedule sc-tv": what an unprompted message is about, as the server says it. */
+/** "task 3f2a completed", "alert a-tv": what an unprompted message is about, as the server says it. */
 const subject = (s: string, followUp = false): Message["args"] => {
   const [source = "", id = "", status = ""] = s.split(" ");
   return { subject: source, id, status, follow_up: followUp ? "yes" : "no" };
@@ -130,11 +130,22 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   [/^Task (\S+): a file handed back$/, (m) => msg("journal-task-turn-file-added", { task: m[1] ?? "" })],
   [/^Task (\S+): a note kept$/, (m) => msg("journal-task-noted", { task: m[1] ?? "" })],
   [/^Task (\S+) still waits for an answer: reminder sent$/, (m) => msg("journal-task-reminded", { task: m[1] ?? "" })],
-  [/^Watch created: (.+)$/, (m) => msg("journal-watch-created", { title: m[1] ?? "" })],
   [
-    /^“(.+)” checked against (\d+) watch(?:es)?: (none match|(\d+) matched)$/,
+    /^Alert set on (\S+): (.+)$/,
+    (m) => msg("journal-alert-created", { trigger: "events", kinds: m[1] ?? "", title: m[2] ?? "" }),
+  ],
+  [
+    /^Recurring alert set: (.+)$/,
+    (m) => msg("journal-alert-created", { trigger: "times", kinds: "", title: m[1] ?? "" }),
+  ],
+  [
+    /^Alert set for a moment: (.+)$/,
+    (m) => msg("journal-alert-created", { trigger: "at", kinds: "", title: m[1] ?? "" }),
+  ],
+  [
+    /^“(.+)” checked against (\d+) alerts?: (none match|(\d+) matched)$/,
     (m) =>
-      msg("journal-watch-sorted", {
+      msg("journal-alert-sorted", {
         item: m[1] ?? "",
         asked: Number(m[2]),
         matched: Number(m[4] ?? "0"),
@@ -142,8 +153,16 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
       }),
   ],
   [
-    /^Watch (\S+) triggered by “(.+)”$/,
-    (m) => msg("journal-watch-triggered", { watch: m[1] ?? "", item: m[2] ?? "", urgent: "no" }),
+    /^Alert (\S+) rang: “(.+)” matched$/,
+    (m) => msg("journal-alert-rang", { alert: m[1] ?? "", cause: "match", item: m[2] ?? "", kind: "" }),
+  ],
+  [
+    /^Alert (\S+) rang: the event (\S+) arrived \(“(.+)”\)$/,
+    (m) => msg("journal-alert-rang", { alert: m[1] ?? "", cause: "event", item: m[3] ?? "", kind: m[2] ?? "" }),
+  ],
+  [
+    /^Alert (\S+) rang: its time came$/,
+    (m) => msg("journal-alert-rang", { alert: m[1] ?? "", cause: "due", item: "", kind: "" }),
   ],
   [
     /^Decided to speak to (\S+): (.+)$/,
@@ -242,7 +261,7 @@ const NO_LINKS: EventLinks = {
   turn: null,
   call: null,
   task: null,
-  watch: null,
+  alert: null,
   delivery: null,
   connection: null,
   satellite: null,
@@ -283,7 +302,7 @@ export function toItem(draft: Draft, where: { position: number; id: string; at: 
   };
 }
 
-/** A message in `lang`, the mock's own words in it (a room, what a watch is about) translated too. */
+/** A message in `lang`, the mock's own words in it (a room, what an alert is about) translated too. */
 const said = (lang: Lang, message: Message) => render(lang, lang === "fr" ? inFrench(message) : message);
 
 /** The item as the server sends it to an account reading `lang`. */

@@ -50,7 +50,7 @@ class TaskAccess:
 
     async def since(self, task: Task) -> datetime:
         """When the conversation its working turn was given in started (in that turn's own channel conversation, not
-        necessarily the task's first): its first turn, a person's or Nestor's (a wake-up)."""
+        necessarily the task's first): its first turn, a person's or Nestor's (an alert)."""
         turn = task.turn
         if (known := self._since.get(turn.id)) is not None:
             return known

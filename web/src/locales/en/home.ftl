@@ -76,9 +76,9 @@ today-all-activity = Everything ongoing
 today-nothing-next = Nothing planned.
 today-follow-up = Follow-up to { $person } on { $channel }
 today-follow-up-someone = Follow-up on { $channel }
-today-watching = { $count ->
-    [one] One active watch
-   *[other] { $count } active watches
+today-alerts = { $count ->
+    [one] One alert waits for something to arrive
+   *[other] { $count } alerts wait for something to arrive
 }
 room-with = { $count ->
     [one] { $people } is here.

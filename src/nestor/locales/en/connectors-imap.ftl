@@ -1,7 +1,7 @@
 # The IMAP connector: its name, description, fields and the guide shown before connecting it.
 
 connector-imap-title = Mailbox (IMAP)
-connector-imap-description = Search and read a mailbox over IMAP, read only. New mail feeds watches.
+connector-imap-description = Search and read a mailbox over IMAP, read only. New mail can ring alerts.
 connector-imap-field-host = IMAP server (e.g. imap.free.fr)
 connector-imap-field-port = Port
 connector-imap-field-username = Login (often the full address)

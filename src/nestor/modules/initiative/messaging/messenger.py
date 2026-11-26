@@ -39,7 +39,7 @@ class Messenger(Component):
     async def deliver(self, message: MessageRequested) -> None:
         person = self.household.person(message.to)
         sender = self.household.person(message.requested_by) if message.requested_by else None
-        address = await self.courier.deliver(
+        sent = await self.courier.deliver(
             person,
             Notification(
                 self._instruction(message, person, sender), About(Source.MESSAGE, message.message_id), must_tell=True
@@ -49,8 +49,8 @@ class Messenger(Component):
             written=message.in_writing,
             to=person.address_on(message.channel) if message.channel else None,
         )
-        if address is not None:
-            await self.book.delivered(message.message_id, address)
+        if sent is not None:
+            await self.book.delivered(message.message_id, sent.address)
             return
         await self.book.undelivered(message.message_id)
         if sender is not None and sender.id != person.id:

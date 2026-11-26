@@ -58,7 +58,7 @@ def test_a_single_model_takes_every_role() -> None:
         "spoken",
         "written",
         "titles",
-        "watches",
+        "alerts",
         "consolidation",
     }
 
@@ -71,14 +71,14 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
         "spoken": "haiku",
         "written": "local",
         "titles": "local",
-        "watches": "local",
+        "alerts": "local",
         "consolidation": "local",
-    }, "the titles, the watches and the consolidation take the written model by default"
+    }, "the titles, the alerts and the consolidation take the written model by default"
     assert roles("agent: {spoken: haiku}\nmemory: {consolidation: local}\n") == {
         "spoken": "haiku",
         "written": "haiku",
         "titles": "haiku",
-        "watches": "haiku",
+        "alerts": "haiku",
         "consolidation": "local",
     }, "the written one takes the spoken one, and a role named takes its model"
 
@@ -87,7 +87,7 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
     ("extra", "error"),
     [
         ("agent: {written: sonnet}\n", "agent: Value error, written: no model named 'sonnet' in models (haiku, local)"),
-        ("agent: {written: local}\nwatches: {model: mini}\n", "watches: Value error, model: no model named 'mini'"),
+        ("agent: {written: local}\nalerts: {model: mini}\n", "alerts: Value error, model: no model named 'mini'"),
     ],
 )
 def test_a_role_must_name_a_declared_model(extra: str, error: str) -> None:

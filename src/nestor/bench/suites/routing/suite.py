@@ -17,8 +17,9 @@ is one, with an executor that searches the web otherwise, and answered without a
 are named as the variant names them (by default, their plugin: `hermes`, `codex`, `claude-code`).
 
 Each request is one written turn of the household's first person, answered by the agent the runtime builds (persona,
-prompt layers, delegation, wake-ups, messages, and the variant's `executors` and `tools`) with the variant's written
-model, for one round: what is measured is the first decision. No tool runs and no executor is reached.
+prompt layers, delegation, alerts over a mailbox and a dishwasher's webhook, messages, and the variant's `executors`
+and `tools`) with the variant's written model, for one round: what is measured is the first decision. No tool runs
+and no executor is reached.
 """
 
 from collections import Counter
@@ -49,10 +50,11 @@ from nestor.modules.conversation import (
     Persona,
 )
 from nestor.modules.household import Household
-from nestor.modules.initiative import MessageBook, MessageTools, ScheduleBook, ScheduleTools
+from nestor.modules.initiative import AlertBook, AlertTools, MessageBook, MessageTools
 from nestor.modules.journal import Journal
 from nestor.modules.system.selfmap import AboutNestor
 from nestor.runtime.app import offered_tools
+from nestor.testing.initiative import QueuedSource
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 NAME = "routing"
@@ -61,6 +63,11 @@ ROUTES = ("tool:", "delegate:", "continue:")
 DELEGATE = "start_task"
 CONTINUE = "continue_task"
 CHAT = Address("bench", "chat")
+# what alerts can wait for in the household of the bench: a mailbox, and the dishwasher's webhook
+SOURCES = (
+    QueuedSource(kinds=("mail",)),
+    QueuedSource(kinds=("dishwasher",), structured=True, follows={"dishwasher": ("lave-vaisselle",)}),
+)
 
 
 class Routing(Suite[None, Knobs]):
@@ -257,9 +264,9 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
     tasks = TaskManager(journal, trial.executors)
     delegation = Delegation(tasks)
     messages = MessageTools(MessageBook(journal), household)
-    schedules = ScheduleTools(ScheduleBook(journal, timezone=config.persona.timezone))
+    alerts = AlertTools(AlertBook(journal, SOURCES, timezone=config.persona.timezone))
     about = [AboutNestor(trial.made_of)] if trial.made_of is not None else []  # never reads the docs: no tool runs
-    providers: Sequence[ToolProvider] = (delegation, messages, schedules, *about, *offered_tools(trial.tools))
+    providers: Sequence[ToolProvider] = (delegation, messages, alerts, *about, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
     persona = config.persona
     agent = Agent(
@@ -269,7 +276,7 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
         journal=journal,
         household=household,
         toolbox=Toolbox(journal, tools=tools),
-        context=[delegation, messages, schedules, *about],
+        context=[delegation, messages, alerts, *about],
         attachments=Attachments(MemoryBlobStore()),
         settings=AgentSettings(max_tool_rounds=1),
     )

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { liveItem, renderApp } from "@/test/render";
 
 const stories = async () => screen.findAllByRole("article");
-/** A story by its text; titles may arrive a moment after the story (a task's or a watch's own answer). */
+/** A story by its text; titles may arrive a moment after the story (a task's or an alert's own answer). */
 const storyWith = async (text: string | RegExp) =>
   waitFor(
     async () => {
@@ -19,10 +19,10 @@ const storyWith = async (text: string | RegExp) =>
   );
 
 describe("the journal", () => {
-  it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {
+  it("tells an alert as one chain, from its ring to the message, with the reason", async () => {
     renderApp("/journal");
     const chain = await storyWith("Jules's school");
-    for (const step of ["triggered", "decision", "not delivered", "written"]) {
+    for (const step of ["rang", "decision", "not delivered", "written"]) {
       expect(within(chain).getByText(step)).toBeInTheDocument();
     }
     expect(chain).toHaveTextContent("why: Mathis is in the office");

@@ -1,27 +1,16 @@
 /**
  * "Ongoing": everything the agent does for the household on its own, by where it stands: what waits
- * for an answer, what runs, what is planned, what it watches, what just ended. Each opens in a drawer.
+ * for an answer, what runs, the alerts it keeps (with why each rang), what just ended. Each opens in a drawer.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import {
-  AlarmClock,
-  Archive,
-  ArrowUpRight,
-  Check,
-  CircleHelp,
-  Plus,
-  Radar,
-  Repeat,
-  Send,
-  ShieldQuestion,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Archive, ArrowUpRight, BellRing, Check, CircleHelp, Plus, Send, ShieldQuestion, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
+  type Alert,
+  alertsQuery,
   api,
   archivedTasksQuery,
   type Confirmation,
@@ -30,18 +19,14 @@ import {
   messageOf,
   messagesQuery,
   type PassedMessage,
-  type Schedule,
-  schedulesQuery,
   type Task,
   tasksQuery,
-  type Watch,
-  watchesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
-import { CardHead, TILE_CARD, TileCard } from "@/components/card";
+import { CardHead } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Confirm } from "@/components/confirm";
-import { Avatar, BrandTile, IconTile, OwnerMark, type TileTone } from "@/components/marks";
+import { Avatar, IconTile, type TileTone } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
@@ -49,20 +34,19 @@ import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { AlertFrequency, AlertKind, AlertMark, CancelAlert, RangBecause, rings } from "@/features/alerts/parts";
 import { TaskCardBody, TaskLine, TaskStateMark } from "@/features/tasks/parts";
 import { TaskSheet } from "@/features/tasks/tasks";
-import { CancelWatch, WatchKind, watchBrand } from "@/features/watches/parts";
 import { useT } from "@/i18n";
-import { tr } from "@/i18n/runtime";
 import { KindName } from "@/lib/brands";
 import { agendaDay, hourMinute, moment } from "@/lib/dates";
-import { turnStatusLabel, weekdayLabel } from "@/lib/labels";
+import { frequencyLabel, turnStatusLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 
-type Lane = "all" | "you" | "running" | "planned" | "watching";
+type Lane = "all" | "you" | "running" | "alerts";
 /** What the drawer shows, looked up in the lists at each render so that it follows them. */
-type Opened = { kind: "task" | "watch" | "schedule"; id: string };
+type Opened = { kind: "task" | "alert"; id: string };
 
 export function ActivityView() {
   const t = useT();
@@ -72,14 +56,12 @@ export function ActivityView() {
     all: true,
     you: useCan("messages:read"),
     running: useCan("tasks:read"),
-    planned: useCan("schedules:read"),
-    watching: useCan("watches:read"),
+    alerts: useCan("alerts:read"),
   };
   const confirmations = useQuery({ ...confirmationsQuery, enabled: can.you });
   const messages = useQuery({ ...messagesQuery, enabled: can.you });
   const tasks = useQuery({ ...tasksQuery, enabled: can.running });
-  const schedules = useQuery({ ...schedulesQuery, enabled: can.planned });
-  const watches = useQuery({ ...watchesQuery, enabled: can.watching });
+  const alerts = useQuery({ ...alertsQuery, enabled: can.alerts });
   const canConfigure = useCan("config:manage");
   const [lane, setLane] = useState<Lane>("all");
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -94,10 +76,8 @@ export function ActivityView() {
   const running = listed.filter((x) => x.state === "working");
   const ready = listed.filter((x) => x.state === "ready");
   const put = archived.data?.tasks ?? [];
-  const planned = [...(schedules.data?.schedules ?? [])].sort((a, b) =>
-    (a.next_due ?? "9").localeCompare(b.next_due ?? "9"),
-  );
-  const watching = watches.data?.watches ?? [];
+  const kept = alerts.data?.alerts ?? []; // soonest due first, then those that wait for items
+  const noSource = alerts.data?.kinds.length === 0;
   const others = lane === "running" ? 0 : asks.length + questions.length + pending.length;
   const waiting = asks.length + questions.length + pending.length + asking.length;
   const lanes = (
@@ -105,16 +85,14 @@ export function ActivityView() {
       { id: "all", label: t("act-all"), count: 0 },
       { id: "you", label: t("act-you"), count: waiting },
       { id: "running", label: t("act-running"), count: asking.length + running.length },
-      { id: "planned", label: t("act-planned"), count: planned.length },
-      { id: "watching", label: t("act-watching"), count: watching.length },
+      { id: "alerts", label: t("act-alerts"), count: kept.length },
     ] satisfies { id: Lane; label: string; count: number }[]
   ).filter((l) => can[l.id]);
   const shows = (id: Lane) => can[id] && (lane === "all" || lane === id);
   const failed = confirmations.isError ? confirmations : messages.isError ? messages : null;
   const openTask = opened?.kind === "task" ? [...listed, ...put].find((x) => x.id === opened.id) : undefined;
   const openOne = (task: Task) => setOpened({ kind: "task", id: task.id });
-  const openWatch = opened?.kind === "watch" ? watching.find((x) => x.id === opened.id) : undefined;
-  const openSchedule = opened?.kind === "schedule" ? planned.find((x) => x.id === opened.id) : undefined;
+  const openAlert = opened?.kind === "alert" ? kept.find((x) => x.id === opened.id) : undefined;
   const close = () => setOpened(null);
 
   return (
@@ -179,102 +157,69 @@ export function ActivityView() {
         </Section>
       ) : null}
 
-      {shows("planned") ? (
-        <Section title={t("act-planned-title")} count={planned.length} aside={<Ask />}>
-          {schedules.isError ? (
-            <Failure error={schedules.error} retry={() => void schedules.refetch()} />
-          ) : schedules.isPending ? (
+      {shows("alerts") ? (
+        <Section title={t("act-alerts-title")} count={kept.length} aside={<Ask />}>
+          {alerts.isError ? (
+            <Failure error={alerts.error} retry={() => void alerts.refetch()} />
+          ) : alerts.isPending ? (
             <Loading lines={2} />
-          ) : planned.length ? (
+          ) : kept.length ? (
             <RowList ordered>
-              {planned.map((s) => (
-                <li key={s.id}>
+              {kept.map((a) => (
+                <li key={a.id}>
                   <button
                     type="button"
                     className="grid w-full grid-cols-[minmax(4.5rem,auto)_1fr_auto] items-center gap-x-5 px-4 py-3.5 text-left hover:bg-paper-sunken/60"
-                    onClick={() => setOpened({ kind: "schedule", id: s.id })}
+                    onClick={() => setOpened({ kind: "alert", id: a.id })}
                   >
-                    <When iso={s.next_due} />
+                    {a.next_due ? <When iso={a.next_due} /> : <AlertMark alert={a} size="sm" />}
                     <span className="min-w-0">
-                      <span className="block font-medium text-ink">{s.title}</span>
-                      <span className="line-clamp-1 block text-body text-ink-muted">{s.instruction}</span>
-                      {s.recurring ? (
-                        <span className="mt-0.5 flex items-center gap-1.5 text-meta text-ink-muted">
-                          <Repeat className="size-3.5" aria-hidden="true" />
-                          {rhythm(s)}
-                        </span>
-                      ) : null}
+                      <span className="block font-medium text-ink">{a.title}</span>
+                      <span className="line-clamp-1 block text-body text-ink-muted">
+                        {a.condition ?? a.instruction}
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-meta text-ink-muted">
+                        <span className="min-w-0">{rings(a)}</span>
+                        <span className="min-w-0">{frequencyLabel(a.frequency)}</span>
+                        {a.rings[0] ? (
+                          <span className="flex min-w-0 items-baseline gap-1.5 text-ink">
+                            <BellRing className="size-3.5 shrink-0 translate-y-0.5 text-ember" aria-hidden="true" />
+                            <span className="min-w-0">
+                              <RangBecause ring={a.rings[0]} />
+                            </span>
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
-                    {s.owner ? <Avatar name={s.owner.name} /> : null}
+                    {a.owner ? <Avatar name={a.owner.name} /> : null}
                   </button>
                 </li>
               ))}
             </RowList>
           ) : (
-            <Empty>{t("schedule-empty-hint", { assistant: me.assistant })}</Empty>
-          )}
-        </Section>
-      ) : null}
-
-      {shows("watching") ? (
-        <Section title={t("act-watching-title")} count={watching.length} aside={<Ask />}>
-          {watches.isError ? (
-            <Failure error={watches.error} retry={() => void watches.refetch()} />
-          ) : watches.isPending ? (
-            <Loading lines={2} />
-          ) : watching.length ? (
-            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {watching.map((w) => (
-                <li key={w.id}>
-                  <button type="button" className={TILE_CARD} onClick={() => setOpened({ kind: "watch", id: w.id })}>
-                    <TileCard
-                      marks={<BrandTile brand={watchBrand(w.kinds[0])} />}
-                      aside={<OwnerMark owner={w.owner} />}
-                      title={w.title}
-                      line={<span className="line-clamp-2">{w.what}</span>}
-                      foot={
-                        <>
-                          <span className="flex flex-wrap gap-x-3">
-                            {w.kinds.map((k) => (
-                              <WatchKind key={k} kind={k} />
-                            ))}
-                          </span>
-                          <span className={w.triggered ? "font-medium text-ember" : ""}>
-                            {w.triggered
-                              ? t("watch-triggered-count", { count: w.triggered })
-                              : t("watch-never-triggered")}
-                          </span>
-                        </>
-                      }
-                    />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : watches.data && watches.data.kinds.length === 0 ? (
             <Empty
-              hint={t("act-no-source-hint", { assistant: me.assistant })}
+              hint={noSource ? t("act-no-source-hint", { assistant: me.assistant }) : undefined}
               action={
-                <span className="flex flex-wrap gap-2">
-                  <Link to="/connections/catalogue" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                    {t("act-connect-account")}
-                  </Link>
-                  {canConfigure ? (
-                    <Link
-                      to="/config/$section"
-                      params={{ section: "inbound" }}
-                      className={buttonVariants({ variant: "outline", size: "sm" })}
-                    >
-                      {t("act-add-source")}
+                noSource ? (
+                  <span className="flex flex-wrap gap-2">
+                    <Link to="/connections/catalogue" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("act-connect-account")}
                     </Link>
-                  ) : null}
-                </span>
+                    {canConfigure ? (
+                      <Link
+                        to="/config/$section"
+                        params={{ section: "inbound" }}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        {t("act-add-source")}
+                      </Link>
+                    ) : null}
+                  </span>
+                ) : undefined
               }
             >
-              {t("act-no-source")}
+              {t("alert-empty-hint", { assistant: me.assistant })}
             </Empty>
-          ) : (
-            <Empty>{t("watch-active-empty-hint")}</Empty>
           )}
         </Section>
       ) : null}
@@ -311,10 +256,9 @@ export function ActivityView() {
         </Section>
       ) : null}
 
-      <SideSheet open={Boolean(openTask ?? openWatch ?? openSchedule)} onOpenChange={(open) => !open && close()}>
+      <SideSheet open={Boolean(openTask ?? openAlert)} onOpenChange={(open) => !open && close()}>
         {openTask ? <TaskSheet listed={openTask} onArchived={close} /> : null}
-        {openWatch ? <WatchPanel watch={openWatch} onDone={close} /> : null}
-        {openSchedule ? <SchedulePanel schedule={openSchedule} onDone={close} /> : null}
+        {openAlert ? <AlertPanel alert={openAlert} onDone={close} /> : null}
       </SideSheet>
     </div>
   );
@@ -363,7 +307,7 @@ function LastTurn({ task }: { task: Task }) {
   return null;
 }
 
-/** Reminders, watches and tasks are made by asking: the way to the agent, from where one looks at them. */
+/** Alerts and tasks are made by asking: the way to the agent, from where one looks at them. */
 function Ask() {
   const t = useT();
   const me = useMe();
@@ -373,12 +317,6 @@ function Ask() {
       <Plus /> {t("act-ask", { assistant: me.assistant })}
     </Link>
   );
-}
-
-/** When a recurring one runs, in words. */
-function rhythm(s: Schedule): string {
-  const days = s.days.length ? s.days.map(weekdayLabel).join(", ") : tr("schedule-every-day");
-  return `${days} · ${s.times.join(", ")}`;
 }
 
 /** The day over the hour: the left edge of a planned row, read like an agenda. */
@@ -483,104 +421,58 @@ function MessageCard({
 
 // -- the drawers ----------------------------------------------------------------------------------
 
-function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) {
+function AlertPanel({ alert: a, onDone }: { alert: Alert; onDone: () => void }) {
   const t = useT();
   return (
     <SheetPanel
-      icon={Radar}
-      tone="watch"
-      kind={t("act-kind-watch")}
-      title={w.title}
-      description={w.what}
+      icon={BellRing}
+      tone="alert"
+      kind={t("act-kind-alert")}
+      title={a.title}
+      description={a.instruction}
       actions={
         <>
-          <Link to="/watches/$watchId" params={{ watchId: w.id }} className={buttonVariants({ variant: "outline" })}>
-            {t("watch-found")} <ArrowUpRight />
+          <Link to="/alerts/$alertId" params={{ alertId: a.id }} className={buttonVariants({ variant: "outline" })}>
+            {t("alert-found")} <ArrowUpRight />
           </Link>
-          <CancelWatch watch={w} onDone={onDone} />
+          <CancelAlert alert={a} onDone={onDone} />
         </>
       }
     >
       <Facts narrow className="text-body">
-        <Fact term={t("watch-watches")}>
-          <span className="flex flex-wrap gap-x-3">
-            {w.kinds.map((k) => (
-              <WatchKind key={k} kind={k} />
-            ))}
-          </span>
-        </Fact>
-        <Fact term={t("watch-rhythm")}>{t(w.once ? "watch-rhythm-once" : "watch-rhythm-every")}</Fact>
-        <Fact term={t("act-for")}>{personName(w.owner)}</Fact>
-        <Fact term={t("act-found")}>
-          {w.triggered ? (
-            <>
-              {t("watch-triggered-count", { count: w.triggered })}
-              {w.last_triggered_at ? (
-                <span className="text-ink-muted">
-                  {" · "}
-                  <Ago iso={w.last_triggered_at} />
-                </span>
-              ) : null}
-            </>
+        <Fact term={t("alert-trigger")}>
+          {a.trigger === "events" ? (
+            <span className="flex flex-wrap gap-x-3">
+              {a.kinds.map((k) => (
+                <AlertKind key={k} kind={k} />
+              ))}
+            </span>
           ) : (
-            t("watch-never-triggered")
+            rings(a)
           )}
         </Fact>
-        <Fact term={t("act-started")}>{moment(w.created_at)}</Fact>
-        {w.origin ? (
-          <Fact term={t("watch-asked-in")}>
-            <OriginLink origin={w.origin} />
-          </Fact>
-        ) : null}
-      </Facts>
-    </SheetPanel>
-  );
-}
-
-function SchedulePanel({ schedule: s, onDone }: { schedule: Schedule; onDone: () => void }) {
-  const t = useT();
-  const canCancel = useCan("schedules:write");
-  const queryClient = useQueryClient();
-  const notify = useNotify();
-  const cancel = useMutation({
-    mutationFn: () => api.cancelSchedule(s.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.schedules });
-      notify(t("schedule-cancelled-notice"));
-      onDone();
-    },
-  });
-  return (
-    <SheetPanel
-      icon={AlarmClock}
-      tone="ink"
-      kind={t("act-kind-schedule")}
-      title={s.title}
-      description={s.instruction}
-      actions={
-        canCancel ? (
-          <Confirm
-            trigger={
-              <Button variant="destructive">
-                <Trash2 /> {t("schedule-cancel-confirm")}
-              </Button>
-            }
-            title={t("schedule-cancel-title")}
-            confirm={t("schedule-cancel-confirm")}
-            onConfirm={() => cancel.mutateAsync()}
-          >
-            {t("schedule-cancel-description", { what: s.title })}
-          </Confirm>
-        ) : undefined
-      }
-    >
-      <Facts narrow className="text-body">
-        {s.next_due ? <Fact term={t("act-next")}>{moment(s.next_due)}</Fact> : null}
-        <Fact term={t("watch-rhythm")}>{s.recurring ? rhythm(s) : t("schedule-once")}</Fact>
-        <Fact term={t("act-for")}>{personName(s.owner)}</Fact>
-        {s.origin ? (
-          <Fact term={t("watch-asked-in")}>
-            <OriginLink origin={s.origin} />
+        {a.next_due ? <Fact term={t("act-next")}>{moment(a.next_due)}</Fact> : null}
+        {a.condition ? <Fact term={t("alert-condition")}>{a.condition}</Fact> : null}
+        <Fact term={t("alert-frequency-term")}>
+          <AlertFrequency alert={a} />
+        </Fact>
+        <Fact term={t("act-for")}>{personName(a.owner)}</Fact>
+        <Fact term={t("alert-so-far")}>
+          {a.rings[0] ? (
+            <>
+              {t("alert-rang-count", { count: a.rang })}
+              <span className="block text-meta text-ink-muted">
+                <RangBecause ring={a.rings[0]} />
+              </span>
+            </>
+          ) : (
+            t("alert-never-rang")
+          )}
+        </Fact>
+        {a.until ? <Fact term={t("act-until")}>{moment(a.until)}</Fact> : null}
+        {a.origin ? (
+          <Fact term={t("alert-asked-in")}>
+            <OriginLink origin={a.origin} />
           </Fact>
         ) : null}
       </Facts>

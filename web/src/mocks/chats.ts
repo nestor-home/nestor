@@ -187,9 +187,9 @@ export function chats(): MockChat[] {
         }),
         message("tool", "", voice, "t3", {
           tool: tool(
-            "schedule",
-            { title: "Call grandma", at: "Sunday 10:00", instruction: "Call grandma on Sunday" },
-            "Scheduled s-12.",
+            "create_alert",
+            { title: "Call grandma", at: "Sunday 10:00", instruction: "Call grandma on Sunday", frequency: "once" },
+            "Alert a-12 set.",
             0.2,
           ),
         }),

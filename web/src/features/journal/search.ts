@@ -18,7 +18,7 @@ const TEXT = [
   "session",
   "conversation",
   "task",
-  "watch",
+  "alert",
   "connection",
   "satellite",
 ] as const satisfies readonly (keyof JournalFilters)[];

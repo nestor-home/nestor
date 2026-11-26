@@ -13,7 +13,7 @@ const TILE = {
   amber: "bg-amber-soft text-amber",
   brick: "bg-brick-soft text-brick",
   task: "bg-paper-sunken text-kind-task",
-  watch: "bg-paper-sunken text-kind-watch",
+  alert: "bg-paper-sunken text-kind-alert",
 } as const;
 
 export type TileTone = keyof typeof TILE;

@@ -18,7 +18,7 @@ class Case:
 
 @dataclass(frozen=True, slots=True)
 class Dataset[S]:
-    """A suite's dataset once read: its cases, and what they share (the watches of the watch-triage suite)."""
+    """A suite's dataset once read: its cases, and what they share (the alerts of the alert-triage suite)."""
 
     version: int
     cases: tuple[Case, ...]
@@ -29,7 +29,7 @@ class Dataset[S]:
 class Call:
     """One model call a case made, as measured (or recorded, when replayed)."""
 
-    role: str  # the role of the model in the configuration: "watches"
+    role: str  # the role of the model in the configuration: "alerts"
     key: str  # its record in the replay cache
     latency_s: float
     first_output_s: float | None = None

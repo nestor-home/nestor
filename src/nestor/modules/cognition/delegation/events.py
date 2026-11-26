@@ -7,10 +7,10 @@ from nestor.modules.journal import FileRef
 
 
 class TaskCreated(Event, event_type="task.created"):
-    """A task, handed to `executor` for `owner` (`None`: for nobody in particular, a wake-up's), from `origin`, where
-    what it comes back with is told; `thread`, what that continues (a recurring wake-up: `Notification.thread`). It
-    starts its first turn, given in `origin`: the fields after `thread` are that turn's, as `TurnStarted` gives a later
-    one."""
+    """A task, handed to `executor` for `owner` (`None`: for nobody in particular, an alert's), from `origin`, where
+    what it comes back with is told; `thread`, what that continues (an alert that rings again: `Notification.thread`).
+    It starts its first turn, given in `origin`: the fields after `thread` are that turn's, as `TurnStarted` gives a
+    later one."""
 
     task_id: str
     title: str  # the short name the household knows it by
@@ -47,7 +47,7 @@ class TurnStarted(Event, event_type="task.turn.started"):
     channel conversation it was given in, where what the turn comes back with is told (`None`: given outside any, from
     the admin; the task's own origin then), and `exchange` the conversation and turn of it that gave it, when one did;
     `capability`, the digest of the value its executor calls Nestor's MCP server with for it (never the value);
-    `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
+    `asked`, whether a person asked for it in their own turn, rather than Nestor (an alert)."""
 
     task_id: str
     turn_id: str

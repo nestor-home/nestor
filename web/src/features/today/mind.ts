@@ -1,10 +1,10 @@
 /**
  * The agent's mind, read from what the API says: the household as it perceives it (rooms, devices,
- * people), what it reaches (channels, tasks, watches, connections), and the marks of its day. Pure:
+ * people), what it reaches (channels, tasks, alerts, connections), and the marks of its day. Pure:
  * the home renders it.
  */
 
-import type { Component, Connection, Home, JournalItem, Person, PersonRef, Satellite, Task, Watch } from "@/api";
+import type { Alert, Component, Connection, Home, JournalItem, Person, PersonRef, Satellite, Task } from "@/api";
 import type { FigureState } from "@/components/agent-figure";
 import { is } from "@/lib/events";
 
@@ -74,14 +74,14 @@ export function elsewhere(people: readonly Person[]): { away: Person[]; unknown:
 export interface Reach {
   channels: Component[];
   tasks: Task[];
-  watches: Watch[];
+  alerts: Alert[];
   connections: Connection[];
 }
 
 /** The node an event belongs to, to make it pulse when it arrives. */
 export function nodeOf(item: JournalItem, satellites: readonly Satellite[]): string | null {
   if (item.links.task) return `task:${item.links.task}`;
-  if (item.kind === "watch" || item.links.watch) return "watches";
+  if (item.kind === "alert" || item.links.alert) return "alerts";
   if (item.links.satellite) {
     const s = satellites.find((x) => x.id === item.links.satellite);
     if (s) return `room:${s.room}`;
@@ -94,7 +94,7 @@ export function nodeOf(item: JournalItem, satellites: readonly Satellite[]): str
 
 // -- the day -------------------------------------------------------------------------------------
 
-export type MarkKind = "conversation" | "delivery" | "task" | "watch" | "memory" | "problem";
+export type MarkKind = "conversation" | "delivery" | "task" | "alert" | "memory" | "problem";
 
 export interface Mark {
   key: string;
@@ -116,7 +116,7 @@ const minuteOf = (iso: string) => {
 
 /**
  * The day as marks: one per conversation (at its first turn), per message the agent delivered, per
- * task it started, per watch that fired, per thing it learnt, per failure.
+ * task it started, per alert that rang, per thing it learnt, per failure.
  */
 export function marksOf(items: readonly JournalItem[]): Mark[] {
   const sorted = [...items].sort((a, b) => a.at.localeCompare(b.at));
@@ -147,7 +147,7 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
       marks.push(m);
     } else if (is(item, "delivered")) marks.push(mark("delivery", item));
     else if (is(item, "taskStarted")) marks.push(mark("task", item));
-    else if (is(item, "watchTriggered")) marks.push(mark("watch", item));
+    else if (is(item, "alertRang")) marks.push(mark("alert", item));
     else if (is(item, "memory")) marks.push(mark("memory", item));
     else if (is(item, "deliveryFailed") || (is(item, "taskEnded") && item.message.args.status === "failed"))
       marks.push(mark("problem", item));

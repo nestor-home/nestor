@@ -5,10 +5,10 @@ conn-intro = Tokens are encrypted and never shown to the model. Only enabled too
 conn-connect-service = Connect a service
 
 conn-empty = No account connected yet.
-conn-empty-hint = A mailbox for watches, an MCP server for tools.
+conn-empty-hint = A mailbox for alerts, an MCP server for tools.
 conn-open-catalogue = Open the catalogue
 conn-no-connector = No connector installed.
-conn-feeds-watches = feeds watches
+conn-feeds-alerts = can ring alerts
 conn-accounts-count = { $count ->
     [one] 1 account
    *[other] { $count } accounts
@@ -61,7 +61,7 @@ conn-tab-overview = Overview
 conn-tab-activity = Activity
 conn-tab-settings = Settings
 conn-connected-at = connected { $when }
-conn-broken = { $assistant } can no longer use this account: its tools and watches are paused.
+conn-broken = { $assistant } can no longer use this account: its tools and alerts are paused.
 conn-reconnect = Reconnect
 conn-reconnect-ellipsis = Reconnect…
 conn-reconnect-hint = To switch account or password. Tool settings are kept.
@@ -74,7 +74,7 @@ conn-disconnect = Disconnect
 conn-disconnect-ellipsis = Disconnect…
 conn-disconnect-hint = Revokes access at the provider when possible, then deletes the account's secrets.
 conn-disconnect-title = Disconnect { $account }?
-conn-disconnect-consequence = Its tools disappear and the watches that depend on it stop.
+conn-disconnect-consequence = Its tools disappear and the alerts that depend on it stop.
 conn-account-connected = Account { $account } connected.
 
 conn-services = In a message
@@ -127,8 +127,8 @@ conn-figure-writes = { $count ->
 conn-figure-confirm = Asks before writing
 conn-yes = Yes
 conn-no = No
-conn-figure-watches = Watches fed
-conn-figure-watches-note = { $count ->
+conn-figure-alerts = Alerts fed
+conn-figure-alerts-note = { $count ->
     [0] none depends on this account
    *[other] they stop if you disconnect
 }

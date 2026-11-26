@@ -23,7 +23,7 @@ const SCREENS: [string, string | RegExp][] = [
   ["/settings", "Settings"],
   ["/config", "Configuration"],
   ["/memories", "Memories"],
-  ["/watches/w-9d41", "School trip reply"],
+  ["/alerts/a-9d41", "School trip reply"],
   ["/tasks/t-3f2a1c", "Green electricity offers"],
   ["/connections", "Connections"],
   ["/connections/catalogue", "Catalogue"],

@@ -23,10 +23,10 @@ class LinksOut(BaseModel):
     turn: str | None  # one message and all it caused: the user's message, tool calls, memories, tasks, the reply
     call: str | None  # a tool call: called, then completed
     task: str | None
-    watch: str | None
+    alert: str | None
     delivery: (
         str | None
-    )  # what an unprompted message is about (`watch:w1`, `task:3f2a`): considered, delivered, followed up
+    )  # what an unprompted message is about (`alert:a1`, `task:3f2a`): considered, delivered, followed up
     connection: str | None
     satellite: str | None  # a device id
     memory: str | None

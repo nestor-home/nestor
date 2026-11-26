@@ -102,7 +102,7 @@ web-page = "nestor.adapters.inbound.web_page:plugin"
 webhook-inbound = "nestor.adapters.inbound.webhook:plugin"
 
 [project.entry-points."nestor.benches"]
-watch-triage = "nestor.bench.suites.watch_triage:suite"
+alert-triage = "nestor.bench.suites.alert_triage:suite"
 memory-recall = "nestor.bench.suites.memory_recall:suite"
 notifications = "nestor.bench.suites.notifications:suite"
 routing = "nestor.bench.suites.routing:suite"

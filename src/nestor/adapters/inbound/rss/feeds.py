@@ -1,7 +1,7 @@
 """RSS 2.0, RSS 1.0 (RDF) and Atom read with the standard library's XML parser, element names matched without their
 namespace. A feed that declares entities is refused, as defusedxml refuses it (external entities are never resolved
 by ElementTree, and expat bounds the expansion of internal ones, but a feed has no use for either). feedparser was
-not taken: it reads the same three formats for what watches need (an id, a title, a link, a summary, a date) with
+not taken: it reads the same three formats for what alerts need (an id, a title, a link, a summary, a date) with
 far more code, and its tolerance of broken XML is not needed for the feeds people follow."""
 
 import hashlib

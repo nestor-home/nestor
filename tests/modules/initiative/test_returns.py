@@ -134,7 +134,7 @@ class Home:
         owner: PersonId | None = MATHIS.id,
     ) -> str:
         """A task asked aloud, its first turn run to its end; `still_talking`: its spoken conversation goes on when it
-        ends; `by_mathis`: in his own turn, rather than in one Nestor opened (a wake-up that delegates). Run by the
+        ends; `by_mathis`: in his own turn, rather than in one Nestor opened (an alert that delegates). Run by the
         Nestor running, or by one that stops right after (what comes back is then delivered at the next start)."""
         if still_talking:
             await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
@@ -423,18 +423,18 @@ async def test_a_tool_slower_than_the_turn_answers_in_the_conversation_once_done
     assert (returned.about, returned.person) == (About(Source.TOOL, "c1", "returned"), MATHIS.id)
 
 
-async def test_a_tool_slower_than_a_wake_up_s_turn_comes_back_in_the_wake_up_s_thread() -> None:
-    """What a recurring wake-up starts and gets later is read back with it the next time it runs."""
+async def test_a_tool_slower_than_a_alert_s_turn_comes_back_in_the_alert_s_thread() -> None:
+    """What a recurring alert starts and gets later is read back with it the next time it runs."""
     done = asyncio.Event()
     model = ScriptedModel(ToolCall("c1", "count_mails"), f"{SILENT} en cours", "Tu as 12 mails non lus.")
     home = Home(model=model, tools=[slow_tool(done)])
-    woken = Notification("Compte les mails de Mathis.", About(Source.SCHEDULE, "s1"), thread="schedule:s1")
+    woken = Notification("Compte les mails de Mathis.", About(Source.ALERT, "a1"), thread="alert:a1")
     async with home.returns():
         await home.courier.deliver(MATHIS, woken, origin=TELEGRAM)
         done.set()
         await until(home.journal, ToolResultDelivered)
     [returned] = await home.journal.history(NotificationTurn)
-    assert (returned.about.source, returned.thread) == (Source.TOOL, "schedule:s1")
+    assert (returned.about.source, returned.thread) == (Source.TOOL, "alert:a1")
 
 
 async def test_a_picture_drawn_after_the_turn_goes_with_the_answer_that_brings_it() -> None:

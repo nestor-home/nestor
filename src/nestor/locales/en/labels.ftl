@@ -23,10 +23,8 @@ scope-name = { $scope ->
     [memory-manage-own] manage one's own memories
     [tasks-manage] manage every task
     [tasks-manage-own] manage one's own tasks
-    [watches-manage-all] manage every watch
-    [watches-manage-own] manage one's own watches
-    [schedules-manage-all] manage every reminder
-    [schedules-manage-own] manage one's own reminders
+    [alerts-manage-all] manage every alert
+    [alerts-manage-own] manage one's own alerts
     [messages-read-all] read every message and confirmation
     [messages-read-own] read one's own messages and confirmations
     [media-view] watch the cameras one is allowed
@@ -79,7 +77,7 @@ auth-kind = { $auth ->
    *[other] { $auth }
 }
 
-schedule-day = { $day ->
+weekday = { $day ->
     [mon] Monday
     [tue] Tuesday
     [wed] Wednesday
@@ -87,6 +85,16 @@ schedule-day = { $day ->
     [fri] Friday
     [sat] Saturday
    *[sun] Sunday
+}
+alert-frequency = { $frequency ->
+    [once] Once
+    [every_time] Every time
+   *[until_rung] Until it has told something
+}
+alert-rang-because = { $cause ->
+    [due] Its time came
+    [event] The event { $kind } arrived: { $item }
+   *[match] “{ $item }” matched
 }
 home-granularity = { $granularity ->
     [home] who is home
@@ -127,8 +135,7 @@ journal-kind = { $kind ->
     [delivery] Unprompted messages
     [tool] Tools
     [task] Tasks
-    [watch] Watches
-    [schedule] Reminders
+    [alert] Alerts
     [memory] Memories
     [connection] Connections
     [presence] Presence
@@ -163,7 +170,7 @@ usage-purpose = { $purpose ->
     [turn] answers
     [notification] notifications
     [title] titles
-    [watch] watches
+    [alert] alerts
     [consolidation] memory
     [indexing] memory search
     [enrollment] voice recording

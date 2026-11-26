@@ -24,6 +24,7 @@ PENDING = 1000  # posts accepted and not yet triaged; beyond, a sender is asked 
 
 class WebhookSource(InboundEventSource):
     brand = "webhook"
+    structured = True  # a hook's kind says what happened: "dishwasher" posts when the cycle ends
 
     def __init__(
         self,

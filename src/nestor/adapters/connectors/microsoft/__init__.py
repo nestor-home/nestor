@@ -3,12 +3,12 @@ own app registration.
 
 Configuration (family `connector`, kind `microsoft`), every key optional:
 
-    poll_interval_s: 60      # how often the inbox is read for watches
+    poll_interval_s: 60      # how often the inbox is read for alerts
     blocked_s: 600           # wait between tries while the account must be reconnected
     retry_initial_s: 1       # first backoff delay after an outage or throttling, doubled up to retry_max_s
     retry_max_s: 300
     body_chars: 20000        # cap of a mail or a file read by outlook_mail_read and onedrive_read
-    excerpt_chars: 2000      # cap of the body excerpt given to watches
+    excerpt_chars: 2000      # cap of the body excerpt given to alerts
     file_bytes: 20000000     # the largest OneDrive file read
 """
 
@@ -24,8 +24,8 @@ plugin = Plugin(
     MicrosoftSettings,
     build,
     card=Card(
-        summary="People connect their Microsoft 365 account: Outlook mail and calendar, OneDrive, To Do; mail feeds "
-        "the watches.",
+        summary="People connect their Microsoft 365 account: Outlook mail and calendar, OneDrive, To Do; mail rings "
+        "alerts.",
         docs="accounts#microsoft-365",
         needs=(Need.ACCOUNT, Need.KEY),
     ),

@@ -24,6 +24,7 @@ import { Route as AppUsageRouteImport } from './routes/_app/usage'
 import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app/accounts/$accountId'
+import { Route as AppAlertsAlertIdRouteImport } from './routes/_app/alerts/$alertId'
 import { Route as AppChatIndexRouteImport } from './routes/_app/chat/index'
 import { Route as AppChatChatRouteImport } from './routes/_app/chat/$chat'
 import { Route as AppConfigIndexRouteImport } from './routes/_app/config/index'
@@ -38,7 +39,6 @@ import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$per
 import { Route as AppSatellitesIndexRouteImport } from './routes/_app/satellites/index'
 import { Route as AppSatellitesSatelliteIdRouteImport } from './routes/_app/satellites/$satelliteId'
 import { Route as AppTasksTaskIdRouteImport } from './routes/_app/tasks/$taskId'
-import { Route as AppWatchesWatchIdRouteImport } from './routes/_app/watches/$watchId'
 import { Route as AppConnectionsConnectionIdIndexRouteImport } from './routes/_app/connections/$connectionId/index'
 import { Route as AppConnectionsConnectionIdActivityRouteImport } from './routes/_app/connections/$connectionId/activity'
 import { Route as AppConnectionsConnectionIdSettingsRouteImport } from './routes/_app/connections/$connectionId/settings'
@@ -126,6 +126,11 @@ const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
   path: '/accounts/$accountId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAlertsAlertIdRoute = AppAlertsAlertIdRouteImport.update({
+  id: '/alerts/$alertId',
+  path: '/alerts/$alertId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChatIndexRoute = AppChatIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -196,11 +201,6 @@ const AppSatellitesSatelliteIdRoute =
 const AppTasksTaskIdRoute = AppTasksTaskIdRouteImport.update({
   id: '/tasks/$taskId',
   path: '/tasks/$taskId',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppWatchesWatchIdRoute = AppWatchesWatchIdRouteImport.update({
-  id: '/watches/$watchId',
-  path: '/watches/$watchId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConnectionsConnectionIdIndexRoute =
@@ -289,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/usage': typeof AppUsageRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/alerts/$alertId': typeof AppAlertsAlertIdRoute
   '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
@@ -299,7 +300,6 @@ export interface FileRoutesByFullPath {
   '/people/$personId': typeof AppPeoplePersonIdRouteWithChildren
   '/satellites/$satelliteId': typeof AppSatellitesSatelliteIdRouteWithChildren
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
-  '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts/': typeof AppAccountsIndexRoute
   '/chat/': typeof AppChatIndexRoute
   '/config/': typeof AppConfigIndexRoute
@@ -330,6 +330,7 @@ export interface FileRoutesByTo {
   '/invitation/$token': typeof InvitationTokenRoute
   '/': typeof AppIndexRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/alerts/$alertId': typeof AppAlertsAlertIdRoute
   '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
@@ -337,7 +338,6 @@ export interface FileRoutesByTo {
   '/connections/catalogue': typeof AppConnectionsCatalogueRoute
   '/connections/failed': typeof AppConnectionsFailedRoute
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
-  '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts': typeof AppAccountsIndexRoute
   '/chat': typeof AppChatIndexRoute
   '/config': typeof AppConfigIndexRoute
@@ -372,6 +372,7 @@ export interface FileRoutesById {
   '/invitation/$token': typeof InvitationTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
+  '/_app/alerts/$alertId': typeof AppAlertsAlertIdRoute
   '/_app/chat/$chat': typeof AppChatChatRoute
   '/_app/config/$section': typeof AppConfigSectionRoute
   '/_app/config/history': typeof AppConfigHistoryRoute
@@ -382,7 +383,6 @@ export interface FileRoutesById {
   '/_app/people/$personId': typeof AppPeoplePersonIdRouteWithChildren
   '/_app/satellites/$satelliteId': typeof AppSatellitesSatelliteIdRouteWithChildren
   '/_app/tasks/$taskId': typeof AppTasksTaskIdRoute
-  '/_app/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/_app/accounts/': typeof AppAccountsIndexRoute
   '/_app/chat/': typeof AppChatIndexRoute
   '/_app/config/': typeof AppConfigIndexRoute
@@ -417,6 +417,7 @@ export interface FileRouteTypes {
     | '/usage'
     | '/invitation/$token'
     | '/accounts/$accountId'
+    | '/alerts/$alertId'
     | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
@@ -427,7 +428,6 @@ export interface FileRouteTypes {
     | '/people/$personId'
     | '/satellites/$satelliteId'
     | '/tasks/$taskId'
-    | '/watches/$watchId'
     | '/accounts/'
     | '/chat/'
     | '/config/'
@@ -458,6 +458,7 @@ export interface FileRouteTypes {
     | '/invitation/$token'
     | '/'
     | '/accounts/$accountId'
+    | '/alerts/$alertId'
     | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
@@ -465,7 +466,6 @@ export interface FileRouteTypes {
     | '/connections/catalogue'
     | '/connections/failed'
     | '/tasks/$taskId'
-    | '/watches/$watchId'
     | '/accounts'
     | '/chat'
     | '/config'
@@ -499,6 +499,7 @@ export interface FileRouteTypes {
     | '/invitation/$token'
     | '/_app/'
     | '/_app/accounts/$accountId'
+    | '/_app/alerts/$alertId'
     | '/_app/chat/$chat'
     | '/_app/config/$section'
     | '/_app/config/history'
@@ -509,7 +510,6 @@ export interface FileRouteTypes {
     | '/_app/people/$personId'
     | '/_app/satellites/$satelliteId'
     | '/_app/tasks/$taskId'
-    | '/_app/watches/$watchId'
     | '/_app/accounts/'
     | '/_app/chat/'
     | '/_app/config/'
@@ -642,6 +642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccountsAccountIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/alerts/$alertId': {
+      id: '/_app/alerts/$alertId'
+      path: '/alerts/$alertId'
+      fullPath: '/alerts/$alertId'
+      preLoaderRoute: typeof AppAlertsAlertIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/chat/': {
       id: '/_app/chat/'
       path: '/'
@@ -738,13 +745,6 @@ declare module '@tanstack/react-router' {
       path: '/tasks/$taskId'
       fullPath: '/tasks/$taskId'
       preLoaderRoute: typeof AppTasksTaskIdRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/watches/$watchId': {
-      id: '/_app/watches/$watchId'
-      path: '/watches/$watchId'
-      fullPath: '/watches/$watchId'
-      preLoaderRoute: typeof AppWatchesWatchIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/connections/$connectionId/': {
@@ -938,13 +938,13 @@ interface AppRouteChildren {
   AppUsageRoute: typeof AppUsageRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
+  AppAlertsAlertIdRoute: typeof AppAlertsAlertIdRoute
   AppConnectionsConnectionIdRoute: typeof AppConnectionsConnectionIdRouteWithChildren
   AppConnectionsCatalogueRoute: typeof AppConnectionsCatalogueRoute
   AppConnectionsFailedRoute: typeof AppConnectionsFailedRoute
   AppPeoplePersonIdRoute: typeof AppPeoplePersonIdRouteWithChildren
   AppSatellitesSatelliteIdRoute: typeof AppSatellitesSatelliteIdRouteWithChildren
   AppTasksTaskIdRoute: typeof AppTasksTaskIdRoute
-  AppWatchesWatchIdRoute: typeof AppWatchesWatchIdRoute
   AppAccountsIndexRoute: typeof AppAccountsIndexRoute
   AppConnectionsIndexRoute: typeof AppConnectionsIndexRoute
   AppSatellitesIndexRoute: typeof AppSatellitesIndexRoute
@@ -962,13 +962,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppUsageRoute: AppUsageRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
+  AppAlertsAlertIdRoute: AppAlertsAlertIdRoute,
   AppConnectionsConnectionIdRoute: AppConnectionsConnectionIdRouteWithChildren,
   AppConnectionsCatalogueRoute: AppConnectionsCatalogueRoute,
   AppConnectionsFailedRoute: AppConnectionsFailedRoute,
   AppPeoplePersonIdRoute: AppPeoplePersonIdRouteWithChildren,
   AppSatellitesSatelliteIdRoute: AppSatellitesSatelliteIdRouteWithChildren,
   AppTasksTaskIdRoute: AppTasksTaskIdRoute,
-  AppWatchesWatchIdRoute: AppWatchesWatchIdRoute,
   AppAccountsIndexRoute: AppAccountsIndexRoute,
   AppConnectionsIndexRoute: AppConnectionsIndexRoute,
   AppSatellitesIndexRoute: AppSatellitesIndexRoute,

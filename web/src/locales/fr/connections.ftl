@@ -5,10 +5,10 @@ conn-intro = Jetons chiffrés, jamais montrés au modèle. Seuls les outils acti
 conn-connect-service = Connecter un service
 
 conn-empty = Aucun compte connecté pour l'instant.
-conn-empty-hint = Une boîte mail pour les veilles, un serveur MCP pour des outils.
+conn-empty-hint = Une boîte mail pour les alertes, un serveur MCP pour des outils.
 conn-open-catalogue = Ouvrir le catalogue
 conn-no-connector = Aucun connecteur installé.
-conn-feeds-watches = alimente les veilles
+conn-feeds-alerts = peut faire sonner les alertes
 conn-accounts-count = { $count ->
     [one] 1 compte
    *[other] { $count } comptes
@@ -61,7 +61,7 @@ conn-tab-overview = Aperçu
 conn-tab-activity = Activité
 conn-tab-settings = Réglages
 conn-connected-at = connecté { $when }
-conn-broken = { $assistant } ne peut plus utiliser ce compte : ses outils et ses veilles sont suspendus.
+conn-broken = { $assistant } ne peut plus utiliser ce compte : ses outils et ses alertes sont suspendus.
 conn-reconnect = Reconnecter
 conn-reconnect-ellipsis = Reconnecter…
 conn-reconnect-hint = Pour changer de compte ou de mot de passe. Les réglages des outils sont conservés.
@@ -74,7 +74,7 @@ conn-disconnect = Déconnecter
 conn-disconnect-ellipsis = Déconnecter…
 conn-disconnect-hint = Révoque l'accès chez le fournisseur si possible, puis supprime les secrets du compte.
 conn-disconnect-title = Déconnecter { $account } ?
-conn-disconnect-consequence = Ses outils disparaissent et les veilles qui en dépendent s'arrêtent.
+conn-disconnect-consequence = Ses outils disparaissent et les alertes qui en dépendent s'arrêtent.
 conn-account-connected = Compte { $account } connecté.
 
 conn-services = Dans un message
@@ -127,8 +127,8 @@ conn-figure-writes = { $count ->
 conn-figure-confirm = Demande avant d'écrire
 conn-yes = Oui
 conn-no = Non
-conn-figure-watches = Veilles alimentées
-conn-figure-watches-note = { $count ->
+conn-figure-alerts = Alertes alimentées
+conn-figure-alerts-note = { $count ->
     [0] aucune ne dépend de ce compte
    *[other] elles s'arrêtent si vous déconnectez
 }

@@ -1,4 +1,4 @@
-"""The Google connector: Gmail (read only, and new mail for watches), Calendar, Drive (read only), Contacts (read
+"""The Google connector: Gmail (read only, and new mail for alerts), Calendar, Drive (read only), Contacts (read
 only) and Tasks of each connected account."""
 
 from collections.abc import Sequence

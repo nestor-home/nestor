@@ -39,7 +39,7 @@ export function fresh(): ConfigDb {
   (older.persona as Record<string, unknown>).character = "You are Richie, the Martin household's assistant.";
   (older.initiative as Record<string, unknown>).quiet_hours = "23:00-07:00";
   const oldest = structuredClone(older);
-  delete (oldest as Record<string, unknown>).watches;
+  delete (oldest as Record<string, unknown>).alerts;
   return {
     document: now,
     path: "/home/mathis/richie-framework/configs/richie.yaml",

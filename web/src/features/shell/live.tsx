@@ -14,13 +14,12 @@ const LiveContext = createContext<Live | null>(null);
 // what a live item makes stale elsewhere in the admin, by its kind (the journal's categories)
 const STALE: Partial<Record<Kind, readonly (readonly unknown[])[]>> = {
   task: [keys.tasks],
-  watch: [keys.watches],
+  alert: [keys.alerts],
   memory: [["memories"]],
   connection: [keys.connections],
   // its list, each satellite and the devices one may watch: a connection, an update reported, who may use it
   satellite: [keys.satellites, keys.home, keys.mediaDevices],
   presence: [keys.people, keys.home],
-  schedule: [keys.schedules],
   delivery: [keys.messages], // a message passed on, delivered or not
   tool: [keys.confirmations], // a confirmation asked or answered
 };

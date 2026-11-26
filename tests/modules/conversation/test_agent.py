@@ -69,7 +69,7 @@ async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> 
 
     said = await agent.respond(message("Quel temps ?", VOICE, "mic")).collect()
     typed = await agent.respond(message("Et en détail ?", VOICE, "mic", medium=Medium.WRITTEN)).collect()
-    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+    parcel = Notification("The parcel arrived.", About(Source.ALERT, "a1"))
     composed = await agent.compose(TELEGRAM, MATHIS, parcel, Medium.SPOKEN)
 
     assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), Draft("C'est prêt."))
@@ -349,7 +349,7 @@ async def test_a_slow_model_gets_a_filler_on_voice_only(make_agent: MakeAgent, j
 async def test_a_composed_message_said_aloud_gets_no_filler(make_agent: MakeAgent, journal: Journal) -> None:
     """A draft is sent once written: "give me a second" would go out with it, to someone who asked nothing."""
     slow = make_agent(model=ScriptedModel("Voilà.", word_delay_s=0.05), settings=AgentSettings(slow_after_s=0.02))
-    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+    parcel = Notification("The parcel arrived.", About(Source.ALERT, "a1"))
 
     assert await slow.compose(VOICE, MATHIS, parcel, Medium.SPOKEN) == Draft("Voilà.")
     assert await journal.history(FallbackSpoken) == []
@@ -403,7 +403,7 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
 async def test_a_composed_message_is_its_last_message_only(make_agent: MakeAgent) -> None:
     """Nobody waits for it: what the model said before calling its tools ("je regarde") never goes out."""
     agent = make_agent(model=Announcing(), tools=[tool("light_on", light_on)])
-    reminder = Notification("A wake-up is due now: turn the light on.", About(Source.SCHEDULE, "s1"))
+    reminder = Notification("An alert rang: turn the light on.", About(Source.ALERT, "a2"))
 
     assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == Draft("C'est allumé.")
 
@@ -422,7 +422,7 @@ class AnnouncingThenSilent(Announcing):
 
 async def test_a_check_that_announced_itself_then_found_nothing_tells_nothing(make_agent: MakeAgent) -> None:
     agent = make_agent(model=AnnouncingThenSilent(), tools=[tool("light_on", light_on)])
-    reminder = Notification("A wake-up is due now: check the light.", About(Source.SCHEDULE, "s1"))
+    reminder = Notification("An alert rang: check the light.", About(Source.ALERT, "a2"))
 
     with pytest.raises(ProviderError, match="wrote nothing"):  # only a choice is silence: this is a failure
         await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN)
@@ -431,7 +431,7 @@ async def test_a_check_that_announced_itself_then_found_nothing_tells_nothing(ma
 async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: MakeAgent, journal: Journal) -> None:
     """A model that fails leaves the delivery to fail and be journaled: no "sorry" sent out of context."""
     agent = make_agent(model=ScriptedModel(fail=ProviderError("model", "down", transient=True)))
-    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+    parcel = Notification("The parcel arrived.", About(Source.ALERT, "a1"))
 
     with pytest.raises(ProviderError):
         await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN)
@@ -449,7 +449,7 @@ async def test_the_silence_marker_is_read_whatever_its_case_and_never_sent(
     make_agent: MakeAgent, written: str, composed: object
 ) -> None:
     agent = make_agent(model=ScriptedModel(written))
-    price = Notification("A wake-up is due now: check the price.", About(Source.SCHEDULE, "s1"))
+    price = Notification("An alert rang: check the price.", About(Source.ALERT, "a2"))
     assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) == composed
 
 

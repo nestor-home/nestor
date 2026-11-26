@@ -55,10 +55,10 @@ export function stepLook(item: JournalItem): StepLook {
     return { label: tr("step-task-delivered"), icon: Send, tone: "text-ember", dot: "bg-ember" };
   if (is(item, "taskReminded"))
     return { label: tr("step-task-reminded"), icon: BellRing, tone: "text-amber", dot: "bg-amber" };
-  if (is(item, "watchCreated"))
-    return { label: tr("step-watch-created"), icon: Plus, tone: "text-kind-watch", dot: "bg-kind-watch" };
-  if (is(item, "watchTriggered"))
-    return { label: tr("step-watch-triggered"), icon: Inbox, tone: "text-kind-watch", dot: "bg-kind-watch" };
+  if (is(item, "alertCreated"))
+    return { label: tr("step-alert-created"), icon: Plus, tone: "text-kind-alert", dot: "bg-kind-alert" };
+  if (is(item, "alertRang"))
+    return { label: tr("step-alert-rang"), icon: Inbox, tone: "text-kind-alert", dot: "bg-kind-alert" };
   if (is(item, "considered"))
     return { label: tr("step-considered"), icon: Megaphone, tone: "text-ember", dot: "bg-ember" };
   if (is(item, "delivered") && followUp)

@@ -13,7 +13,7 @@ from nestor.core import PersonId
 from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.connectors import Connection, Connections
-from nestor.modules.initiative import Schedule, Watch
+from nestor.modules.initiative import Alert
 from nestor.modules.memory import Memory, Place
 from nestor.modules.usage import Dimension
 
@@ -91,7 +91,7 @@ def connection_owner(admin: AdminState, caller: Caller, person: str | None) -> P
     return chosen
 
 
-# -- memories, tasks, watches ----------------------------------------------------------------------------
+# -- memories, tasks, alerts -----------------------------------------------------------------------------
 
 
 def reads_memory(caller: Caller, memory: Memory) -> bool:
@@ -133,26 +133,17 @@ def reachable_task(admin: AdminState, caller: Caller, task_id: str) -> Task:
     return task
 
 
-def reaches_watch(caller: Caller, watch: Watch) -> bool:
-    return caller.principal.reaches(watch.owner, every=Scope.WATCHES_MANAGE_ALL, own=Scope.WATCHES_MANAGE_OWN)
+def reaches_alert(caller: Caller, alert: Alert) -> bool:
+    """Whoever set an alert reaches it, and whoever manages every alert."""
+    return caller.principal.reaches(alert.owner, every=Scope.ALERTS_MANAGE_ALL, own=Scope.ALERTS_MANAGE_OWN)
 
 
-def reachable_watch(admin: AdminState, caller: Caller, watch_id: str) -> Watch:
-    watch = admin.nestor.watch_book.watches.get(watch_id)
-    if watch is None or not reaches_watch(caller, watch):
-        raise not_found("watch_unknown")
-    return watch
-
-
-def reaches_schedule(caller: Caller, schedule: Schedule) -> bool:
-    return caller.principal.reaches(schedule.owner, every=Scope.SCHEDULES_MANAGE_ALL, own=Scope.SCHEDULES_MANAGE_OWN)
-
-
-def reachable_schedule(admin: AdminState, caller: Caller, schedule_id: str) -> Schedule:
-    schedule = admin.nestor.schedule_book.schedules.get(schedule_id)
-    if schedule is None or not reaches_schedule(caller, schedule):
-        raise not_found("schedule_unknown")
-    return schedule
+def reachable_alert(admin: AdminState, caller: Caller, alert_id: str) -> Alert:
+    """An active alert the caller reaches, else 404."""
+    alert = admin.nestor.alert_book.alerts.get(alert_id)
+    if alert is None or not reaches_alert(caller, alert):
+        raise not_found("alert_unknown")
+    return alert
 
 
 def reaches_message_of(caller: Caller, *people: PersonId | None) -> bool:

@@ -25,9 +25,7 @@ async def document(api: Api) -> dict[str, Any]:
 async def test_the_schema_gives_every_section_and_every_installed_plugin_its_form(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         schema = (await (await admin.api()).get("/api/v1/config/schema")).json()
-        assert {"persona", "household", "agent", "watches", "initiative", "admin", "data_dir"} <= set(
-            schema["sections"]
-        )
+        assert {"persona", "household", "agent", "alerts", "initiative", "admin", "data_dir"} <= set(schema["sections"])
         assert schema["section_titles"]["household"] == "Foyer"
         locale = schema["sections"]["persona"]["properties"]["locale"]["x-nestor"]
         assert locale["title"] == "Langue" and locale["help"].startswith("Ex. fr-FR")

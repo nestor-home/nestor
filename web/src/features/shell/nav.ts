@@ -76,10 +76,10 @@ export const SPACES: Space[] = [
     to: "/activity",
     label: "space-activity",
     icon: ListChecks,
-    any: ["schedules:read", "watches:read", "tasks:read", "messages:read"],
+    any: ["alerts:read", "tasks:read", "messages:read"],
     key: "e",
     holds: [],
-    covers: ["/tasks", "/watches"],
+    covers: ["/tasks", "/alerts"],
   },
   {
     to: "/house",

@@ -6,7 +6,7 @@ import { EventSheet } from "./event-sheet";
 import { buildStories } from "./stories";
 import { StoryCard } from "./story";
 
-/** The journal's stories about one subject (a task, a watch, a person's conversations), in place. */
+/** The journal's stories about one subject (a task, an alert, a person's conversations), in place. */
 export function SubjectStory({
   filters,
   empty,

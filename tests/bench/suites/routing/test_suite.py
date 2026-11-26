@@ -137,7 +137,7 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
     prompt = model.requests[0].messages[0].text
     assert "hermes: chercher sur le web" in prompt and "write in French" in prompt, "the runtime's instructions"
     offered = {t.name for t in model.requests[0].tools}
-    assert {"start_task", "schedule", "message_person", "weather", "about_nestor"} <= offered
+    assert {"start_task", "create_alert", "message_person", "weather", "about_nestor"} <= offered
 
     handed = ScriptedModel(
         ToolCall(

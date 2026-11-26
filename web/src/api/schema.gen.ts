@@ -859,7 +859,7 @@ export interface paths {
         /**
          * List Journal
          * @description Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`
-         *     and `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `watch`, `connection` and
+         *     and `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `alert`, `connection` and
          *     `satellite` keep one thread.
          */
         get: operations["listJournal"];
@@ -1211,15 +1211,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/watches": {
+    "/api/v1/alerts": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Watches */
-        get: operations["listWatches"];
+        /** List Alerts */
+        get: operations["listAlerts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1228,7 +1228,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/watches/{watch_id}": {
+    "/api/v1/alerts/{alert_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1236,10 +1236,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Watch
-         * @description One active watch; 404 when unknown, ended or out of reach.
+         * Get Alert
+         * @description One active alert; 404 when unknown, ended or out of reach.
          */
-        get: operations["getWatch"];
+        get: operations["getAlert"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1248,7 +1248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/watches/{watch_id}/cancel": {
+    "/api/v1/alerts/{alert_id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -1257,45 +1257,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cancel Watch */
-        post: operations["cancelWatch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schedules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Schedules
-         * @description Soonest first.
-         */
-        get: operations["listSchedules"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/schedules/{schedule_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel Schedule */
-        post: operations["cancelSchedule"];
+        /** Cancel Alert */
+        post: operations["cancelAlert"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2030,6 +1993,51 @@ export interface components {
             name: string;
             status: components["schemas"]["Health"];
         };
+        /** AlertOut */
+        AlertOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Instruction */
+            instruction: string;
+            /** Condition */
+            condition: string | null;
+            trigger: components["schemas"]["Trigger"];
+            /** At */
+            at: string | null;
+            /** Times */
+            times: components["schemas"]["Clock"][];
+            /** Days */
+            days: components["schemas"]["Day"][];
+            /** Kinds */
+            kinds: string[];
+            frequency: components["schemas"]["Frequency"];
+            /** Until */
+            until: string | null;
+            /** Urgent */
+            urgent: boolean;
+            owner: components["schemas"]["PersonRef"] | null;
+            origin: components["schemas"]["OriginOut"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Next Due */
+            next_due: string | null;
+            /** Rang */
+            rang: number;
+            /** Rings */
+            rings: components["schemas"]["RingOut"][];
+        };
+        /** AlertsOut */
+        AlertsOut: {
+            /** Alerts */
+            alerts: components["schemas"]["AlertOut"][];
+            /** Kinds */
+            kinds: string[];
+        };
         /** AnswerIn */
         AnswerIn: {
             /** Approved */
@@ -2165,7 +2173,7 @@ export interface components {
          * @description Why Nestor called: what the call serves, whichever model type answers it.
          * @enum {string}
          */
-        CallPurpose: "turn" | "notification" | "title" | "watch" | "consolidation" | "indexing" | "enrollment" | "task" | "search" | "unattributed";
+        CallPurpose: "turn" | "notification" | "title" | "alert" | "consolidation" | "indexing" | "enrollment" | "task" | "search" | "unattributed";
         /** CallsOut */
         CallsOut: {
             /** Calls */
@@ -2462,8 +2470,8 @@ export interface components {
             last_used_at: string | null;
             /** Calls Today */
             calls_today: number;
-            /** Watches */
-            watches: number;
+            /** Alerts */
+            alerts: number;
             /** Tools */
             tools: components["schemas"]["ToolOut"][];
             /** Services */
@@ -2497,8 +2505,8 @@ export interface components {
             last_used_at: string | null;
             /** Calls Today */
             calls_today: number;
-            /** Watches */
-            watches: number;
+            /** Alerts */
+            alerts: number;
         };
         /** ConnectionSettingsIn */
         ConnectionSettingsIn: {
@@ -2541,6 +2549,7 @@ export interface components {
         CostBasis: "reported" | "priced" | "free" | "nothing" | "unknown";
         /**
          * Day
+         * @description A day of the week, Monday first.
          * @enum {string}
          */
         Day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -2601,7 +2610,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unavailable" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "unknown_place" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_not_stopped" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unavailable" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "unknown_place" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_not_stopped" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "alert_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -2658,6 +2667,12 @@ export interface components {
             /** Default */
             default: string | null;
         };
+        /**
+         * Frequency
+         * @description How often an alert rings before it ends by itself (`until` may end it earlier).
+         * @enum {string}
+         */
+        Frequency: "once" | "every_time" | "until_rung";
         /**
          * Granularity
          * @description How much the presence source can tell, from coarse to fine (`at_least` compares).
@@ -2971,7 +2986,7 @@ export interface components {
          * @description What the journal groups entries by: the facets of its filters, one per category, and `other`.
          * @enum {string}
          */
-        Kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "schedule" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "usage" | "other";
+        Kind: "conversation" | "delivery" | "tool" | "task" | "alert" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "usage" | "other";
         /** KindFacetOut */
         KindFacetOut: {
             key: components["schemas"]["Kind"];
@@ -3014,8 +3029,8 @@ export interface components {
             call: string | null;
             /** Task */
             task: string | null;
-            /** Watch */
-            watch: string | null;
+            /** Alert */
+            alert: string | null;
             /** Delivery */
             delivery: string | null;
             /** Connection */
@@ -3289,7 +3304,7 @@ export interface components {
         Off: "switched_off" | "quiet_hours" | "someone_home";
         /**
          * OriginOut
-         * @description Where something was asked for: a task, a watch.
+         * @description Where something was asked for: a task, an alert.
          */
         OriginOut: {
             /** Session */
@@ -3676,6 +3691,32 @@ export interface components {
             beats: components["schemas"]["BeatOut"][];
         };
         /**
+         * RingCause
+         * @description What made an alert ring.
+         * @enum {string}
+         */
+        RingCause: "due" | "event" | "match";
+        /**
+         * RingOut
+         * @description One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how).
+         */
+        RingOut: {
+            /** Id */
+            id: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            cause: components["schemas"]["RingCause"];
+            /** Item Title */
+            item_title: string | null;
+            /** Item Kind */
+            item_kind: string | null;
+            /** Summary */
+            summary: string;
+        };
+        /**
          * Risk
          * @enum {string}
          */
@@ -3749,27 +3790,6 @@ export interface components {
             /** Additions */
             additions: components["schemas"]["AdditionOut"][];
         };
-        /** ScheduleOut */
-        ScheduleOut: {
-            /** Id */
-            id: string;
-            /** Title */
-            title: string;
-            /** Instruction */
-            instruction: string;
-            owner: components["schemas"]["PersonRef"] | null;
-            origin: components["schemas"]["OriginOut"] | null;
-            /** Recurring */
-            recurring: boolean;
-            /** Once At */
-            once_at: string | null;
-            /** Times */
-            times: string[];
-            /** Days */
-            days: components["schemas"]["Day"][];
-            /** Next Due */
-            next_due: string | null;
-        };
         /**
          * ScheduledDeliveryOut
          * @description A written follow-up of something said aloud: sent at `due_at` unless someone answers first.
@@ -3788,19 +3808,12 @@ export interface components {
              */
             due_at: string;
         };
-        /** SchedulesOut */
-        SchedulesOut: {
-            /** Schedules */
-            schedules: components["schemas"]["ScheduleOut"][];
-            /** Timezone */
-            timezone: string;
-        };
         /**
          * Scope
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all" | "usage.read.all" | "usage.read.own";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "alerts.manage.all" | "alerts.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all" | "usage.read.all" | "usage.read.own";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -4123,6 +4136,12 @@ export interface components {
             /** Conversed Nusd */
             conversed_nusd: number;
         };
+        /**
+         * Trigger
+         * @description What rings an alert.
+         * @enum {string}
+         */
+        Trigger: "at" | "times" | "events";
         /** TurnOut */
         TurnOut: {
             /** Id */
@@ -4220,39 +4239,6 @@ export interface components {
             last_learned_at: string | null;
             /** Manageable */
             manageable: boolean;
-        };
-        /** WatchOut */
-        WatchOut: {
-            /** Id */
-            id: string;
-            /** Title */
-            title: string;
-            /** What */
-            what: string;
-            /** Kinds */
-            kinds: string[];
-            owner: components["schemas"]["PersonRef"] | null;
-            /** Once */
-            once: boolean;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Until */
-            until: string | null;
-            origin: components["schemas"]["OriginOut"] | null;
-            /** Triggered */
-            triggered: number;
-            /** Last Triggered At */
-            last_triggered_at: string | null;
-        };
-        /** WatchesOut */
-        WatchesOut: {
-            /** Watches */
-            watches: components["schemas"]["WatchOut"][];
-            /** Kinds */
-            kinds: string[];
         };
         /** WrittenOut */
         WrittenOut: {
@@ -8984,7 +8970,7 @@ export interface operations {
                 session?: string;
                 conversation?: string;
                 task?: string;
-                watch?: string;
+                alert?: string;
                 connection?: string;
                 satellite?: string;
             };
@@ -9093,7 +9079,7 @@ export interface operations {
                 session?: string;
                 conversation?: string;
                 task?: string;
-                watch?: string;
+                alert?: string;
                 connection?: string;
                 satellite?: string;
             };
@@ -9203,7 +9189,7 @@ export interface operations {
                 session?: string;
                 conversation?: string;
                 task?: string;
-                watch?: string;
+                alert?: string;
                 connection?: string;
                 satellite?: string;
             };
@@ -10907,7 +10893,7 @@ export interface operations {
             };
         };
     };
-    listWatches: {
+    listAlerts: {
         parameters: {
             query?: never;
             header?: never;
@@ -10922,7 +10908,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WatchesOut"];
+                    "application/json": components["schemas"]["AlertsOut"];
                 };
             };
             /** @description Bad Request */
@@ -10999,12 +10985,12 @@ export interface operations {
             };
         };
     };
-    getWatch: {
+    getAlert: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                watch_id: string;
+                alert_id: string;
             };
             cookie?: never;
         };
@@ -11016,7 +11002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WatchOut"];
+                    "application/json": components["schemas"]["AlertOut"];
                 };
             };
             /** @description Bad Request */
@@ -11093,196 +11079,12 @@ export interface operations {
             };
         };
     };
-    cancelWatch: {
+    cancelAlert: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                watch_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Content */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    listSchedules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SchedulesOut"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Content */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    cancelSchedule: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                schedule_id: string;
+                alert_id: string;
             };
             cookie?: never;
         };
@@ -14945,21 +14747,22 @@ type ReadonlyArray<T> = [
 export const activityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Activity"]> = ["listening", "speaking", "thinking", "working", "sleeping", "idle"];
 export const attachmentKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AttachmentKind"]> = ["image", "voice", "audio", "file"];
 export const authKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AuthKind"]> = ["oauth2", "secret", "none", "discovered"];
-export const callPurposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CallPurpose"]> = ["turn", "notification", "title", "watch", "consolidation", "indexing", "enrollment", "task", "search", "unattributed"];
+export const callPurposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CallPurpose"]> = ["turn", "notification", "title", "alert", "consolidation", "indexing", "enrollment", "task", "search", "unattributed"];
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
 export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "nothing", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
-export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unavailable", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "unknown_place", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_not_stopped", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unavailable", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "unknown_place", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_not_stopped", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "alert_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
+export const frequencyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Frequency"]> = ["once", "every_time", "until_rung"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
 export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
 export const intervalValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Interval"]> = ["hour", "day", "week", "month"];
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
-export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "usage", "other"];
+export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "alert", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "usage", "other"];
 export const mediumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Medium"]> = ["spoken", "written"];
 export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection", "task"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
@@ -14973,9 +14776,10 @@ export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
 export const purposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Purpose"]> = ["view", "call"];
 export const retirementValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Retirement"]> = ["ended", "stale", "merged"];
+export const ringCauseValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["RingCause"]> = ["due", "event", "match"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
-export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all", "usage.read.all", "usage.read.own"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "alerts.manage.all", "alerts.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all", "usage.read.all", "usage.read.own"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
 export const shelfValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shelf"]> = ["people", "home", "household", "projects", "topics"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
@@ -14984,6 +14788,7 @@ export const suggestValues: ReadonlyArray<FlattenedDeepRequired<components>["sch
 export const taskStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskState"]> = ["working", "waiting", "ready", "archived"];
 export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
 export const toolStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ToolState"]> = ["running", "done", "failed", "background"];
+export const triggerValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Trigger"]> = ["at", "times", "events"];
 export const turnStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TurnStatus"]> = ["running", "completed", "asked", "failed", "stopped"];
 export const unitValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Unit"]> = ["input_tokens", "cached_input_tokens", "cache_write_tokens", "output_tokens", "images", "audio_seconds", "characters", "requests"];
 export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];

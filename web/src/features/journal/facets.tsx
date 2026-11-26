@@ -24,7 +24,7 @@ import type { JournalSearch } from "./search";
  * filters as they are. Kinds combine; person, channel and room pick one.
  */
 /** Filters that come from a link elsewhere (a task's page, a connection's activity…), shown so they can be removed. */
-const SUBJECTS = ["session", "conversation", "task", "watch", "connection", "satellite", "tone"] as const;
+const SUBJECTS = ["session", "conversation", "task", "alert", "connection", "satellite", "tone"] as const;
 
 /** A value of a facet as the filters show it. */
 interface Choice {

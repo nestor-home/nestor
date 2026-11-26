@@ -1,4 +1,4 @@
-"""New Gmail inbox messages as watch items, from the mailbox history (users.history.list).
+"""New Gmail inbox messages as items for alerts, from the mailbox history (users.history.list).
 
 Cursor (kept in the connection's `Access` state): the history id up to which every added message was
 yielded, plus the ids yielded since (bounded), so that a feed stopped in the middle of a batch resumes

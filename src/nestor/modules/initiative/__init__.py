@@ -1,13 +1,30 @@
-"""Initiative: what the agent says without being asked — task results and watched-for arrivals — and
-the choice of where and when to say it.
+"""Initiative: what the agent says without being asked (task results, alerts that ring) and the choice of where and
+when to say it.
 
 - `delivery`: the courier and its presence-aware policy
-- `watches`: durable watches, inbound sources, triage
+- `alerts`: what the agent does later or when something happens, rung by a time or by items from inbound sources
 - `returns`: what comes back to a conversation by itself (ended tasks, results of deferred tool calls)
 - `messaging`: messages and questions passed on to someone of the household
-- `schedules`: wake-ups, the agent doing something later, once or regularly
 """
 
+from nestor.modules.initiative.alerts import (
+    Alert,
+    AlertBook,
+    AlertCreated,
+    AlertEnd,
+    AlertEnded,
+    AlertKeeper,
+    AlertRang,
+    AlertSorted,
+    AlertTools,
+    Frequency,
+    InboundEventSource,
+    Incoming,
+    Ring,
+    RingCause,
+    Triage,
+    Trigger,
+)
 from nestor.modules.initiative.delivery import (
     Courier,
     Delivered,
@@ -18,6 +35,7 @@ from nestor.modules.initiative.delivery import (
     FollowUp,
     Plan,
     QuietHours,
+    Sent,
 )
 from nestor.modules.initiative.messaging import (
     MessageBook,
@@ -28,39 +46,25 @@ from nestor.modules.initiative.messaging import (
     Messenger,
 )
 from nestor.modules.initiative.returns import Returns, ToolResultDelivered
-from nestor.modules.initiative.schedules import (
-    Day,
-    Schedule,
-    ScheduleBook,
-    ScheduleCancelled,
-    ScheduleCreated,
-    ScheduleFired,
-    Scheduler,
-    ScheduleTools,
-)
-from nestor.modules.initiative.watches import (
-    InboundEventSource,
-    Incoming,
-    Triage,
-    Verdict,
-    Watch,
-    WatchBook,
-    WatchCreated,
-    WatchEnded,
-    WatchKeeper,
-    WatchSorted,
-    WatchTriggered,
-)
 
 __all__ = [
+    "Alert",
+    "AlertBook",
+    "AlertCreated",
+    "AlertEnd",
+    "AlertEnded",
+    "AlertKeeper",
+    "AlertRang",
+    "AlertSorted",
+    "AlertTools",
     "Courier",
-    "Day",
     "Delivered",
     "DeliveryConsidered",
     "DeliveryFailed",
     "DeliveryPolicy",
     "DeliveryWithheld",
     "FollowUp",
+    "Frequency",
     "InboundEventSource",
     "Incoming",
     "MessageBook",
@@ -72,21 +76,10 @@ __all__ = [
     "Plan",
     "QuietHours",
     "Returns",
-    "Schedule",
-    "ScheduleBook",
-    "ScheduleCancelled",
-    "ScheduleCreated",
-    "ScheduleFired",
-    "ScheduleTools",
-    "Scheduler",
+    "Ring",
+    "RingCause",
+    "Sent",
     "ToolResultDelivered",
     "Triage",
-    "Verdict",
-    "Watch",
-    "WatchBook",
-    "WatchCreated",
-    "WatchEnded",
-    "WatchKeeper",
-    "WatchSorted",
-    "WatchTriggered",
+    "Trigger",
 ]

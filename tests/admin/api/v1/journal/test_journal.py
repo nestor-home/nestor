@@ -55,20 +55,20 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
         await admin.nestor.journal.publish(
             DeliveryConsidered(
                 source="courier",
-                about=About(Source.WATCH, "w1"),
+                about=About(Source.ALERT, "a1"),
                 reason=Message.of("delivery-in-room", person="Mathis", room="salon"),
                 spoken=Address("voice", "salon"),
                 person=PersonId("mathis"),
             )
         )
         (item,) = (await (await admin.api()).get("/api/v1/journal", kinds="delivery")).json()["items"]
-        assert item["text"] == "Message pour Mathis : veille w1"
-        assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "w1"
+        assert item["text"] == "Message pour Mathis : alerte a1"
+        assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "a1"
         assert item["reason"] == {
             "message": {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}},
             "text": "Mathis est dans la pièce « salon »",
         }
-        assert item["tone"] == "decision" and item["links"]["delivery"] == "watch:w1" and item["links"]["watch"] == "w1"
+        assert item["tone"] == "decision" and item["links"]["delivery"] == "alert:a1" and item["links"]["alert"] == "a1"
         assert item["detail_text"] == "Prévu : à voix haute sur voice:salon" and item["detail"] == ""
         assert item["kind"] == "delivery"
         assert item["people"] == [{"id": "mathis", "name": "Mathis"}] and item["channels"] == ["voice"]
@@ -265,13 +265,14 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
     from nestor.modules.conversation import AnswerCut, FallbackReason, FallbackSpoken
     from nestor.modules.home import PresenceChanged
     from nestor.modules.initiative import (
+        AlertCreated,
+        AlertEnd,
+        AlertEnded,
+        AlertRang,
+        AlertSorted,
         Delivered,
         DeliveryFailed,
-        ScheduleCreated,
-        WatchCreated,
-        WatchEnded,
-        WatchSorted,
-        WatchTriggered,
+        RingCause,
     )
     from nestor.modules.memory import MemoryCorrected
     from nestor.modules.satellites import (
@@ -298,10 +299,10 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             AssistantTurn(source="agent", address=MATHIS_CHAT, text="Je surveille.", interrupted=True),
             FallbackSpoken(source="agent", address=MATHIS_CHAT, reason=FallbackReason.MODEL_SLOW),
             AnswerCut(source="agent", answer="t1", heard="Je surv"),
-            ToolCalled(source="toolbox", address=MATHIS_CHAT, call_id="c1", name="create_watch", arguments={}),
-            ToolCompleted(source="toolbox", call_id="c1", name="create_watch", output="ok", ok=True, duration_s=0.2),
+            ToolCalled(source="toolbox", address=MATHIS_CHAT, call_id="c1", name="create_alert", arguments={}),
+            ToolCompleted(source="toolbox", call_id="c1", name="create_alert", output="ok", ok=True, duration_s=0.2),
             ToolCompleted(source="toolbox", call_id="c2", name="mailbox_send", output="no", ok=False, duration_s=1),
-            WatchSorted(
+            AlertSorted(
                 source="keeper",
                 item_id="i",
                 item_title="Colis livré",
@@ -309,8 +310,8 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
                 asked=("w1", "w2"),
                 matched=("w1",),
             ),
-            WatchSorted(source="keeper", item_id="j", item_title="Newsletter", item_source="c1", asked=("w1",)),
-            WatchSorted(
+            AlertSorted(source="keeper", item_id="j", item_title="Newsletter", item_source="c1", asked=("w1",)),
+            AlertSorted(
                 source="keeper",
                 item_id="k",
                 item_title="Facture",
@@ -318,18 +319,28 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
                 asked=("w1",),
                 unsorted=True,
             ),
-            WatchTriggered(
+            AlertRang(
                 source="keeper",
-                watch_id="w1",
+                alert_id="w1",
+                ring_id="r1",
+                cause=RingCause.MATCH,
                 item_id="i",
                 item_title="Colis livré",
                 item_source="c1",
-                summary="",
-                urgent=True,
             ),
-            WatchEnded(source="watch-book", watch_id="w1", reason="matched"),
-            Delivered(source="courier", address=MATHIS_CHAT, about=About(Source.WATCH, "w1"), person=mathis),
-            DeliveryFailed(source="courier", about=About(Source.WATCH, "w2"), tried=(), person=mathis),
+            AlertRang(
+                source="keeper",
+                alert_id="w4",
+                ring_id="r2",
+                cause=RingCause.EVENT,
+                item_id="h",
+                item_title="Cycle terminé",
+                item_kind="dishwasher",
+                item_source="webhook",
+            ),
+            AlertEnded(source="alert-book", alert_id="w1", reason=AlertEnd.RANG),
+            Delivered(source="courier", address=MATHIS_CHAT, about=About(Source.ALERT, "w1"), person=mathis),
+            DeliveryFailed(source="courier", about=About(Source.ALERT, "w2"), tried=(), person=mathis),
             MemoryCorrected(source="memory", memory_id="m1", text="Le chat s'appelle Biscotte"),
             PresenceChanged(source="presence", person=mathis, home=True, room="salon"),
             PresenceChanged(source="presence", person=mathis, home=False),
@@ -348,10 +359,15 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             TurnEnded(
                 source="tasks", task_id="t1", turn_id="u2", status=TurnStatus.FAILED, error="quota", duration_s=12
             ),
-            WatchCreated(source="watch-book", watch_id="w3", title="Colis", what="le colis", kinds=(), once=True),
-            ScheduleCreated(
-                source="schedule-book", schedule_id="s1", title="Plantes", instruction="Arrose", times=("08:00",)
+            AlertCreated(
+                source="alert-book",
+                alert_id="w3",
+                title="Colis",
+                instruction="Préviens Mathis",
+                condition="le colis",
+                kinds=("mail",),
             ),
+            AlertCreated(source="alert-book", alert_id="s1", title="Plantes", instruction="Arrose", times=("08:00",)),
             ConnectionChanged(
                 source="connections",
                 connection_id="c1",
@@ -376,16 +392,17 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             ("journal-fallback", {"reason": "model_slow"}),
             ("journal-answer-cut", {}),
             ("journal-detail-heard", {"heard": "Je surv"}),
-            ("journal-tool-called", {"tool": "create_watch"}),
-            ("journal-tool-completed", {"tool": "create_watch", "seconds": 0.2}),
+            ("journal-tool-called", {"tool": "create_alert"}),
+            ("journal-tool-completed", {"tool": "create_alert", "seconds": 0.2}),
             ("journal-tool-failed", {"tool": "mailbox_send"}),
-            ("journal-watch-sorted", {"item": "Colis livré", "matched": 1, "asked": 2, "unsorted": "no"}),
-            ("journal-watch-sorted", {"item": "Newsletter", "matched": 0, "asked": 1, "unsorted": "no"}),
-            ("journal-watch-sorted", {"item": "Facture", "unsorted": "yes"}),
-            ("journal-watch-triggered", {"watch": "w1", "item": "Colis livré", "urgent": "yes"}),
-            ("journal-watch-ended", {"watch": "w1", "reason": "matched"}),
-            ("journal-delivered", {"subject": "watch", "id": "w1"}),
-            ("journal-delivery-failed", {"subject": "watch", "id": "w2"}),
+            ("journal-alert-sorted", {"item": "Colis livré", "matched": 1, "asked": 2, "unsorted": "no"}),
+            ("journal-alert-sorted", {"item": "Newsletter", "matched": 0, "asked": 1, "unsorted": "no"}),
+            ("journal-alert-sorted", {"item": "Facture", "unsorted": "yes"}),
+            ("journal-alert-rang", {"alert": "w1", "item": "Colis livré", "cause": "match"}),
+            ("journal-alert-rang", {"alert": "w4", "kind": "dishwasher", "cause": "event"}),
+            ("journal-alert-ended", {"alert": "w1", "reason": "rang"}),
+            ("journal-delivered", {"subject": "alert", "id": "w1"}),
+            ("journal-delivery-failed", {"subject": "alert", "id": "w2"}),
             ("journal-detail-tried", {"count": 0}),
             ("journal-memory-corrected", {}),
             ("journal-presence-changed", {"person": "Mathis", "where": "room", "room": "salon"}),
@@ -395,8 +412,8 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             ("journal-task-created", {"task": "t1", "executor": "hermes", "title": "Analyse du dépôt"}),
             ("journal-task-turn-started", {"task": "t1"}),
             ("journal-task-turn-ended", {"task": "t1", "status": "failed", "seconds": 12.0}),
-            ("journal-watch-created", {"title": "Colis"}),
-            ("journal-schedule-created", {"recurring": "yes", "title": "Plantes"}),
+            ("journal-alert-created", {"trigger": "events", "kinds": "mail", "title": "Colis"}),
+            ("journal-alert-created", {"trigger": "times", "title": "Plantes"}),
             ("journal-connection-changed", {"connection": "c1", "status": "needs_reauth"}),
             (
                 "journal-satellite-pairing-requested",
@@ -416,12 +433,14 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             assert any(m["id"] == message_id and args.items() <= m["args"].items() for m in told), (message_id, args)
         said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
         for sentence in (  # what Fluent formats: plurals, decimals, percentages, a long text cut short
-            "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
+            "« Newsletter » vérifié pour 1 alerte : aucune ne correspond",
             "Tâche t1 ouverte avec hermes : Analyse du dépôt\nAnalyse le dépôt",  # its first instruction with it
             "Tâche t1 : nouvelle consigne\nAnalyse",  # what it was asked, beside the line
-            "Veille créée : Colis\nle colis",
-            "Rappel régulier programmé : Plantes\nArrose",
-            "Outil create_watch terminé en 0,2 s",
+            "Alerte sur mail : Colis\nle colis\nPréviens Mathis",
+            "Alerte régulière programmée : Plantes\nArrose",
+            "L'alerte w4 a sonné : l'événement dishwasher est arrivé (« Cycle terminé »)",
+            "Alerte w1 terminée : elle a sonné",
+            "Outil create_alert terminé en 0,2 s",
             "2 personnes vues par reachy-salon",
             "1 personne vue par reachy-salon",
             "Confiance : 87\N{NO-BREAK SPACE}%",

@@ -1,4 +1,4 @@
-"""Tasks, watches, memories and the household through the API — each member reaching only their own."""
+"""Tasks, memories and the household through the API, each member reaching only their own."""
 
 import asyncio
 from pathlib import Path
@@ -7,7 +7,7 @@ from nestor.core import PersonId
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskState
-from nestor.modules.initiative import Watch
+from nestor.modules.initiative import Alert, Frequency, RingCause
 from nestor.modules.memory import Place, Retirement
 from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
@@ -47,21 +47,6 @@ async def test_a_stop_the_executor_does_not_confirm_is_reported(tmp_path: Path) 
         await asyncio.sleep(0.01)
         stopped = (await (await admin.api()).post(f"/api/v1/tasks/{task.id}/stop")).json()
         assert stopped["confirmed"] is False and stopped["task"]["thread"][0]["error"]
-
-
-async def test_a_member_sees_and_cancels_their_own_watches_only(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        book = admin.nestor.watch_book
-        hers = await book.create(Watch(title="Colis", what="le colis", owner=MATHILDE))
-        his = await book.create(Watch(title="La facture", what="la facture", owner=MATHIS))
-        api = await admin.api("mathilde")
-        listed = (await api.get("/api/v1/watches")).json()
-        assert [(w["title"], w["what"]) for w in listed["watches"]] == [("Colis", "le colis")]
-        assert listed["kinds"] == ["mail"]
-        assert (await api.post(f"/api/v1/watches/{his.id}/cancel")).status_code == 404
-        assert (await api.post(f"/api/v1/watches/{hers.id}/cancel")).status_code == 204
-        assert list(book.watches) == [his.id]
 
 
 async def test_a_member_reads_memories_about_them_and_the_household_but_edits_only_theirs(tmp_path: Path) -> None:
@@ -149,7 +134,6 @@ async def test_without_a_presence_source_nobody_is_located(tmp_path: Path) -> No
 
 async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_path: Path) -> None:
     from nestor.modules.cognition.tools import ToolCalled
-    from nestor.modules.initiative import WatchTriggered
     from nestor.modules.satellites import Device, Manifest
 
     async with Harness(tmp_path) as admin:
@@ -159,20 +143,19 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         )
         await nestor.tasks.stop(quick.id)
         await nestor.tasks.delivered(quick, quick.turn, TELEGRAM)
-        watch = await nestor.watch_book.create(
-            Watch(title="Le colis", what="le colis", owner=MATHIS, created_in=TELEGRAM)
-        )
-        for item in ("i1", "i2"):
-            await nestor.journal.publish(
-                WatchTriggered(
-                    source="keeper",
-                    watch_id=watch.id,
-                    item_id=item,
-                    item_title="Colis",
-                    item_source="c1",
-                    summary="",
-                )
+        alert = await nestor.alert_book.create(
+            Alert(
+                title="Le colis",
+                instruction="Préviens Mathis",
+                condition="le colis",
+                kinds=("mail",),
+                frequency=Frequency.EVERY_TIME,
+                owner=MATHIS,
+                created_in=TELEGRAM,
             )
+        )
+        for _ in range(2):
+            await nestor.alert_book.ring(alert, RingCause.MATCH, summary="Le colis est livré")
         memory = await nestor.memories.remember("Mathis aime le thé", place=Place.of(MATHIS), source=TELEGRAM)
         assert nestor.connections
         connection = await nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
@@ -196,14 +179,15 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         assert task["origin"] == {"session": "telegram:42", "channel": "telegram"}
         [delivered] = [t["delivered"] for t in task["thread"]]
         assert delivered["channel"] == "telegram" and delivered["room"] is None
-        (listed,) = (await api.get("/api/v1/watches")).json()["watches"]
-        assert listed["triggered"] == 2 and listed["last_triggered_at"] and listed["origin"]["session"] == "telegram:42"
+        (listed,) = (await api.get("/api/v1/alerts")).json()["alerts"]
+        assert listed["rang"] == 2 and listed["rings"][0]["summary"] == "Le colis est livré"
+        assert listed["origin"]["session"] == "telegram:42"
         (remembered,) = (await api.get("/api/v1/memories", q="thé")).json()
         assert remembered["session"] == "telegram:42" and remembered["learnt_event"]
         entry = (await api.get(f"/api/v1/journal/{remembered['learnt_event']}")).json()
         assert entry["item"]["links"]["memory"] == memory.id
         used = (await api.get(f"/api/v1/connections/{connection.id}")).json()
-        assert used["calls_today"] == 1 and used["last_used_at"] and used["watches"] == 1
+        assert used["calls_today"] == 1 and used["last_used_at"] and used["alerts"] == 1
         (satellite,) = (await api.get("/api/v1/satellites")).json()["paired"]
         assert satellite["last_seen_at"] and satellite["software"] == {
             "name": SOFTWARE.name,

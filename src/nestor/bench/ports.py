@@ -1,7 +1,7 @@
 """The suite port: what a benchmark measures. Suites are plugins, declared like adapters:
 
     [project.entry-points."nestor.benches"]
-    watch-triage = "nestor.bench.suites.watch_triage:suite"
+    alert-triage = "nestor.bench.suites.alert_triage:suite"
 
 The engine reads the dataset, builds the variant's models, runs every case against every variant and
 repetition, records each model call and writes the results; a suite only says what a case is, how to run
@@ -77,7 +77,7 @@ class Suite[S, K: Knobs](ABC):
     - `summarise` scores the outputs against the expected answers, whatever their order.
     """
 
-    name: str  # the command line's: "watch-triage"
+    name: str  # the command line's: "alert-triage"
     description: str  # a message id
     knobs: type[K]
     models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)

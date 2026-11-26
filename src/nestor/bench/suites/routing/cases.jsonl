@@ -4,8 +4,8 @@
 {"case": "r03", "said": "Combien de temps à vélo de la gare Part-Dieu à la place Bellecour ?", "expected": [["tool:route", "tool:find_place"], ["delegate:hermes"]], "label": "trajet"}
 {"case": "r04", "said": "Trouve-moi l'adresse de la mairie de Villeurbanne", "expected": [["tool:find_place"], ["delegate:hermes"]], "label": "lieu"}
 {"case": "r05", "said": "Résume-moi cette page : https://www.service-public.fr/particuliers/vosdroits/F1342", "expected": [["tool:read_page"], ["delegate:hermes"]], "label": "page"}
-{"case": "r06", "said": "Rappelle-moi demain à 9 h d'appeler le plombier", "expected": [["tool:schedule"]], "label": "réveil"}
-{"case": "r07", "said": "Tous les lundis à 8 h, envoie-moi la météo de la semaine", "expected": [["tool:schedule"]], "label": "réveil récurrent"}
+{"case": "r06", "said": "Rappelle-moi demain à 9 h d'appeler le plombier", "expected": [["tool:create_alert"]], "label": "rappel"}
+{"case": "r07", "said": "Tous les lundis à 8 h, envoie-moi la météo de la semaine", "expected": [["tool:create_alert"]], "label": "rappel récurrent"}
 {"case": "r08", "said": "Dis à Mathilde que je rentre tard ce soir", "expected": [["tool:message_person"]], "label": "message"}
 {"case": "r09", "said": "Demande à Mathilde si elle veut des pizzas ce soir", "expected": [["tool:message_person"]], "label": "question"}
 {"case": "r10", "said": "Où en est la recherche que je t'ai demandée ?", "expected": [["tool:list_tasks", "tool:read_task", "none"]], "label": "suivi"}
@@ -33,3 +33,5 @@
 {"case": "r32", "said": "Est-ce que tu peux être prévenu par un webhook quand mon imprimante 3D a fini ?", "expected": [["tool:about_nestor"]], "label": "ce que Nestor sait faire"}
 {"case": "r33", "said": "Tu pourrais lire mon agenda Google ?", "expected": [["tool:about_nestor"]], "label": "ce que Nestor sait faire"}
 {"case": "r34", "said": "Où en est le lave-vaisselle ?", "expected": [["tool:GetLiveContext", "tool:homeassistant__GetLiveContext"], ["tool:about_nestor", "none"]], "label": "maison"}
+{"case": "r35", "said": "Préviens-moi quand le lave-vaisselle dit qu'il a fini", "expected": [["tool:create_alert"]], "label": "alerte sur un événement"}
+{"case": "r36", "said": "Dis-moi dès que l'action Nvidia passe sous 135 $", "expected": [["tool:create_alert"]], "label": "alerte sous condition"}

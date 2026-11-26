@@ -9,9 +9,8 @@ from datetime import UTC, datetime, time
 
 import pytest
 
-from nestor.core import PersonId
+from nestor.core import Day, PersonId
 from nestor.modules.home import Granularity, Presence, Whereabouts
-from nestor.modules.initiative.schedules.types import Day
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     VIDEO_CAPTURE,

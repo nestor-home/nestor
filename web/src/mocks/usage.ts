@@ -249,7 +249,7 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
         answer(moment, "haiku", cut ? 1 : whole(1, 2), cut ? { ...who, outcome: "cancelled" } : who);
       }
     }
-    // the mail every watch is sorted against
+    // the mail every alert is sorted against
     const mails = Math.round(between(14, 34) * growth * (weekend ? 0.6 : 1));
     for (let n = 0; n < mails; n += 1) {
       const moment = at(6, 23.5);
@@ -259,25 +259,25 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
         call(
           moment,
           "haiku",
-          "watch",
+          "alert",
           { input_tokens: whole(900, 2600), output_tokens: whole(18, 60) },
-          { person: owner ? { id: owner.id, name: owner.name } : null, origin: rand() < 0.35 ? pick(WATCHES) : null },
+          { person: owner ? { id: owner.id, name: owner.name } : null, origin: rand() < 0.35 ? pick(ALERTS) : null },
         ),
       );
     }
-    // reminders and the morning TV-price check, each told to whom it is for
-    for (const [schedule, person, hour] of SCHEDULES) {
-      if (schedule === "sc-bins" && start.getUTCDay() !== 2) continue;
+    // alerts that ring at times and the morning TV-price check, each told to whom it is for
+    for (const [alert, person, hour] of TIMED) {
+      if (alert === "a-bins" && start.getUTCDay() !== 2) continue;
       const moment = at(hour, hour + 0.05);
       const owner = PEOPLE.find((p) => p.id === person);
       if (!moment || !owner) continue;
-      answer(moment, "sonnet", schedule === "sc-tv" ? 3 : 1, {
+      answer(moment, "sonnet", alert === "a-tv" ? 3 : 1, {
         purpose: "notification",
         person: { id: owner.id, name: owner.name },
         channel: "telegram",
         medium: "written",
         session: owner.session("telegram"),
-        origin: `schedule:${schedule}`,
+        origin: `alert:${alert}`,
       });
     }
     // a task's result, now and then
@@ -318,13 +318,13 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
   return calls.map((c, index) => ({ ...c, position: index + 1 }));
 }
 
-const WATCHES = ["watch:w-9d41", "watch:w-2b77", "watch:w-f31a", "watch:w-p8c2"] as const;
+const ALERTS = ["alert:a-9d41", "alert:a-2b77", "alert:a-f31a", "alert:a-p8c2"] as const;
 const TASKS = ["t-4410aa", "t-88b07e", "t-3f2a1c", "t-a04f12", "t-5e6b70"] as const;
-const SCHEDULES: [string, string, number][] = [
-  ["sc-tv", "mathis", 7.5],
-  ["sc-bread", "mathis", 17.75],
-  ["sc-plants", "lea", 8.25],
-  ["sc-bins", "jules", 19.5],
+const TIMED: [string, string, number][] = [
+  ["a-tv", "mathis", 7.5],
+  ["a-bread", "mathis", 17.75],
+  ["a-plants", "lea", 8.25],
+  ["a-bins", "jules", 19.5],
 ];
 
 // -- the ledger, as the server reads it, in Richie's zone (UTC) ---------------------------------------

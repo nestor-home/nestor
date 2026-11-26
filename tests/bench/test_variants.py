@@ -30,7 +30,7 @@ def test_a_variant_naming_only_the_model_under_test_runs_it_with_the_suites_knob
     assert variant.name == "small"
     assert variant.knobs.shout
     assert variant.config.models["m"].provider == "oracle"
-    assert set(variant.models) == {"watches"}
+    assert set(variant.models) == {"alerts"}
 
 
 def test_a_section_of_the_fragment_completes_the_defaults_rather_than_replacing_them(tmp_path: Path) -> None:
@@ -52,11 +52,11 @@ models:
   big: {type: language, provider: oracle, served: big}
   small: {type: language, provider: oracle, served: small}
 agent: {written: big}
-watches: {model: small}
+alerts: {model: small}
 channels: [{kind: telegram}]
 """
     variant = load(write_variant(tmp_path, "nestor", text))
-    assert (variant.described["watches"]["name"], variant.described["watches"]["served"]) == ("small", "small")
+    assert (variant.described["alerts"]["name"], variant.described["alerts"]["served"]) == ("small", "small")
 
 
 def test_what_a_run_keeps_of_a_variant_never_holds_a_secret(tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ def test_what_a_run_keeps_of_a_variant_never_holds_a_secret(tmp_path: Path) -> N
     variant = load_variant(write_variant(tmp_path, "keyed", text), Quiz(), Registry([ORACLE]), EchoLocalizer())
     kept = str(variant.record())
     assert "sk-live-123456" not in kept
-    assert variant.record()["models"]["watches"]["api_key"] == "**********"
+    assert variant.record()["models"]["alerts"]["api_key"] == "**********"
 
 
 def test_a_variant_without_models_is_refused_as_a_configuration_would_be(tmp_path: Path) -> None:

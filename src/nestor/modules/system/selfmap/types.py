@@ -24,7 +24,7 @@ class Capability(StrEnum):
     SPEECH_MODEL = "speech-model"
     EXECUTOR = "executor"  # an agent long tasks are handed to
     TOOLS = "tools"  # tools the agent calls in a turn
-    INBOUND = "inbound"  # a source the watches follow
+    INBOUND = "inbound"  # a source whose items ring alerts
     HOME = "home"  # the home system: presence, rooms, devices
     CONNECTOR = "connector"  # a service people connect their accounts to from the admin
     SATELLITE = "satellite"  # a device in a room people talk with: a package of its own, run on that device

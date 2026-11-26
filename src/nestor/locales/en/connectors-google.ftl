@@ -1,7 +1,7 @@
 # The Google connector: its name, description and the guide shown before connecting it.
 
 connector-google-title = Google
-connector-google-description = Gmail (read only, new mail feeds watches), Calendar, Drive (read only), Contacts (read only) and Tasks.
+connector-google-description = Gmail (read only, new mail can ring alerts), Calendar, Drive (read only), Contacts (read only) and Tasks.
 connector-google-setup =
     Nestor connects to Google with your own OAuth client. Allow about ten minutes, once per
     household.

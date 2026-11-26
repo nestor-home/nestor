@@ -1,5 +1,5 @@
-"""Webhooks as watch items: a post signed with its hook's secret (or bearing it) is an item of the hook's kind, kept
-until taken across a restart; a post without the secret, too large, not JSON or to an unknown hook is refused and
+"""Webhooks as items for alerts: a post signed with its hook's secret (or bearing it) is an item of the hook's kind,
+kept until taken across a restart; a post without the secret, too large, not JSON or to an unknown hook is refused and
 yields nothing. Posts reach the source's app in process."""
 
 import asyncio

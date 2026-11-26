@@ -16,12 +16,12 @@ from nestor.runtime import AdapterSettings
 
 
 class AccountSettings(AdapterSettings):
-    poll_interval_s: PositiveFloat = 60.0  # how often the inbox is read for watches
+    poll_interval_s: PositiveFloat = 60.0  # how often the inbox is read for alerts
     blocked_s: PositiveFloat = 600.0  # wait between tries while the account must be reconnected
     retry_initial_s: PositiveFloat = 1.0  # first backoff delay, doubled up to retry_max_s
     retry_max_s: PositiveFloat = 300.0
     body_chars: PositiveInt = 20_000  # cap of a mail or a file read
-    excerpt_chars: PositiveInt = 2_000  # cap of the body excerpt given to watches
+    excerpt_chars: PositiveInt = 2_000  # cap of the body excerpt given to alerts
     file_bytes: PositiveInt = 20_000_000  # the largest file read
 
     @model_validator(mode="after")

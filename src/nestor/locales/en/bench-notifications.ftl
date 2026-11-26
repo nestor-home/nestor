@@ -2,7 +2,7 @@
 
 bench-notifications-description = whether the agent tells a notification or stays silent with its reason, per model
 bench-notifications-no-header = the dataset must start with {"{"}"dataset": "notifications", "version": <number>{"}"}
-bench-notifications-bad-record = dataset line { $line }: a case needs case, a source (task, watch, schedule, message, tool, confirmation), text and expected (tell or silent)
+bench-notifications-bad-record = dataset line { $line }: a case needs case, a source (task, alert, message, tool, confirmation), text and expected (tell or silent)
 
 bench-notifications-accuracy = right decisions
 bench-notifications-unsaid = silent when it had to tell

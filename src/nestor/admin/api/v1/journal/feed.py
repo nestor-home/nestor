@@ -22,16 +22,15 @@ from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolComplet
 from nestor.modules.conversation import About, AnswerCut, AssistantTurn, NotificationTurn, Source, UserTurn
 from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
+    AlertCreated,
+    AlertEnded,
+    AlertRang,
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
     DeliveryWithheld,
     MessageRequested,
-    ScheduleFired,
     ToolResultDelivered,
-    WatchCreated,
-    WatchEnded,
-    WatchTriggered,
 )
 from nestor.modules.initiative.confirmations import ConfirmationRequested
 from nestor.modules.journal import Entry, EventLog, LogQuery
@@ -47,8 +46,7 @@ _DELIVERY = frozenset(
 _BROUGHT_BY: dict[Source, tuple[type[Event], str]] = {
     Source.TASK: (TurnEnded, "turn_id"),  # the part: the turn
     Source.TOOL: (ToolReturned, "call_id"),
-    Source.WATCH: (WatchTriggered, "watch_id"),
-    Source.SCHEDULE: (ScheduleFired, "schedule_id"),
+    Source.ALERT: (AlertRang, "ring_id"),  # the part: the ring
     Source.MESSAGE: (MessageRequested, "message_id"),
     Source.CONFIRMATION: (ConfirmationRequested, "confirmation_id"),
 }
@@ -84,7 +82,7 @@ class Filters:
     session: str = ""
     conversation: str = ""
     task: str = ""
-    watch: str = ""
+    alert: str = ""
     connection: str = ""
     satellite: str = ""
 
@@ -132,7 +130,7 @@ class Filters:
         for wanted, got in (
             (self.conversation, links.conversation),
             (self.task, links.task),
-            (self.watch, links.watch),
+            (self.alert, links.alert),
             (self.connection, links.connection),
             (self.satellite, links.satellite),
         ):
@@ -218,10 +216,12 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         )
     if kind == TurnDelivered.event_type:
         return of(TurnEnded, "turn_id")
-    if kind == WatchTriggered.event_type:
-        return of(WatchCreated, "watch_id")
-    if kind == WatchEnded.event_type:
-        return of(WatchTriggered, "watch_id")
+    if kind == AlertRang.event_type:
+        return of(AlertCreated, "alert_id")
+    if kind == AlertEnded.event_type:  # its last ring, or its creation when it never rang
+        return _Rule(
+            frozenset({AlertCreated.event_type, AlertRang.event_type}), _same("alert_id", payload.get("alert_id"))
+        )
     if kind == AnswerCut.event_type:
         answer = payload.get("answer")
         return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == answer)
@@ -325,11 +325,11 @@ class Feed:
     def _links(self, entry: Entry) -> LinksOut:
         payload = _payload(entry)
         device = payload.get("device")
-        delivery = task = watch = None
+        delivery = task = alert = None
         if entry.type in _DELIVERY and (about := _about(entry)) is not None:
             delivery = about.key
             task = about.id if about.source is Source.TASK else None
-            watch = about.id if about.source is Source.WATCH else None
+            alert = about.id if about.source is Source.ALERT else None
         exchange = _exchange(entry)
         return LinksOut(
             session=_text(entry.record.get("session")),
@@ -337,7 +337,7 @@ class Feed:
             turn=_text(exchange.get("turn_id")),
             call=_text(payload.get("call_id")),
             task=_text(payload.get("task_id")) or task,
-            watch=_text(payload.get("watch_id")) or watch,
+            alert=_text(payload.get("alert_id")) or alert,
             delivery=delivery,
             connection=_text(payload.get("connection_id")),
             satellite=_text(payload.get("device_id"))
@@ -349,7 +349,7 @@ class Feed:
         payload = _payload(entry)
         nestor = self.admin.nestor
         connections = nestor.connections
-        # what it is about: an account (its tool called, its connection changed), or what brought a watched item
+        # what it is about: an account (its tool called, its connection changed), or what brought an item to the alerts
         connection_id = payload.get("connection_id") or payload.get("item_source")
         if connections is not None and connection_id:
             connection = connections.connections.get(str(connection_id))

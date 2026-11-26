@@ -1,55 +1,20 @@
-"""What the agent will do on its own, as the admin shows it: wake-ups, messages and questions on their way, and
-sensitive actions waiting for their person — each visible to whom it concerns."""
+"""What waits on the household, as the admin shows it: messages and questions on their way, and sensitive actions
+waiting for their person, each visible to whom it concerns."""
 
-from datetime import time, timedelta
 from pathlib import Path
 
-from nestor.core import PersonId, utc_now
+from nestor.core import PersonId
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import ToolContext
 from nestor.modules.identity import Identified, Speaker
-from nestor.modules.initiative import Day
 
 from ....harness import Harness
 
 TELEGRAM = Address("telegram", "42")
 SALON = Address("speaker", "salon")
 MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
-
-
-async def test_wake_ups_come_soonest_first_each_to_whom_it_was_set_for_and_cancel(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        book = admin.nestor.schedule_book
-        later = await book.create(
-            "Arrose les plantes", title="Plantes du week-end", owner=MATHILDE, times=(time(8),), days=(Day.SAT, Day.SUN)
-        )
-        soon = await book.create(
-            "Rappelle le pain", title="Pain", owner=MATHIS, created_in=TELEGRAM, at=utc_now() + timedelta(hours=1)
-        )
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        owner, member = await admin.api(), await admin.api("mathilde")
-
-        listed = (await owner.get("/api/v1/schedules")).json()
-        assert [s["id"] for s in listed["schedules"]] == [soon.id, later.id]
-        assert listed["timezone"] == "Europe/Paris"
-        weekly = listed["schedules"][1]
-        assert (weekly["title"], weekly["instruction"]) == ("Plantes du week-end", "Arrose les plantes")
-        assert (weekly["recurring"], weekly["times"], weekly["days"], weekly["owner"]["id"]) == (
-            True,
-            ["08:00"],
-            ["sat", "sun"],
-            "mathilde",
-        )
-        assert listed["schedules"][0]["origin"] == {"session": "telegram:42", "channel": "telegram"}
-
-        mine = (await member.get("/api/v1/schedules")).json()["schedules"]
-        assert [s["id"] for s in mine] == [later.id], "a member sees the wake-ups set for them"
-        refused = await member.post(f"/api/v1/schedules/{soon.id}/cancel")
-        assert refused.json()["error"]["code"] == "schedule_unknown"
-        assert (await member.post(f"/api/v1/schedules/{later.id}/cancel")).status_code == 204
-        assert set(book.schedules) == {soon.id}
 
 
 async def test_open_questions_show_to_whom_they_concern(tmp_path: Path) -> None:

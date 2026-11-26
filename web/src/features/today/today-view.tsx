@@ -7,18 +7,19 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
+  BellRing,
   BookMarked,
   ChevronDown,
   CircleAlert,
   Megaphone,
   MessageSquareText,
   MoonStar,
-  Radar,
   Send,
   Workflow,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
+  alertsQuery,
   homeQuery,
   initiativeQuery,
   type JournalItem,
@@ -28,10 +29,8 @@ import {
   peopleQuery,
   type Satellite,
   satellitesQuery,
-  schedulesQuery,
   type Task,
   tasksQuery,
-  watchesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
@@ -276,7 +275,7 @@ const MARK: Record<Mark["kind"], { icon: LucideIcon; tone: TileTone }> = {
   conversation: { icon: MessageSquareText, tone: "ink" },
   delivery: { icon: Megaphone, tone: "ember" },
   task: { icon: Workflow, tone: "task" },
-  watch: { icon: Radar, tone: "watch" },
+  alert: { icon: BellRing, tone: "alert" },
   memory: { icon: BookMarked, tone: "sage" },
   problem: { icon: CircleAlert, tone: "brick" },
 };
@@ -344,17 +343,16 @@ interface Coming {
   hint?: string;
 }
 
-/** What comes next, soonest first: reminders, follow-ups, the quiet hours; then what it keeps watching. */
+/** What comes next, soonest first: alerts due, follow-ups, the quiet hours; then the alerts that wait for items. */
 function Next() {
   const t = useT();
   const { quiet } = useAgentPresence();
-  const schedules = useQuery({ ...schedulesQuery, enabled: useCan("schedules:read") });
-  const watches = useQuery({ ...watchesQuery, enabled: useCan("watches:read") });
+  const alerts = useQuery({ ...alertsQuery, enabled: useCan("alerts:read") });
   const initiative = useQuery({ ...initiativeQuery, enabled: useCan("agent:read") });
   const coming: Coming[] = [
-    ...(schedules.data?.schedules ?? [])
-      .filter((s) => s.next_due)
-      .map((s) => ({ key: s.id, at: s.next_due, icon: AlarmClock, tone: "ink" as const, text: s.title })),
+    ...(alerts.data?.alerts ?? [])
+      .filter((a) => a.next_due)
+      .map((a) => ({ key: a.id, at: a.next_due, icon: AlarmClock, tone: "ink" as const, text: a.title })),
     ...(initiative.data?.upcoming ?? []).map((u) => ({
       key: `${u.delivery}:${u.due_at}`,
       at: u.due_at,
@@ -368,7 +366,7 @@ function Next() {
   ]
     .sort((a, b) => (a.at ?? "").localeCompare(b.at ?? ""))
     .slice(0, 5);
-  const watching = watches.data?.watches ?? [];
+  const waiting = (alerts.data?.alerts ?? []).filter((a) => a.trigger === "events");
   return (
     <Section title={t("home-next")} aside={<MoreLink to="/activity">{t("today-all-activity")}</MoreLink>}>
       <ul className="grid gap-2.5">
@@ -395,19 +393,19 @@ function Next() {
             />
           </li>
         ))}
-        {watching.length ? (
+        {waiting.length ? (
           <li>
             <Link to="/activity" className="group surface block p-3.5">
               <CardHead
-                mark={<IconTile icon={Radar} tone="watch" size="sm" />}
-                title={t("today-watching", { count: watching.length })}
-                line={<span className="line-clamp-1">{watching.map((w) => w.title).join(" · ")}</span>}
+                mark={<IconTile icon={BellRing} tone="alert" size="sm" />}
+                title={t("today-alerts", { count: waiting.length })}
+                line={<span className="line-clamp-1">{waiting.map((a) => a.title).join(" · ")}</span>}
                 aside={<OpenArrow />}
               />
             </Link>
           </li>
         ) : null}
-        {!quiet && !coming.length && !watching.length ? <Empty>{t("today-nothing-next")}</Empty> : null}
+        {!quiet && !coming.length && !waiting.length ? <Empty>{t("today-nothing-next")}</Empty> : null}
       </ul>
     </Section>
   );

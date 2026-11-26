@@ -86,7 +86,7 @@ class Quiz(Suite[str, QuizKnobs]):
     name = "quiz"
     description = "bench-help"
     knobs = QuizKnobs
-    models = ("watches",)
+    models = ("alerts",)
     plugins = (ORACLE,)
 
     def __init__(self, dataset: Path | None = None) -> None:
@@ -102,7 +102,7 @@ class Quiz(Suite[str, QuizKnobs]):
     async def run(self, case: Case, shared: str, trial: Trial[QuizKnobs]) -> Mapping[str, Any]:
         request = ModelRequest(messages=(Said.user(case.data["question"]),))
         try:
-            reply = "".join([o.text async for o in trial.model("watches").stream(request) if isinstance(o, TextDelta)])
+            reply = "".join([o.text async for o in trial.model("alerts").stream(request) if isinstance(o, TextDelta)])
         except ProviderError:
             reply = ""
         return {"reply": reply.upper() if trial.knobs.shout else reply}
@@ -115,7 +115,7 @@ class Quiz(Suite[str, QuizKnobs]):
             metrics=(
                 Metric(
                     id="accuracy",
-                    label="bench-watch-triage-matches-f1",
+                    label="bench-alert-triage-matches-f1",
                     value=accuracy,
                     unit=Unit.RATIO,
                     better=Better.HIGHER,
@@ -123,7 +123,7 @@ class Quiz(Suite[str, QuizKnobs]):
             ),
             findings=tuple(
                 Finding(
-                    group="bench-watch-triage-missed-list", case=r.case, detail=Message.of("bench-wrote", path=r.case)
+                    group="bench-alert-triage-missed-list", case=r.case, detail=Message.of("bench-wrote", path=r.case)
                 )
                 for r in wrong
             ),

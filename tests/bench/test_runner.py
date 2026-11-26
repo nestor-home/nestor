@@ -52,7 +52,7 @@ async def test_a_run_records_the_model_that_answered_tokens_cost_and_calls(tmp_p
     [run] = await quiz_runs(tmp_path, variant(tmp_path, suite, "served", text))
     assert run.served_models == ("oracle/v1-2026-10",)
     first = run.results[1].calls[0]
-    assert (first.role, first.input_tokens, first.output_tokens, first.cost) == ("watches", 12, 1, 0.001)
+    assert (first.role, first.input_tokens, first.output_tokens, first.cost) == ("alerts", 12, 1, 0.001)
     assert metric(run, "calls-per-case") == 1
     assert metric(run, "cost-per-1000-cases") == pytest.approx(1.0)
     assert sum(c.cold for r in run.results for c in r.calls) == 1, "only the very first call opens the connection"
@@ -79,7 +79,7 @@ async def test_replaying_a_case_never_recorded_stops_the_run_and_names_it(tmp_pa
     with pytest.raises(BenchError) as raised:
         await quiz_runs(tmp_path, variant(tmp_path, suite), plan=Plan(replay=True, repeat=2))
     assert raised.value.message.id == "bench-no-recording"
-    assert raised.value.message.args["role"] == "watches"
+    assert raised.value.message.args["role"] == "alerts"
 
 
 async def test_another_seed_or_model_is_not_answered_from_the_recordings_of_the_first(tmp_path: Path) -> None:
@@ -188,7 +188,7 @@ async def test_results_name_the_nestor_version_and_the_commit_of_this_source(tmp
 def test_a_recording_keeps_tool_calls_and_what_the_call_consumed(tmp_path: Path, usage: Usage) -> None:
     outputs = (
         TextDelta("Je regarde."),
-        ToolCallRequested(ToolCall("call-1", "create_watch", {"what": "le colis"})),
+        ToolCallRequested(ToolCall("call-1", "create_alert", {"condition": "le colis"})),
         Finished(FinishReason.TOOL_CALLS),
     )
     cache = Cache(tmp_path)
@@ -209,4 +209,4 @@ async def test_a_trial_refuses_a_model_its_suite_did_not_declare(tmp_path: Path)
         variant="v", knobs=QuizKnobs(), config=variant(tmp_path, suite).config, models={}, repetition=0, seed=0
     )
     with pytest.raises(ContractError, match="did not declare"):
-        trial.model("watches")
+        trial.model("alerts")

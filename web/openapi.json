@@ -5485,7 +5485,7 @@
           "journal"
         ],
         "summary": "List Journal",
-        "description": "Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`\nand `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `watch`, `connection` and\n`satellite` keep one thread.",
+        "description": "Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`\nand `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `alert`, `connection` and\n`satellite` keep one thread.",
         "operationId": "listJournal",
         "parameters": [
           {
@@ -5657,13 +5657,13 @@
             }
           },
           {
-            "name": "watch",
+            "name": "alert",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string",
               "default": "",
-              "title": "Watch"
+              "title": "Alert"
             }
           },
           {
@@ -5928,13 +5928,13 @@
             }
           },
           {
-            "name": "watch",
+            "name": "alert",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string",
               "default": "",
-              "title": "Watch"
+              "title": "Alert"
             }
           },
           {
@@ -6215,13 +6215,13 @@
             }
           },
           {
-            "name": "watch",
+            "name": "alert",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string",
               "default": "",
-              "title": "Watch"
+              "title": "Alert"
             }
           },
           {
@@ -8291,20 +8291,20 @@
         }
       }
     },
-    "/api/v1/watches": {
+    "/api/v1/alerts": {
       "get": {
         "tags": [
-          "watches"
+          "alerts"
         ],
-        "summary": "List Watches",
-        "operationId": "listWatches",
+        "summary": "List Alerts",
+        "operationId": "listAlerts",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WatchesOut"
+                  "$ref": "#/components/schemas/AlertsOut"
                 }
               }
             }
@@ -8392,22 +8392,22 @@
         }
       }
     },
-    "/api/v1/watches/{watch_id}": {
+    "/api/v1/alerts/{alert_id}": {
       "get": {
         "tags": [
-          "watches"
+          "alerts"
         ],
-        "summary": "Get Watch",
-        "description": "One active watch; 404 when unknown, ended or out of reach.",
-        "operationId": "getWatch",
+        "summary": "Get Alert",
+        "description": "One active alert; 404 when unknown, ended or out of reach.",
+        "operationId": "getAlert",
         "parameters": [
           {
-            "name": "watch_id",
+            "name": "alert_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Watch Id"
+              "title": "Alert Id"
             }
           }
         ],
@@ -8417,7 +8417,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WatchOut"
+                  "$ref": "#/components/schemas/AlertOut"
                 }
               }
             }
@@ -8505,228 +8505,21 @@
         }
       }
     },
-    "/api/v1/watches/{watch_id}/cancel": {
+    "/api/v1/alerts/{alert_id}/cancel": {
       "post": {
         "tags": [
-          "watches"
+          "alerts"
         ],
-        "summary": "Cancel Watch",
-        "operationId": "cancelWatch",
+        "summary": "Cancel Alert",
+        "operationId": "cancelAlert",
         "parameters": [
           {
-            "name": "watch_id",
+            "name": "alert_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Watch Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schedules": {
-      "get": {
-        "tags": [
-          "schedules"
-        ],
-        "summary": "List Schedules",
-        "description": "Soonest first.",
-        "operationId": "listSchedules",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchedulesOut"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Content",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/schedules/{schedule_id}/cancel": {
-      "post": {
-        "tags": [
-          "schedules"
-        ],
-        "summary": "Cancel Schedule",
-        "operationId": "cancelSchedule",
-        "parameters": [
-          {
-            "name": "schedule_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Schedule Id"
+              "title": "Alert Id"
             }
           }
         ],
@@ -14532,6 +14325,182 @@
         "title": "AgentOut",
         "description": "The assistant itself, as the front's sidebar shows it."
       },
+      "AlertOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/Trigger"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "times": {
+            "items": {
+              "$ref": "#/components/schemas/Clock"
+            },
+            "type": "array",
+            "title": "Times"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Day"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "frequency": {
+            "$ref": "#/components/schemas/Frequency"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          },
+          "urgent": {
+            "type": "boolean",
+            "title": "Urgent"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OriginOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "next_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due"
+          },
+          "rang": {
+            "type": "integer",
+            "title": "Rang"
+          },
+          "rings": {
+            "items": {
+              "$ref": "#/components/schemas/RingOut"
+            },
+            "type": "array",
+            "title": "Rings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "instruction",
+          "condition",
+          "trigger",
+          "at",
+          "times",
+          "days",
+          "kinds",
+          "frequency",
+          "until",
+          "urgent",
+          "owner",
+          "origin",
+          "created_at",
+          "next_due",
+          "rang",
+          "rings"
+        ],
+        "title": "AlertOut"
+      },
+      "AlertsOut": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/AlertOut"
+            },
+            "type": "array",
+            "title": "Alerts"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kinds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerts",
+          "kinds"
+        ],
+        "title": "AlertsOut"
+      },
       "AnswerIn": {
         "properties": {
           "approved": {
@@ -14991,7 +14960,7 @@
           "turn",
           "notification",
           "title",
-          "watch",
+          "alert",
           "consolidation",
           "indexing",
           "enrollment",
@@ -15838,9 +15807,9 @@
             "type": "integer",
             "title": "Calls Today"
           },
-          "watches": {
+          "alerts": {
             "type": "integer",
-            "title": "Watches"
+            "title": "Alerts"
           },
           "tools": {
             "items": {
@@ -15872,7 +15841,7 @@
           "created_at",
           "last_used_at",
           "calls_today",
-          "watches",
+          "alerts",
           "tools",
           "services"
         ],
@@ -15962,9 +15931,9 @@
             "type": "integer",
             "title": "Calls Today"
           },
-          "watches": {
+          "alerts": {
             "type": "integer",
-            "title": "Watches"
+            "title": "Alerts"
           }
         },
         "type": "object",
@@ -15982,7 +15951,7 @@
           "created_at",
           "last_used_at",
           "calls_today",
-          "watches"
+          "alerts"
         ],
         "title": "ConnectionOut"
       },
@@ -16134,7 +16103,8 @@
           "sat",
           "sun"
         ],
-        "title": "Day"
+        "title": "Day",
+        "description": "A day of the week, Monday first."
       },
       "DeliveredOut": {
         "properties": {
@@ -16372,8 +16342,7 @@
               "use_me_password",
               "voice_not_yours",
               "voices_off",
-              "watch_unknown",
-              "schedule_unknown",
+              "alert_unknown",
               "service_refused",
               "confirmation_unknown",
               "weak_password",
@@ -16573,6 +16542,16 @@
           "default"
         ],
         "title": "FieldOut"
+      },
+      "Frequency": {
+        "type": "string",
+        "enum": [
+          "once",
+          "every_time",
+          "until_rung"
+        ],
+        "title": "Frequency",
+        "description": "How often an alert rings before it ends by itself (`until` may end it earlier)."
       },
       "Granularity": {
         "type": "string",
@@ -17452,8 +17431,7 @@
           "delivery",
           "tool",
           "task",
-          "watch",
-          "schedule",
+          "alert",
           "memory",
           "connection",
           "presence",
@@ -17605,7 +17583,7 @@
             ],
             "title": "Task"
           },
-          "watch": {
+          "alert": {
             "anyOf": [
               {
                 "type": "string"
@@ -17614,7 +17592,7 @@
                 "type": "null"
               }
             ],
-            "title": "Watch"
+            "title": "Alert"
           },
           "delivery": {
             "anyOf": [
@@ -17668,7 +17646,7 @@
           "turn",
           "call",
           "task",
-          "watch",
+          "alert",
           "delivery",
           "connection",
           "satellite",
@@ -18363,7 +18341,7 @@
           "channel"
         ],
         "title": "OriginOut",
-        "description": "Where something was asked for: a task, a watch."
+        "description": "Where something was asked for: a task, an alert."
       },
       "Outcome": {
         "type": "string",
@@ -19445,6 +19423,69 @@
         ],
         "title": "RhythmOut"
       },
+      "RingCause": {
+        "type": "string",
+        "enum": [
+          "due",
+          "event",
+          "match"
+        ],
+        "title": "RingCause",
+        "description": "What made an alert ring."
+      },
+      "RingOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "cause": {
+            "$ref": "#/components/schemas/RingCause"
+          },
+          "item_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Title"
+          },
+          "item_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Kind"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "cause",
+          "item_title",
+          "item_kind",
+          "summary"
+        ],
+        "title": "RingOut",
+        "description": "One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how)."
+      },
       "Risk": {
         "type": "string",
         "enum": [
@@ -19696,98 +19737,6 @@
         ],
         "title": "SatellitesOut"
       },
-      "ScheduleOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "instruction": {
-            "type": "string",
-            "title": "Instruction"
-          },
-          "owner": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "origin": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OriginOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "recurring": {
-            "type": "boolean",
-            "title": "Recurring"
-          },
-          "once_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Once At"
-          },
-          "times": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Times"
-          },
-          "days": {
-            "items": {
-              "$ref": "#/components/schemas/Day"
-            },
-            "type": "array",
-            "title": "Days"
-          },
-          "next_due": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Due"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "instruction",
-          "owner",
-          "origin",
-          "recurring",
-          "once_at",
-          "times",
-          "days",
-          "next_due"
-        ],
-        "title": "ScheduleOut"
-      },
       "ScheduledDeliveryOut": {
         "properties": {
           "delivery": {
@@ -19829,27 +19778,6 @@
         "title": "ScheduledDeliveryOut",
         "description": "A written follow-up of something said aloud: sent at `due_at` unless someone answers first."
       },
-      "SchedulesOut": {
-        "properties": {
-          "schedules": {
-            "items": {
-              "$ref": "#/components/schemas/ScheduleOut"
-            },
-            "type": "array",
-            "title": "Schedules"
-          },
-          "timezone": {
-            "type": "string",
-            "title": "Timezone"
-          }
-        },
-        "type": "object",
-        "required": [
-          "schedules",
-          "timezone"
-        ],
-        "title": "SchedulesOut"
-      },
       "Scope": {
         "type": "string",
         "enum": [
@@ -19869,10 +19797,8 @@
           "memory.manage.own",
           "tasks.manage",
           "tasks.manage.own",
-          "watches.manage.all",
-          "watches.manage.own",
-          "schedules.manage.all",
-          "schedules.manage.own",
+          "alerts.manage.all",
+          "alerts.manage.own",
           "messages.read.all",
           "messages.read.own",
           "media.view",
@@ -20767,6 +20693,16 @@
         ],
         "title": "TotalsOut"
       },
+      "Trigger": {
+        "type": "string",
+        "enum": [
+          "at",
+          "times",
+          "events"
+        ],
+        "title": "Trigger",
+        "description": "What rings an alert."
+      },
       "TurnOut": {
         "properties": {
           "id": {
@@ -21108,125 +21044,6 @@
           "manageable"
         ],
         "title": "VoiceOut"
-      },
-      "WatchOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "what": {
-            "type": "string",
-            "title": "What"
-          },
-          "kinds": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Kinds"
-          },
-          "owner": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "once": {
-            "type": "boolean",
-            "title": "Once"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "until": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Until"
-          },
-          "origin": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OriginOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "triggered": {
-            "type": "integer",
-            "title": "Triggered"
-          },
-          "last_triggered_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Triggered At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "title",
-          "what",
-          "kinds",
-          "owner",
-          "once",
-          "created_at",
-          "until",
-          "origin",
-          "triggered",
-          "last_triggered_at"
-        ],
-        "title": "WatchOut"
-      },
-      "WatchesOut": {
-        "properties": {
-          "watches": {
-            "items": {
-              "$ref": "#/components/schemas/WatchOut"
-            },
-            "type": "array",
-            "title": "Watches"
-          },
-          "kinds": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Kinds"
-          }
-        },
-        "type": "object",
-        "required": [
-          "watches",
-          "kinds"
-        ],
-        "title": "WatchesOut"
       },
       "WrittenOut": {
         "properties": {

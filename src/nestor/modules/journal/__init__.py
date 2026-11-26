@@ -1,7 +1,7 @@
 """Journal: the append-only event log every module writes to, and the blobs it refers to.
 
 The log is the source of truth: dashboards, audit, memory management and durable state (tasks,
-watches) are all derived from it. `Journal` is what modules use: it writes an event, then hands it
+alerts) are all derived from it. `Journal` is what modules use: it writes an event, then hands it
 to the live subscribers.
 """
 

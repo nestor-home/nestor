@@ -3,7 +3,7 @@ import type { JournalItem, Kind } from "@/api";
 import type { TileTone } from "@/components/marks";
 import { kindStyle } from "@/lib/icons";
 
-const TONE: Partial<Record<Kind, TileTone>> = { delivery: "ember", task: "task", watch: "watch", memory: "sage" };
+const TONE: Partial<Record<Kind, TileTone>> = { delivery: "ember", task: "task", alert: "alert", memory: "sage" };
 
 /** The tile that leads an event: its kind's icon, in its kind's colour, brick when something went wrong. */
 export function tileOf(item: Pick<JournalItem, "kind" | "tone">): { icon: LucideIcon; tone: TileTone } {

@@ -33,11 +33,11 @@ describe("the mock instance", () => {
     expect(db.system.nestor.version).toBe(db.updates.running);
   });
 
-  it("names only channels of the configuration: people's accounts, tasks, reminders, messages, the journal", () => {
+  it("names only channels of the configuration: people's accounts, tasks, alerts, messages, the journal", () => {
     const channels = new Set(names("channel"));
     const named = [
       ...db.people.flatMap((p) => [...p.channel_accounts, ...(p.reach ? [p.reach] : [])]),
-      ...[...db.tasks, ...db.watches, ...db.schedules, ...db.confirmations].flatMap((x) => x.origin?.channel ?? []),
+      ...[...db.tasks, ...db.alerts, ...db.confirmations].flatMap((x) => x.origin?.channel ?? []),
       ...db.tasks.flatMap((t) => t.thread.flatMap((turn) => turn.delivered?.channel ?? [])),
       ...[...db.messages.questions, ...db.messages.pending].flatMap((m) => m.channel ?? []),
       ...db.journal.flatMap((e) => e.item.channels),
@@ -52,12 +52,12 @@ describe("the mock instance", () => {
     expect(db.executors.executors.map((e) => e.name)).toEqual(executors);
   });
 
-  it("connects accounts to connectors of the configuration, and watches what its sources bring", () => {
+  it("connects accounts to connectors of the configuration, and waits for what its sources bring", () => {
     const connectors = names("connector");
     expect(db.connectors.map((c) => c.kind)).toEqual(connectors);
     expect(db.connections.filter((c) => !connectors.includes(c.kind))).toEqual([]);
     const brought = new Set([...db.connectors.flatMap((c) => c.inbound), ...db.inbound]);
-    expect(db.watches.flatMap((w) => w.kinds).filter((kind) => !brought.has(kind))).toEqual([]);
+    expect(db.alerts.flatMap((a) => a.kinds).filter((kind) => !brought.has(kind))).toEqual([]);
   });
 
   it("knows the people of the configuration, at home through the entities it ties them to", () => {

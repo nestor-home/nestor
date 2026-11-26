@@ -228,7 +228,7 @@ button.surface:hover {
   --tint: var(--amber);
 }
 .avatar[data-hue="4"] {
-  --tint: var(--kind-watch);
+  --tint: var(--kind-alert);
 }
 .avatar[data-hue="5"] {
   --tint: var(--brick);

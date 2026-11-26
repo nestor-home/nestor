@@ -4,6 +4,8 @@
     "accounts.owners.manage",
     "agent.chat",
     "agent.read",
+    "alerts.manage.all",
+    "alerts.manage.own",
     "config.manage",
     "household.connections.manage",
     "household.read",
@@ -19,20 +21,18 @@
     "messages.read.own",
     "own.connections.manage",
     "satellites.manage",
-    "schedules.manage.all",
-    "schedules.manage.own",
     "system.read",
     "tasks.manage",
     "tasks.manage.own",
     "usage.read.all",
-    "usage.read.own",
-    "watches.manage.all",
-    "watches.manage.own"
+    "usage.read.own"
   ],
   "admin": [
     "accounts.manage",
     "agent.chat",
     "agent.read",
+    "alerts.manage.all",
+    "alerts.manage.own",
     "config.manage",
     "household.connections.manage",
     "household.read",
@@ -46,19 +46,16 @@
     "messages.read.own",
     "own.connections.manage",
     "satellites.manage",
-    "schedules.manage.all",
-    "schedules.manage.own",
     "system.read",
     "tasks.manage",
     "tasks.manage.own",
     "usage.read.all",
-    "usage.read.own",
-    "watches.manage.all",
-    "watches.manage.own"
+    "usage.read.own"
   ],
   "member": [
     "agent.chat",
     "agent.read",
+    "alerts.manage.own",
     "household.read",
     "journal.read.own",
     "media.call",
@@ -66,10 +63,8 @@
     "memory.manage.own",
     "messages.read.own",
     "own.connections.manage",
-    "schedules.manage.own",
     "tasks.manage.own",
-    "usage.read.own",
-    "watches.manage.own"
+    "usage.read.own"
   ],
   "guest": [
     "agent.chat",

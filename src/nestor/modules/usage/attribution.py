@@ -1,6 +1,6 @@
 """On whose behalf and why a call is made: set where the work starts, read by the meter when a model is called.
 
-A turn says it answers a person on a channel; a watch says it sorts what came in. What runs inside, models, tools,
+A turn says it answers a person on a channel; an alert says it sorts what came in. What runs inside, models, tools,
 the tasks it starts in the background, inherits it, and may say more (`attributed(purpose=CallPurpose.TITLE)`). A call
 made with nothing said is recorded as `unattributed`, a fault the ledger shows rather than hides.
 """

@@ -52,7 +52,7 @@ class ConnectorOut(BaseModel):
     auth: AuthKind
     setup: str  # the step-by-step guide, plain text with line breaks; empty without one
     fields: list[FieldOut]
-    inbound: list[str]  # what it brings to watches ("mail")
+    inbound: list[str]  # what it brings to alerts ("mail")
     presets: list[PresetOut]  # well-known services, filling the fields
     oauth: OAuthClientOut | None  # the household's client; for a discovered service, where people come back
 

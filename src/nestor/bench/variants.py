@@ -13,7 +13,7 @@
       algorithm: batch
 
 The fragment is laid over the defaults of a minimal configuration, so a whole `nestor.yaml` is a variant
-too. Each role the suite calls (`watches`, `written`…) takes the model the configuration gives it: with a
+too. Each role the suite calls (`alerts`, `written`…) takes the model the configuration gives it: with a
 single model, every role does. `${NAME}` and `${secret:name}` resolve as in a configuration (the `.env`
 next to the variant file). What a run records of it has every secret masked.
 """
