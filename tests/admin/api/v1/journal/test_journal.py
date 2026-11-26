@@ -45,9 +45,7 @@ async def conversations(admin: Harness) -> None:
         answer(MATHIS_CHAT, "Il est midi."),
         turn(MATHILDE_CHAT, "Rappelle-moi le dentiste", "mathilde"),
         answer(MATHILDE_CHAT, "C'est noté."),
-        MemoryRecorded(
-            source="memory", memory_id="m1", text="Mathilde a peur des araignées", about=PersonId("mathilde")
-        ),
+        MemoryRecorded(source="memory", memory_id="m1", text="Mathilde a peur des araignées", place="people/mathilde"),
     ):
         await admin.nestor.journal.publish(event)
 
@@ -96,7 +94,9 @@ async def test_pages_go_back_in_time_without_gaps_or_repeats(tmp_path: Path) -> 
     async with Harness(tmp_path) as admin:
         for n in range(7):
             await admin.nestor.journal.publish(turn(MATHIS_CHAT, f"message {n}", "mathis"))
-            await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"m{n}", text=f"souvenir {n}"))
+            await admin.nestor.journal.publish(
+                MemoryRecorded(source="memory", memory_id=f"m{n}", text=f"souvenir {n}", place="household")
+            )
         api = await admin.api()
         seen, before = [], None
         while True:

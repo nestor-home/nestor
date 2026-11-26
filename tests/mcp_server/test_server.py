@@ -28,6 +28,7 @@ from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import Attached
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import FileRef
+from nestor.modules.memory import Place
 from nestor.runtime import Nestor
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin
@@ -162,8 +163,10 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         async with httpx.AsyncClient() as http:
             assert (await http.get(world.reached(read["url"]))).content == PDF, "no key: the link is enough"
 
-        await world.nestor.memories.remember("Léa préfère les devis en PDF signés", about=PersonId("lea"), source=MAIN)
-        await world.nestor.memories.remember("Mathis préfère les devis en PDF", about=MATHIS, source=MAIN)
+        await world.nestor.memories.remember(
+            "Léa préfère les devis en PDF signés", place=Place.of(PersonId("lea")), source=MAIN
+        )
+        await world.nestor.memories.remember("Mathis préfère les devis en PDF", place=Place.of(MATHIS), source=MAIN)
         await call(nestor, "note", task=task, text="Le devis est en TVA à 20 %.")
         recalled = await call(nestor, "recall", task=task, query="devis PDF TVA")
         texts = [m["text"] for m in recalled["memories"]]

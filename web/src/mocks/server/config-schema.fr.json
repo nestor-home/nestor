@@ -783,8 +783,8 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
-            "title": "Upkeep at",
-            "help": null
+            "title": "Rangement des souvenirs la nuit",
+            "help": "Heure où les doublons sont fusionnés et les souvenirs périmés retirés, chaque changement gardé dans le journal. Vide : jamais."
           }
         }
       },

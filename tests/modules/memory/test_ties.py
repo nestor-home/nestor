@@ -61,6 +61,7 @@ async def test_a_memory_tied_to_a_task_is_retired_with_its_reason_when_the_task_
     async with ties:
         await journal.publish(TaskArchived(source="tasks", task_id="t1"))
         event = await asyncio.wait_for(retired.next(), 1.0)
+    assert isinstance(event, MemoryRetired)
 
     assert (event.memory_id, event.reason, event.tied_to, event.text) == (
         tied["memory_id"],

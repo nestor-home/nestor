@@ -783,8 +783,8 @@
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
-            "title": "Upkeep at",
-            "help": null
+            "title": "Nightly tidying of memories",
+            "help": "When duplicates are merged and outdated memories retired, each change kept in the journal. Empty: never."
           }
         }
       },

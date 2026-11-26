@@ -181,7 +181,7 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     )
     async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
         model = ScriptedModel(
-            ToolCall("c1", "remember", {"text": "Mathis aime le thé", "about": "mathis"}),
+            ToolCall("c1", "remember", {"text": "Mathis aime le thé", "place": "people/mathis"}),
             ToolCall("c2", "start_task", {"title": "Comparer les théières", "instruction": "Comparer les théières"}),
             "C'est noté, et je compare les théières.",
         )

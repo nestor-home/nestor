@@ -438,7 +438,7 @@ async def test_the_command_line_serves_until_stopped(tmp_path: Path) -> None:
 
 async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
     fakes = Fakes()
-    fakes.script = [ToolCall("c1", "remember", {"text": "Le chat s'appelle Biscotte", "about": "household"}), "Noté."]
+    fakes.script = [ToolCall("c1", "remember", {"text": "Le chat s'appelle Biscotte", "place": "household"}), "Noté."]
     async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
         serving = asyncio.create_task(nestor.serve())
         await fakes.channels[0].ask("Retiens que le chat s'appelle Biscotte")

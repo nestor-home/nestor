@@ -243,10 +243,17 @@ async def test_a_summary_reads_the_tools_used_and_every_turn_of_its_conversation
     home = Home(SUMMARY)
     async with home.consolidator:
         asked = await home.exchange("c1", "Il fait combien au salon ?", "21 degrés.", at=START + timedelta(minutes=10))
-        call = {"source": "t", "session": CHAT.session, "call_id": "k1", "name": "home_state", "exchange": asked}
-        call |= {"at": START + timedelta(minutes=10)}
-        await home.journal.publish(ToolCalled(**call, address=CHAT, arguments={"room": "salon"}))
-        await home.journal.publish(ToolCompleted(**call, output="salon: 21,4 °C", ok=True, duration_s=0.2))
+        at, session = START + timedelta(minutes=10), CHAT.session
+        called = ToolCalled(
+            source="t", session=session, call_id="k1", name="home_state", exchange=asked, at=at, address=CHAT,
+            arguments={"room": "salon"},
+        )  # fmt: skip
+        done = ToolCompleted(
+            source="t", session=session, call_id="k1", name="home_state", exchange=asked, at=at,
+            output="salon: 21,4 °C", ok=True, duration_s=0.2,
+        )  # fmt: skip
+        await home.journal.publish(called)
+        await home.journal.publish(done)
         await home.consolidator.consolidate_due()  # follows c1 from its first turn read
         await home.exchange("c1", "Bonsoir Richie", "Bonsoir Léa.", at=START)  # stamped earlier, published later
         await home.exchange("c1", "Et dehors ?", "12 degrés.", at=START + timedelta(minutes=12), address=SALON)

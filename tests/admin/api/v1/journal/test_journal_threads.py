@@ -198,7 +198,9 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         await journal.publish(
             DeliveryConsidered(source="courier", about=About(Source.WATCH, "w9"), reason=REASON, person=MATHIS)
         )
-        await journal.publish(MemoryRecorded(source="memory", memory_id="m1", text="Aime le thé", about=MATHILDE))
+        await journal.publish(
+            MemoryRecorded(source="memory", memory_id="m1", text="Aime le thé", place="people/mathilde")
+        )
         api = await admin.api()
 
         def details(found: list[dict[str, Any]]) -> set[str]:
