@@ -93,11 +93,12 @@ class Routing(Suite[None, Knobs]):
         agent, tasks = _agent(trial)
         person = agent.household.people[0]
         seeded = [await _seed(agent.journal, task, person.id) for task in case.data.get("tasks", [])]
+        tools = {s.name for s in agent.toolbox.specs()}
         offered = {
             NONE,
-            *(f"tool:{s.name}" for s in agent.toolbox.specs()),
+            *(f"tool:{name}" for name in tools),
             *(f"delegate:{e.name}" for e in trial.executors),
-            *(f"continue:{task_id}" for task_id in seeded),
+            *(f"continue:{task_id}" for task_id in seeded if CONTINUE in tools),  # no executor, no task goes on
         }
         tiers = _tiers(case.data["expected"]) or ()
         right = next((routes for tier in tiers if (routes := [r for r in tier if r in offered])), [NONE])
