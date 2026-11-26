@@ -148,6 +148,7 @@ journal-alert-ended = Alerte { $alert } { $reason ->
     [rang] terminée : elle a sonné
     [cancelled] annulée
     [expired] expirée
+    [left] terminée : la personne qui l'a créée a quitté le foyer
    *[done] terminée : plus rien ne peut la faire sonner
 }
 

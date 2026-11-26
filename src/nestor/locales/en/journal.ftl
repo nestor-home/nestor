@@ -146,6 +146,7 @@ journal-alert-ended = Alert { $alert } { $reason ->
     [rang] ended: it rang
     [cancelled] cancelled
     [expired] expired
+    [left] ended: whoever set it left the household
    *[done] ended: nothing left to ring it
 }
 

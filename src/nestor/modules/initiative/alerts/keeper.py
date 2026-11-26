@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from datetime import datetime
 
 from nestor.core import Component
-from nestor.modules.conversation import About, Notification, Source
+from nestor.modules.conversation import About, Notification, NotificationTurn, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.alerts.book import AlertBook
 from nestor.modules.initiative.alerts.events import AlertSorted
@@ -17,6 +17,7 @@ from nestor.modules.initiative.alerts.ports import InboundEventSource
 from nestor.modules.initiative.alerts.triage import Triage, describe
 from nestor.modules.initiative.alerts.types import Alert, AlertEnd, Frequency, Incoming, Ring, RingCause, Trigger
 from nestor.modules.initiative.delivery import Courier
+from nestor.modules.journal import Subscription
 
 log = logging.getLogger(__name__)
 IDLE_S = 3600.0  # the longest sleep between two looks at the clock, against drift and clock changes
@@ -46,12 +47,25 @@ class AlertKeeper(Component):
         self.journal = book.journal
         self.sources = tuple(sources)
         self._workers: list[asyncio.Task[None]] = []
+        self._subscription: Subscription | None = None
 
     async def start(self) -> None:
+        members = {p.id for p in self.household.people}
+        for alert in tuple(self.book.alerts.values()):
+            if alert.owner is not None and alert.owner not in members:  # what they set leaves with them
+                await self.book.end(alert.id, AlertEnd.LEFT)
+        self._subscription = self.journal.subscribe(NotificationTurn)
+        for turn in await self.journal.history(NotificationTurn):  # told while it was stopped
+            if alert_id := _alert_of(turn.thread):
+                await self._told(alert_id)
         self._workers = [asyncio.create_task(self._consume(s), name=f"alerts {s.name}") for s in self.sources]
         self._workers.append(asyncio.create_task(self._clock(), name="alerts clock"))
+        self._workers.append(asyncio.create_task(self._follow(self._subscription), name="alerts told"))
 
     async def close(self) -> None:
+        if self._subscription is not None:
+            self._subscription.close()
+            self._subscription = None
         for worker in self._workers:
             worker.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -91,7 +105,7 @@ class AlertKeeper(Component):
             )
         )
         for alert in judged:
-            if matches and alert.id in matches and alert.id in self.book.alerts:
+            if matches and alert.id in matches:
                 await self._ring(alert, RingCause.MATCH, item=item, summary=matches[alert.id])
 
     async def _ring(
@@ -103,6 +117,8 @@ class AlertKeeper(Component):
         item: Incoming | None = None,
         summary: str = "",
     ) -> None:
+        if alert.id not in self.book.alerts or (alert.until is not None and alert.until <= self.book.clock()):
+            return  # cancelled or expired while the alerts before it were delivered: it never rings late
         ring = await self.book.ring(alert, cause, due_at=due_at, item=item, summary=summary)
         if alert.frequency is Frequency.ONCE:
             await self.book.end(alert.id, AlertEnd.RANG)
@@ -124,10 +140,20 @@ class AlertKeeper(Component):
         except Exception:  # one alert failing never stops the others
             log.exception("alert %s failed", alert.id)
             return
-        if alert.id not in self.book.alerts:
-            return
-        if alert.frequency is Frequency.UNTIL_RUNG and sent is not None and sent.said:
+        if sent is not None and sent.said:
+            await self._told(alert.id)
+
+    async def _told(self, alert_id: str) -> None:
+        """Something was told for it: an alert that rings until then ends."""
+        alert = self.book.alerts.get(alert_id)
+        if alert is not None and alert.frequency is Frequency.UNTIL_RUNG:
             await self.book.end(alert.id, AlertEnd.RANG)
+
+    async def _follow(self, subscription: Subscription) -> None:
+        """What a ring started (a task, a slow tool) tells later, in the alert's thread, counts as told too."""
+        async for event in subscription:
+            if isinstance(event, NotificationTurn) and (alert_id := _alert_of(event.thread)):
+                await self._told(alert_id)
 
     async def _consume(self, source: InboundEventSource) -> None:
         async for item in source.items():
@@ -144,6 +170,12 @@ class AlertKeeper(Component):
             wait = min([(min(wakes) - self.book.clock()).total_seconds(), IDLE_S] if wakes else [IDLE_S])
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self.book.changed.wait(), timeout=max(wait, 0.0))
+
+
+def _alert_of(thread: str | None) -> str | None:
+    """The alert a notification's thread continues, if it is one's."""
+    prefix = f"{Source.ALERT.value}:"
+    return thread.removeprefix(prefix) if thread and thread.startswith(prefix) else None
 
 
 def ring_instruction(alert: Alert, ring: Ring, owner: Person | None, timezone: str, item: Incoming | None) -> str:

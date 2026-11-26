@@ -76,14 +76,13 @@ class TestWebhookSource(InboundEventSourceContract):
         assert (await post(self.current, body, {"Authorization": f"Bearer {SECRET}"})).status_code == 202
 
 
-async def test_a_signed_post_is_an_item_of_its_hook_s_kind_with_its_json_parsed(tmp_path: Path) -> None:
+async def test_a_signed_post_is_an_item_of_its_hook_s_kind(tmp_path: Path) -> None:
     body = json.dumps(RELEASE).encode()
     async with webhook_source(tmp_path / "w.json") as source:
         assert (await post(source, body, signed(body))).status_code == 202
         item = await anext(source.items())
     assert (item.kind, item.sender, item.title) == ("github", "github", "release · published")
     assert '"tag_name": "v7.0.0"' in item.body
-    assert item.data["payload"] == RELEASE and item.data["event"] == "release", "kept whole, not as cut text"
 
 
 @pytest.mark.parametrize(

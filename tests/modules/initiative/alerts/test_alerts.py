@@ -560,7 +560,7 @@ async def test_a_moment_ends_once_rung_a_cancelled_one_never_rings_and_an_expire
         await home.create(
             title="Jusqu'à ce soir",
             instruction="Arrose",
-            times=["23:00"],
+            times=["21:00"],
             frequency="every_time",
             until="2026-11-02T22:00",
         )
@@ -582,6 +582,31 @@ async def test_a_moment_ends_once_rung_a_cancelled_one_never_rings_and_an_expire
     assert "once, Tuesday 03 November 2026 09:00" in str(once["when"])
 
 
+async def test_an_alert_cancelled_while_the_one_before_it_rang_never_rings() -> None:
+    home = Home(ToolCall("c1", "cancel_alert", {"alert_id": "volets"}), "Plantes arrosées.", now=paris(2, 7))
+    async with home.book:
+        for alert_id in ("plantes", "volets"):
+            await home.book.create(
+                Alert(id=alert_id, title=alert_id, instruction="Fais-le", times=(time(8),), owner=MATHIS.id)
+            )
+        home.clock.now = paris(2, 8, 1)
+        assert await wake(home.keeper) == 1
+    assert [(e.alert_id, e.reason) for e in await home.journal.history(AlertEnded)] == [
+        ("plantes", AlertEnd.RANG),
+        ("volets", AlertEnd.CANCELLED),
+    ]
+
+
+async def test_the_alerts_of_someone_who_left_the_household_end_when_nestor_starts() -> None:
+    home = Home(now=paris(2, 7))
+    async with home.book:
+        await home.book.create(on_mail(owner=PersonId("lea")))
+        kept = await home.book.create(on_mail(owner=MATHIS.id))
+    async with home.running() as keeper:
+        assert list(keeper.book.alerts) == [kept.id]
+    assert [e.reason for e in await home.journal.history(AlertEnded)] == [AlertEnd.LEFT]
+
+
 async def test_expiry_is_checked_while_running() -> None:
     home = Home()
     async with home.running() as keeper:
@@ -591,15 +616,58 @@ async def test_expiry_is_checked_while_running() -> None:
     assert [e.reason for e in await home.journal.history(AlertEnded)] == [AlertEnd.EXPIRED]
 
 
+class Delegating:
+    """A household whose alerts hand their checks to an executor, Hermes, who finds the TV at 1 599 €."""
+
+    CHECK = ToolCall(
+        "c", "start_task", {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "notify": "message"}
+    )
+
+    def __init__(self, *replies: Reply) -> None:
+        hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
+        hermes.name = "hermes"
+        self.model = ScriptedModel(*replies)
+        self.journal = Journal(MemoryEventLog())
+        self.clock = Clock(paris(2, 7))
+        self.book = AlertBook(self.journal, timezone="Europe/Paris", clock=self.clock)
+        household = Household([MATHIS])
+        self.tasks = TaskManager(self.journal, [hermes])
+        delegation, self.alerts = Delegation(self.tasks), AlertTools(self.book)
+        agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
+            models=ModelChoice.single(self.model),
+            persona=Persona(name="Richie", character="Tu es Richie.", timezone="Europe/Paris"),
+            journal=self.journal,
+            household=household,
+            localizer=EchoLocalizer(),
+            toolbox=Toolbox(self.journal, providers=[delegation, self.alerts]),
+            context=[delegation, self.alerts],
+        )
+        self.telegram = InMemoryChannel("telegram")
+        courier = Courier(self.journal, agent, [self.telegram])
+        self.returns = Returns(self.journal, household, courier, self.tasks)
+        self.keeper = AlertKeeper(self.book, household, courier, Triage(self.model))
+        self._answered = self.journal.subscribe(Delivered, DeliveryWithheld)
+
+    async def create(self, frequency: str) -> str:
+        tool = next(t for t in self.alerts.tools() if t.spec.name == "create_alert")
+        context = ToolContext(address=TELEGRAM, speaker=Speaker.account(MATHIS.id))
+        arguments = {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "times": ["09:00"]}
+        created: Any = await tool.run({**arguments, "frequency": frequency}, context)
+        return str(created["alert_id"])
+
+    async def result_answered(self) -> None:
+        while True:
+            event = await self._answered.next(timeout_s=2)
+            if isinstance(event, Delivered | DeliveryWithheld) and event.about.source is Source.TASK:
+                return
+
+
 async def test_a_recurring_alert_reads_what_it_and_its_tasks_told_before_and_tells_only_what_is_new() -> None:
     """As in production: a daily price check handed to an executor found the same offer two mornings in a row; the
     second result is answered knowing what the first one told, a day and a conversation later."""
-    hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
-    hermes.name = "hermes"
-    check = ToolCall(
-        "c", "start_task", {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "notify": "message"}
-    )
-    model = ScriptedModel(
+    check = Delegating.CHECK
+    home = Delegating(
         check,
         f"{SILENT} lancé",
         "Le LG OLED65C6 est à 1 599 € chez Boulanger.",  # Monday
@@ -607,47 +675,36 @@ async def test_a_recurring_alert_reads_what_it_and_its_tasks_told_before_and_tel
         f"{SILENT} lancé",
         f"{SILENT} déjà dit hier",  # Tuesday
     )
-    journal = Journal(MemoryEventLog())
-    clock = Clock(paris(2, 7))
-    book = AlertBook(journal, timezone="Europe/Paris", clock=clock)
-    household = Household([MATHIS])
-    tasks = TaskManager(journal, [hermes])
-    delegation, alerts = Delegation(tasks), AlertTools(book)
-    agent = Agent(
-        attachments=Attachments(MemoryBlobStore()),
-        models=ModelChoice.single(model),
-        persona=Persona(name="Richie", character="Tu es Richie.", timezone="Europe/Paris"),
-        journal=journal,
-        household=household,
-        localizer=EchoLocalizer(),
-        toolbox=Toolbox(journal, providers=[delegation, alerts]),
-        context=[delegation, alerts],
-    )
-    telegram = InMemoryChannel("telegram")
-    courier = Courier(journal, agent, [telegram])
-    keeper = AlertKeeper(book, household, courier, Triage(model))
-    answered = journal.subscribe(Delivered, DeliveryWithheld)
-
-    async def result_answered() -> None:
-        while True:
-            event = await answered.next(timeout_s=2)
-            if isinstance(event, Delivered | DeliveryWithheld) and event.about.source is Source.TASK:
-                return
-
-    async with book, tasks, Returns(journal, household, courier, tasks):
-        tool = next(t for t in alerts.tools() if t.spec.name == "create_alert")
-        context = ToolContext(address=TELEGRAM, speaker=Speaker.account(MATHIS.id))
-        arguments = {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "times": ["09:00"]}
-        await tool.run({**arguments, "frequency": "every_time"}, context)
+    async with home.book, home.tasks, home.returns:
+        await home.create("every_time")
         for day in (2, 3):
-            clock.now = paris(day, 9, 1)
-            assert await wake(keeper) == 1
-            await result_answered()
+            home.clock.now = paris(day, 9, 1)
+            assert await wake(home.keeper) == 1
+            await home.result_answered()
 
-    monday, tuesday = (r.messages[0].content for r in model.requests[2::3])
+    monday, tuesday = (r.messages[0].content for r in home.model.requests[2::3])
     assert "You already wrote to them" not in monday
     assert "You already wrote to them" in tuesday and "1 599 € chez Boulanger" in tuesday, "the first answer, read back"
-    assert telegram.sent == [(TELEGRAM, "Le LG OLED65C6 est à 1 599 € chez Boulanger.")], "told once"
+    assert home.telegram.sent == [(TELEGRAM, "Le LG OLED65C6 est à 1 599 € chez Boulanger.")], "told once"
+
+
+@pytest.mark.parametrize("restarted", [False, True], ids=["running", "told while stopped"])
+async def test_an_alert_that_rings_until_told_ends_when_the_task_it_started_tells(restarted: bool) -> None:
+    """Its ring started a check and said nothing yet: what the check tells later, in the alert's thread, ends it."""
+    home = Delegating(Delegating.CHECK, f"{SILENT} lancé", "Le LG OLED65C6 est à 1 599 € chez Boulanger.")
+    ended = home.journal.subscribe(AlertEnded)
+    async with home.book, home.tasks, home.returns:
+        alert_id = await home.create("until_rung")
+        home.clock.now = paris(2, 9, 1)
+        if restarted:
+            assert await wake(home.keeper) == 1
+            await home.result_answered()
+            assert alert_id in home.book.alerts, "the ring itself told nothing"
+        async with home.keeper:  # its clock rings it now when it was not
+            await ended.next(timeout_s=2)
+    assert [(e.alert_id, e.reason) for e in await home.journal.history(AlertEnded)] == [(alert_id, AlertEnd.RANG)]
+    assert home.telegram.sent == [(TELEGRAM, "Le LG OLED65C6 est à 1 599 € chez Boulanger.")]
+    assert len(await home.journal.history(AlertRang)) == 1
 
 
 # -- the agent's tools -------------------------------------------------------------------------------------------
@@ -668,6 +725,10 @@ async def test_a_recurring_alert_reads_what_it_and_its_tasks_told_before_and_tel
         ({"at": "2026-11-03T09:00", "frequency": "sometimes"}, "frequency is one of"),
         ({"at": "2026-11-03T09:00", "title": " "}, "title must be a short name"),
         ({"at": "2026-11-03T09:00", "title": "Arrose " * 20}, "title must be a short name"),
+        ({"times": ["08:00:30"]}, "hours and minutes"),
+        ({"times": ["08:00", "09:00+01:00"]}, "hours and minutes"),
+        ({"at": "2026-11-03T09:00", "until": "2026-11-03T08:00"}, "end before it first rings"),
+        ({"times": ["08:00"], "days": ["sat"], "until": "2026-11-05T09:00"}, "end before it first rings"),
     ],
 )
 async def test_an_alert_that_cannot_be_set_says_why(arguments: dict[str, object], error: str) -> None:
@@ -700,9 +761,9 @@ async def test_the_alerts_set_are_in_the_instructions_and_their_list_says_why_ea
         alert = home.book.alerts[hook["alert_id"]]
         home.clock.now = paris(2, 21, 19)
         await home.book.ring(alert, RingCause.EVENT, item=dishwasher())
-        listed: Any = await next(t for t in home.tools.tools() if t.spec.name == "list_alerts").run(
-            {}, ToolContext(address=TELEGRAM, speaker=Speaker.account(MATHIS.id))
-        )
+        listing = next(t for t in home.tools.tools() if t.spec.name == "list_alerts")
+        listed: Any = await listing.run({}, ToolContext(address=TELEGRAM, speaker=Speaker.account(MATHIS.id)))
+        theirs: Any = await listing.run({}, ToolContext(address=SALON, speaker=Speaker.account(MATHILDE.id)))
         section = str(
             await home.tools.context(
                 TurnContext(person=MATHIS, speaker=Speaker.account(MATHIS.id), address=TELEGRAM, said=None)
@@ -718,6 +779,7 @@ async def test_the_alerts_set_are_in_the_instructions_and_their_list_says_why_ea
     assert second["last_rang"] == (
         "Monday 02 November 21:19, because an event of kind dishwasher arrived from webhook: cycle · done"
     )
+    assert theirs["alerts"][1]["last_rang"] == "Monday 02 November 21:19", "what rang Mathis's alert is his to read"
     (created, _) = await home.journal.history(AlertCreated)
     assert (created.title, created.instruction) == ("Plantes du week-end", "Arrose les plantes")
 

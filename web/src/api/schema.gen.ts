@@ -3610,6 +3610,8 @@ export interface components {
          * @description One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how).
          */
         RingOut: {
+            /** Id */
+            id: string;
             /**
              * At
              * Format: date-time

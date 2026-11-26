@@ -49,6 +49,7 @@ class AlertEnd(StrEnum):
     CANCELLED = "cancelled"
     EXPIRED = "expired"  # its `until` passed
     DONE = "done"  # nothing can ring it anymore: a moment that passed
+    LEFT = "left"  # whoever set it is no longer in the household
 
 
 class RingCause(StrEnum):

@@ -1,5 +1,5 @@
-"""What a post brings, kept until taken, and the item it becomes: its JSON parsed in `data`, an excerpt of it as the
-body the triage model and the agent read."""
+"""What a post brings, kept until taken, and the item it becomes: an excerpt of its JSON as the body the triage model
+and the agent read."""
 
 import json
 from collections.abc import Mapping
@@ -26,6 +26,6 @@ def incoming(source: str, post: Mapping[str, Any]) -> Incoming:
         title=cap(" ".join(title.split()), 200),
         body=cap(json.dumps(payload, ensure_ascii=False, indent=1), EXCERPT),
         sender=str(post["hook"]),
-        data={"hook": post["hook"], "event": post.get("event"), "payload": payload},
+        data={"hook": post["hook"], "event": post.get("event")},
         id=str(post["id"]),
     )

@@ -5,7 +5,7 @@ from datetime import datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from nestor.core import ContractError, Day
+from nestor.core import ContractError, Day, PersonId
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import TITLE, Risk, Tool, ToolContext, ToolFailed, ToolProvider, titled
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
@@ -92,6 +92,8 @@ class AlertTools(ToolProvider, ContextProvider):
             times = tuple(time.fromisoformat(str(t)) for t in _listed(arguments.get("times")))
         except ValueError as error:
             raise ToolFailed(f"cannot read the time: {error}") from None
+        if any(t.tzinfo or t.second or t.microsecond for t in times):
+            raise ToolFailed("times are hours and minutes in the household's clock: 08:00")
         named = [str(d) for d in _listed(arguments.get("days"))]
         if unknown := sorted(set(named) - set(Day)):
             raise ToolFailed(f"unknown days {', '.join(unknown)}: use {', '.join(Day)}")
@@ -108,29 +110,30 @@ class AlertTools(ToolProvider, ContextProvider):
             if moment is not None and moment <= now:
                 raise ToolFailed(f"{moment:%Y-%m-%d %H:%M} has already passed")
         try:
-            alert = await self.book.create(
-                Alert(
-                    title=title,
-                    instruction=str(arguments["instruction"]),
-                    at=at,
-                    times=times,
-                    days=tuple(Day(d) for d in named),
-                    kinds=kinds,
-                    condition=condition,
-                    frequency=Frequency(str(arguments["frequency"])),
-                    until=until,
-                    urgent=arguments.get("urgent") is True,
-                    owner=context.person,
-                    created_in=context.address,
-                ),
-                exchange=context.exchange,
+            alert = Alert(
+                title=title,
+                instruction=str(arguments["instruction"]),
+                at=at,
+                times=times,
+                days=tuple(Day(d) for d in named),
+                kinds=kinds,
+                condition=condition,
+                frequency=Frequency(str(arguments["frequency"])),
+                until=until,
+                urgent=arguments.get("urgent") is True,
+                owner=context.person,
+                created_in=context.address,
             )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
+        first = alert.next_due(now, self.book.timezone)
+        if until is not None and first is not None and until <= first:
+            raise ToolFailed(f"it would end before it first rings ({first:%Y-%m-%d %H:%M}): `until` comes after that")
+        alert = await self.book.create(alert, exchange=context.exchange)
         return {"alert_id": alert.id, "title": alert.title, "when": self._when(alert)}
 
     async def _list(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        return {"alerts": [self._listed(a) for a in self.book.upcoming()]}
+        return {"alerts": [self._listed(a, context.person) for a in self.book.upcoming()]}
 
     async def _cancel(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         alert_id = str(arguments["alert_id"])
@@ -138,7 +141,7 @@ class AlertTools(ToolProvider, ContextProvider):
             raise ToolFailed(f"no active alert {alert_id!r}")
         return {"cancelled": alert_id}
 
-    def _listed(self, alert: Alert) -> dict[str, Any]:
+    def _listed(self, alert: Alert, asker: PersonId | None) -> dict[str, Any]:
         listed: dict[str, Any] = {
             "alert_id": alert.id,
             "title": alert.title,
@@ -156,7 +159,9 @@ class AlertTools(ToolProvider, ContextProvider):
             last = rings[-1]
             zone = ZoneInfo(self.book.timezone)
             listed["rang"] = self.book.rang[alert.id]
-            listed["last_rang"] = f"{last.at.astimezone(zone):%A %d %B %H:%M}, because {last.why(self.book.timezone)}"
+            listed["last_rang"] = f"{last.at.astimezone(zone):%A %d %B %H:%M}"
+            if alert.owner is None or alert.owner == asker:  # why says what rang it: a mail is its owner's
+                listed["last_rang"] += f", because {last.why(self.book.timezone)}"
         return listed
 
     def _when(self, alert: Alert) -> str:

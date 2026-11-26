@@ -1171,6 +1171,7 @@ export function alerts(): Alert[] {
       rang: 8,
       rings: [
         {
+          id: "ring-1",
           at: minutes(60 * 14),
           cause: "due",
           item_title: null,
@@ -1194,6 +1195,7 @@ export function alerts(): Alert[] {
       rang: 5,
       rings: [
         {
+          id: "ring-2",
           at: minutes(60 * 24 * 3),
           cause: "due",
           item_title: null,
@@ -1229,6 +1231,7 @@ export function alerts(): Alert[] {
       rang: 1,
       rings: [
         {
+          id: "ring-3",
           at: minutes(230),
           cause: "match",
           item_title: fr("Planetarium trip: reply needed", "Sortie au planétarium : réponse attendue"),
@@ -1250,6 +1253,7 @@ export function alerts(): Alert[] {
       rang: 7,
       rings: [
         {
+          id: "ring-4",
           at: minutes(96),
           cause: "match",
           item_title: fr("Canteen menu for next week", "Menu de la cantine de la semaine prochaine"),
@@ -1271,6 +1275,7 @@ export function alerts(): Alert[] {
       rang: 1,
       rings: [
         {
+          id: "ring-5",
           at: minutes(458),
           cause: "match",
           item_title: "Python 3.15 beta 1",
@@ -1305,6 +1310,7 @@ export function alerts(): Alert[] {
       rang: 23,
       rings: [
         {
+          id: "ring-6",
           at: minutes(427),
           cause: "event",
           item_title: "cycle · done",

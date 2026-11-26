@@ -191,6 +191,7 @@ export function stress(db: Db, now = Date.now()): void {
     rang: 1,
     rings: [
       {
+        id: "ring-stress",
         at: at(30),
         cause: "match",
         item_title: `${LONG_WORD} ${LONG_URL}`,

@@ -102,7 +102,7 @@ function Loaded({ alert: a, trail }: { alert: Alert; trail: Crumb[] }) {
           {a.rings.length ? (
             <RowList>
               {a.rings.map((ring) => (
-                <li key={ring.at} className="px-4 py-3 text-body text-ink">
+                <li key={ring.id} className="px-4 py-3 text-body text-ink">
                   <RangBecause ring={ring} />
                 </li>
               ))}
