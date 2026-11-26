@@ -1,4 +1,4 @@
-"""Web pages watched for changes, as watch items of the kind `page`: "tell me when the lamp drops under 50 €",
+"""Web pages watched for changes, as items for alerts of the kind `page`: "tell me when the lamp drops under 50 €",
 "when the town hall posts the new opening hours".
 
 Each page is read every `every_s` (an hour by default, never less than five minutes) the way `read_page` reads it:

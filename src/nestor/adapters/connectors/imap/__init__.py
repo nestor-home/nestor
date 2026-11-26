@@ -10,7 +10,7 @@ Configuration (family `connector`, kind `imap`), every key optional:
     retry_initial_s: 1       # first backoff delay after an outage, doubled up to retry_max_s
     retry_max_s: 300
     body_chars: 20000        # cap of a body read by imap_mail_read
-    excerpt_chars: 2000      # cap of the body excerpt given to watches
+    excerpt_chars: 2000      # cap of the body excerpt given to alerts
 """
 
 from nestor.adapters.connectors.imap.settings import ImapSettings, build

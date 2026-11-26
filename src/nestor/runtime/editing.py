@@ -34,6 +34,7 @@ from nestor.runtime.config import (
     LANGUAGE_MODEL,
     AdminConfig,
     AgentConfig,
+    AlertsConfig,
     ConfigError,
     InitiativeConfig,
     MemoryConfig,
@@ -44,7 +45,6 @@ from nestor.runtime.config import (
     PricesConfig,
     ProblemCode,
     UpdatesConfig,
-    WatchesConfig,
     references,
     substitute,
 )
@@ -91,7 +91,7 @@ SECTIONS: Mapping[str, Any] = {
     "persona": PersonaConfig,
     "household": PersonConfig,  # a list of them
     "agent": AgentConfig,
-    "watches": WatchesConfig,
+    "alerts": AlertsConfig,
     "memory": MemoryConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,

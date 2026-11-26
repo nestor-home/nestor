@@ -72,7 +72,7 @@ const PAGES: ConfigPage[] = [
   {
     slug: "models",
     kind: "slots",
-    keys: ["models", "agent", "watches"],
+    keys: ["models", "agent", "alerts"],
     icon: Brain,
     group: "talk",
     about: "cfg-about-models",

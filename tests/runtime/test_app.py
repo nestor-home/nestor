@@ -447,27 +447,28 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
         assert [m.text for m in await restarted.memories.recall("chat", vector=None)] == ["Le chat s'appelle Biscotte"]
 
 
-async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:
-    from nestor.modules.initiative import Incoming, WatchTriggered
+async def test_an_alert_created_in_conversation_rings_when_its_mail_arrives(tmp_path: Path) -> None:
+    from nestor.modules.initiative import AlertRang, Incoming
 
-    def every_listed_watch(request: ModelRequest) -> str:
+    def every_listed_alert(request: ModelRequest) -> str:
         ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].text, re.MULTILINE)
-        return json.dumps({"matches": [{"watch": id, "summary": "Colis livré."} for id in ids]})
+        return json.dumps({"matches": [{"alert": id, "summary": "Colis livré."} for id in ids]})
 
     fakes = Fakes()
+    created = {"title": "Le colis", "instruction": "Préviens-moi", "condition": "le colis", "frequency": "once"}
     fakes.script = [
-        ToolCall("c1", "create_watch", {"title": "Le colis", "what": "le colis"}),
+        ToolCall("c1", "create_alert", {**created, "kinds": ["mail"]}),
         "Je te préviens.",
-        every_listed_watch,
+        every_listed_alert,
         "Ton colis est arrivé.",
     ]
     text = CONFIG.format(data_dir=tmp_path, replies=[]) + "inbound: [{kind: inbox}]\n"
     async with Nestor(parse_config(text, {}), fakes.registry()) as nestor:
         serving = asyncio.create_task(nestor.serve())
         assert await fakes.channels[0].ask("Préviens-moi quand le colis arrive") == ("Je te préviens.",)
-        triggered = nestor.journal.subscribe(WatchTriggered)
+        rang = nestor.journal.subscribe(AlertRang)
         fakes.inbox.deliver(Incoming(source="inbox", kind="mail", title="Votre colis Colissimo est livré"))
-        await triggered.next(timeout_s=2)
+        await rang.next(timeout_s=2)
         await asyncio.sleep(0.05)
         serving.cancel()
     assert fakes.channels[0].sent == [(Address("memory", "main"), "Ton colis est arrivé.")]

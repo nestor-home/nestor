@@ -98,7 +98,7 @@
   --color-night: var(--night);
 
   --color-kind-task: var(--kind-task);
-  --color-kind-watch: var(--kind-watch);
+  --color-kind-alert: var(--kind-alert);
 
   --font-sans: var(--font-ui);
   --font-serif: var(--font-display);

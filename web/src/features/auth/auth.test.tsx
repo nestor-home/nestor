@@ -8,7 +8,7 @@ describe("signing in", () => {
   it("refuses a wrong password, then lands where the person was going", async () => {
     db.signedIn = null;
     const user = userEvent.setup();
-    const { router } = renderApp("/login?next=%2Fwatches");
+    const { router } = renderApp("/login?next=%2Fmemories");
     await user.type(await screen.findByLabelText("Login"), "lea");
     await user.type(screen.getByLabelText("Password"), "wrong");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
@@ -19,7 +19,7 @@ describe("signing in", () => {
     await user.clear(screen.getByLabelText("Password"));
     await user.type(screen.getByLabelText("Password"), "nestor");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/watches"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/memories"));
   });
 
   it("never follows a `next` to another site", async () => {

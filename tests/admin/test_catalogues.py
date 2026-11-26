@@ -21,13 +21,14 @@ import nestor.modules
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin.api.v1.errors import ErrorCode
 from nestor.admin.presentation import EventDescriber, Kind, Phrasebook
-from nestor.core import Event, ModelType, PersonId, Unit
+from nestor.core import Day, Event, ModelType, PersonId, Unit
 from nestor.core.i18n import Locale, Message
 from nestor.modules.accounts import InvitationStatus, Role
 from nestor.modules.cognition.delegation.types import TaskState, TurnStatus
 from nestor.modules.cognition.tools.types import Risk
 from nestor.modules.connectors.types import AuthKind, Status
 from nestor.modules.household import Household, Person
+from nestor.modules.initiative import Frequency, RingCause
 from nestor.modules.journal import Entry
 from nestor.modules.usage import CallPurpose, CostBasis, Dimension, Outcome
 from nestor.runtime import Registry
@@ -183,6 +184,9 @@ SELECTS = {
     "usage-outcome": Outcome,
     "usage-dimension": Dimension,
     "usage-unit": Unit,
+    "weekday": Day,
+    "alert-frequency": Frequency,
+    "alert-rang-because": RingCause,
 }
 
 

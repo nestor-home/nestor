@@ -121,7 +121,7 @@ DISCOVERED_OAUTH = OAuthSpec(
 
 
 class ScriptedConnector(Connector):
-    """A mail-like service: a read tool, a send tool, and an inbox feeding watches.
+    """A mail-like service: a read tool, a send tool, and an inbox feeding alerts.
 
     Authorised by discovery, it is reached at the `server` typed; what it answers is `found`, which registers an
     OAuth client by default. With `found` registering none, the client typed (`client_id`, `client_secret`) is used.

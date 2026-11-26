@@ -4,6 +4,7 @@
  */
 import type {
   Account,
+  Alert,
   Capability,
   Component,
   ConfigDocument,
@@ -22,7 +23,6 @@ import type {
   PersonRef,
   Role,
   Satellite,
-  Schedule,
   Scope,
   Service,
   SystemInfo,
@@ -31,7 +31,6 @@ import type {
   Tool,
   Updates,
   Voice,
-  Watch,
 } from "@/api";
 import { scopeValues } from "@/api/schema.gen";
 import { isRecord } from "@/features/config/schema";
@@ -351,7 +350,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 21),
       last_used_at: minutes(171),
       calls_today: 2,
-      watches: 1,
+      alerts: 1,
     },
     {
       id: "c-imap-lea",
@@ -367,7 +366,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 9),
       last_used_at: minutes(230),
       calls_today: 0,
-      watches: 1,
+      alerts: 1,
     },
     {
       id: "c-mcp-ha",
@@ -383,7 +382,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 30),
       last_used_at: minutes(61),
       calls_today: 1,
-      watches: 0,
+      alerts: 0,
     },
     {
       id: "c-mcp-recipes",
@@ -404,7 +403,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 3),
       last_used_at: minutes(6),
       calls_today: 1,
-      watches: 0,
+      alerts: 0,
     },
     // Léa's two Google accounts: tools of the second are numbered, and a message names each by its address
     quiet({
@@ -417,7 +416,7 @@ export function connections(): Connection[] {
       confirm_writes: true,
       created_at: minutes(60 * 24 * 12),
       last_used_at: minutes(398),
-      watches: 0,
+      alerts: 0,
     }),
     quiet({
       id: "c-google-lea-studio",
@@ -430,7 +429,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 5),
       last_used_at: minutes(489),
       calls_today: 2,
-      watches: 0,
+      alerts: 0,
     }),
     quiet({
       id: "c-microsoft-mathis",
@@ -443,7 +442,7 @@ export function connections(): Connection[] {
       created_at: minutes(60 * 24 * 8),
       last_used_at: minutes(443),
       calls_today: 1,
-      watches: 0,
+      alerts: 0,
     }),
     quiet({
       id: "c-dav-family",
@@ -455,7 +454,7 @@ export function connections(): Connection[] {
       confirm_writes: true,
       created_at: minutes(60 * 24 * 40),
       last_used_at: minutes(60 * 20),
-      watches: 0,
+      alerts: 0,
     }),
     quiet({
       id: "c-mcp-linear",
@@ -467,7 +466,7 @@ export function connections(): Connection[] {
       confirm_writes: true,
       created_at: minutes(60 * 24 * 2),
       last_used_at: minutes(60 * 22),
-      watches: 0,
+      alerts: 0,
     }),
   ];
 }
@@ -1119,143 +1118,207 @@ export function tasks(): TaskThread[] {
   ];
 }
 
-/** The watch on the school's reply: its name and what it watches for, as its creation reads in the journal. */
-export const SCHOOL_TRIP_WATCH = fr("School trip reply", "Réponse pour la sortie scolaire");
-export const SCHOOL_TRIP = fr(
-  "News from the school: tell Léa as soon as the school replies about the trip.",
-  "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
-);
+/** The alert on the school's reply: its name and what it waits for, as its creation reads in the journal. */
+export const SCHOOL_TRIP_ALERT = fr("School trip reply", "Réponse pour la sortie scolaire");
+export const SCHOOL_TRIP = fr("News from the school about the trip.", "Les nouvelles de l'école pour la sortie.");
 
-export function watches(): Watch[] {
-  return [
-    {
-      id: "w-9d41",
-      title: SCHOOL_TRIP_WATCH,
-      what: SCHOOL_TRIP,
-      owner: ref("lea"),
-      kinds: ["mail"],
-      once: false,
-      created_at: minutes(60 * 28),
-      until: ahead(60 * 60 * 24 * 6),
-      origin: { session: "s-hier", channel: "telegram" },
-      triggered: 1,
-      last_triggered_at: minutes(230),
-    },
-    {
-      id: "w-2b77",
-      title: fr("Jules's school", "École de Jules"),
-      what: fr("Messages from Jules's school.", "Les messages de l'école de Jules."),
-      owner: null,
-      kinds: ["mail"],
-      once: false,
-      created_at: minutes(60 * 24 * 14),
-      until: null,
-      origin: null,
-      triggered: 7,
-      last_triggered_at: minutes(96),
-    },
-    {
-      id: "w-f31a",
-      title: fr("Python 3.15 on LWN", "Python 3.15 sur LWN"),
-      what: fr("Tell me when LWN writes about Python 3.15.", "Préviens-moi quand LWN parle de Python 3.15."),
-      owner: ref("mathis"),
-      kinds: ["feed"],
-      once: false,
-      created_at: minutes(60 * 24 * 3),
-      until: null,
-      origin: { session: "s-slack", channel: "slack" },
-      triggered: 1,
-      last_triggered_at: minutes(458),
-    },
-    {
-      id: "w-p8c2",
-      title: fr("Summer camp sign-ups", "Inscriptions au centre aéré"),
-      what: fr(
-        "Tell me when the town hall opens the summer camp sign-ups.",
-        "Préviens-moi quand la mairie ouvre les inscriptions au centre aéré.",
-      ),
-      owner: ref("lea"),
-      kinds: ["page"],
-      once: true,
-      created_at: minutes(60 * 24 * 6),
-      until: ahead(60 * 60 * 24 * 30),
-      origin: { session: "s-signal", channel: "signal" },
-      triggered: 0,
-      last_triggered_at: null,
-    },
-    {
-      id: "w-h5e0",
-      title: fr("Washing machine done", "Machine à laver finie"),
-      what: fr(
-        "Tell whoever is home when the washing machine is done.",
-        "Dire à qui est là quand la machine est finie.",
-      ),
-      owner: null,
-      kinds: ["washing-machine"],
-      once: false,
-      created_at: minutes(60 * 24 * 20),
-      until: null,
-      origin: null,
-      triggered: 23,
-      last_triggered_at: minutes(427),
-    },
-  ];
-}
+type AlertFields = Pick<Alert, "id" | "title" | "instruction" | "owner" | "origin" | "created_at"> & Partial<Alert>;
 
-/** Reminders: one for tomorrow morning, three that come back. */
-export function schedules(): Schedule[] {
+/** An alert as the server sends it: what is not said is the default of an alert set in words. */
+const alert = (fields: AlertFields): Alert => ({
+  condition: null,
+  trigger: "events",
+  at: null,
+  times: [],
+  days: [],
+  kinds: [],
+  frequency: "once",
+  until: null,
+  urgent: false,
+  next_due: null,
+  rang: 0,
+  rings: [],
+  ...fields,
+});
+
+/** Alerts: on mail, a feed, a page and a webhook, a reminder for tomorrow, three that come back, and a price
+ * checked every evening until it is told. */
+export function alerts(): Alert[] {
   return [
-    {
-      id: "sc-bread",
+    alert({
+      id: "a-bread",
       title: fr("Buy bread", "Acheter du pain"),
       instruction: fr("Remind Mathis to buy bread.", "Rappeler à Mathis d'acheter du pain."),
       owner: ref("mathis"),
       origin: { session: "telegram:@mathis_l", channel: "telegram" },
-      recurring: false,
-      once_at: ahead(60 * 60 * 9),
-      times: [],
-      days: [],
+      created_at: minutes(60 * 2),
+      trigger: "at",
+      at: ahead(60 * 60 * 9),
       next_due: ahead(60 * 60 * 9),
-    },
-    {
-      id: "sc-tv",
+    }),
+    alert({
+      id: "a-tv",
       title: fr("Samsung TV price", "Prix de la télé Samsung"),
-      instruction: fr(
-        "Check the price of the Samsung 65S92H; tell Mathis only below €1,600.",
-        "Vérifier le prix du Samsung 65S92H ; prévenir Mathis seulement sous 1 600 €.",
-      ),
+      instruction: fr("Check the price of the Samsung 65S92H.", "Vérifier le prix du Samsung 65S92H."),
+      condition: fr("Below €1,600", "Sous 1 600 €"),
       owner: ref("mathis"),
       origin: { session: "telegram:@mathis_l", channel: "telegram" },
-      recurring: true,
-      once_at: null,
+      created_at: minutes(60 * 24 * 9),
+      trigger: "times",
       times: ["10:00"],
-      days: [],
+      frequency: "until_rung",
       next_due: ahead(60 * 60 * 12),
-    },
-    {
-      id: "sc-bins",
+      rang: 8,
+      rings: [
+        {
+          at: minutes(60 * 14),
+          cause: "due",
+          due_at: minutes(60 * 14),
+          item_title: null,
+          item_kind: null,
+          summary: "",
+        },
+      ],
+    }),
+    alert({
+      id: "a-bins",
       title: fr("Bins out", "Sortir les poubelles"),
       instruction: fr("Remind Jules to take the bins out.", "Rappeler à Jules de sortir les poubelles."),
       owner: ref("lea"),
       origin: null,
-      recurring: true,
-      once_at: null,
+      created_at: minutes(60 * 24 * 40),
+      trigger: "times",
       times: ["19:00"],
       days: ["tue"],
+      frequency: "every_time",
       next_due: ahead(60 * 60 * 24 * 4),
-    },
-    {
-      id: "sc-plants",
+      rang: 5,
+      rings: [
+        {
+          at: minutes(60 * 24 * 3),
+          cause: "due",
+          due_at: minutes(60 * 24 * 3),
+          item_title: null,
+          item_kind: null,
+          summary: "",
+        },
+      ],
+    }),
+    alert({
+      id: "a-plants",
       title: fr("Water the plants", "Arroser les plantes"),
       instruction: fr("Remind Léa to water the plants.", "Rappeler à Léa d'arroser les plantes."),
       owner: ref("lea"),
       origin: null,
-      recurring: true,
-      once_at: null,
+      created_at: minutes(60 * 24 * 30),
+      trigger: "times",
       times: ["09:00"],
       days: ["sat", "sun"],
+      frequency: "every_time",
       next_due: ahead(60 * 60 * 30),
-    },
+    }),
+    alert({
+      id: "a-9d41",
+      title: SCHOOL_TRIP_ALERT,
+      instruction: fr("Tell Léa as soon as the school replies.", "Prévenir Léa dès que l'école répond."),
+      condition: SCHOOL_TRIP,
+      owner: ref("lea"),
+      kinds: ["mail"],
+      frequency: "every_time",
+      created_at: minutes(60 * 28),
+      until: ahead(60 * 60 * 24 * 6),
+      origin: { session: "s-hier", channel: "telegram" },
+      rang: 1,
+      rings: [
+        {
+          at: minutes(230),
+          cause: "match",
+          due_at: null,
+          item_title: fr("Planetarium trip: reply needed", "Sortie au planétarium : réponse attendue"),
+          item_kind: "mail",
+          summary: fr("The school asks for the permission slip.", "L'école demande l'autorisation de sortie."),
+        },
+      ],
+    }),
+    alert({
+      id: "a-2b77",
+      title: fr("Jules's school", "École de Jules"),
+      instruction: fr("Tell the household.", "Prévenir le foyer."),
+      condition: fr("Messages from Jules's school.", "Les messages de l'école de Jules."),
+      owner: null,
+      kinds: ["mail"],
+      frequency: "every_time",
+      created_at: minutes(60 * 24 * 14),
+      origin: null,
+      rang: 7,
+      rings: [
+        {
+          at: minutes(96),
+          cause: "match",
+          due_at: null,
+          item_title: fr("Canteen menu for next week", "Menu de la cantine de la semaine prochaine"),
+          item_kind: "mail",
+          summary: fr("A message from Jules's school.", "Un message de l'école de Jules."),
+        },
+      ],
+    }),
+    alert({
+      id: "a-f31a",
+      title: fr("Python 3.15 on LWN", "Python 3.15 sur LWN"),
+      instruction: fr("Tell Mathis.", "Prévenir Mathis."),
+      condition: fr("LWN writes about Python 3.15.", "LWN parle de Python 3.15."),
+      owner: ref("mathis"),
+      kinds: ["feed"],
+      frequency: "every_time",
+      created_at: minutes(60 * 24 * 3),
+      origin: { session: "s-slack", channel: "slack" },
+      rang: 1,
+      rings: [
+        {
+          at: minutes(458),
+          cause: "match",
+          due_at: null,
+          item_title: "Python 3.15 beta 1",
+          item_kind: "feed",
+          summary: fr("The first beta of Python 3.15 is out.", "La première bêta de Python 3.15 est sortie."),
+        },
+      ],
+    }),
+    alert({
+      id: "a-p8c2",
+      title: fr("Summer camp sign-ups", "Inscriptions au centre aéré"),
+      instruction: fr("Tell Léa.", "Prévenir Léa."),
+      condition: fr(
+        "The town hall opens the summer camp sign-ups.",
+        "La mairie ouvre les inscriptions au centre aéré.",
+      ),
+      owner: ref("lea"),
+      kinds: ["page"],
+      created_at: minutes(60 * 24 * 6),
+      until: ahead(60 * 60 * 24 * 30),
+      origin: { session: "s-signal", channel: "signal" },
+    }),
+    alert({
+      id: "a-h5e0",
+      title: fr("Washing machine done", "Machine à laver finie"),
+      instruction: fr("Tell whoever is home.", "Le dire à qui est là."),
+      owner: null,
+      kinds: ["washing-machine"],
+      frequency: "every_time",
+      created_at: minutes(60 * 24 * 20),
+      origin: null,
+      rang: 23,
+      rings: [
+        {
+          at: minutes(427),
+          cause: "event",
+          due_at: null,
+          item_title: "cycle · done",
+          item_kind: "washing-machine",
+          summary: "",
+        },
+      ],
+    }),
   ];
 }
 

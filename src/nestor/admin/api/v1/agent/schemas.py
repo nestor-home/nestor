@@ -33,7 +33,7 @@ class QuietHoursOut(BaseModel):
 class ScheduledDeliveryOut(BaseModel):
     """A written follow-up of something said aloud: sent at `due_at` unless someone answers first."""
 
-    delivery: str  # the thread it belongs to, as the journal's `links.delivery` (`watch:w1`, `task:3f2a`)
+    delivery: str  # the thread it belongs to, as the journal's `links.delivery` (`alert:a1`, `task:3f2a`)
     person: PersonRef | None
     spoken_on: str  # where it was said (`voice:salon`)
     written_on: str  # where it will be written (`telegram:7`)

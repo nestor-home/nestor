@@ -29,10 +29,8 @@ class Scope(StrEnum):
     MEMORY_MANAGE_OWN = "memory.manage.own"  # memories about the person (household-wide ones read only)
     TASKS_MANAGE = "tasks.manage"
     TASKS_MANAGE_OWN = "tasks.manage.own"  # tasks the person asked for
-    WATCHES_MANAGE_ALL = "watches.manage.all"
-    WATCHES_MANAGE_OWN = "watches.manage.own"  # watches kept for the person
-    SCHEDULES_MANAGE_ALL = "schedules.manage.all"  # every wake-up and reminder
-    SCHEDULES_MANAGE_OWN = "schedules.manage.own"  # the wake-ups set for the person
+    ALERTS_MANAGE_ALL = "alerts.manage.all"  # every alert
+    ALERTS_MANAGE_OWN = "alerts.manage.own"  # the alerts set for the person
     MESSAGES_READ_ALL = "messages.read.all"  # every message passed on, question and confirmation waiting
     MESSAGES_READ_OWN = "messages.read.own"  # those the person sent or receives, and their own confirmations
     MEDIA_VIEW = "media.view"  # watch the satellites that film and list the person (`MediaAccess`)

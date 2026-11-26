@@ -1,7 +1,7 @@
 # Le connecteur IMAP : son nom, sa description, ses champs et le guide affiché avant de le connecter.
 
 connector-imap-title = Boîte mail (IMAP)
-connector-imap-description = Recherche et lecture d'une boîte mail en IMAP, en lecture seule. Les nouveaux mails alimentent les veilles.
+connector-imap-description = Recherche et lecture d'une boîte mail en IMAP, en lecture seule. Les nouveaux mails peuvent faire sonner les alertes.
 connector-imap-field-host = Serveur IMAP (ex. imap.free.fr)
 connector-imap-field-port = Port
 connector-imap-field-username = Identifiant (souvent l'adresse complète)

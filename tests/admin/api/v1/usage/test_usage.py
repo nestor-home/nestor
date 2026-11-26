@@ -40,7 +40,7 @@ async def test_the_owner_reads_every_call_and_a_member_only_what_their_requests_
             call(2_000_000, "mathis"),
             call(1_000_000, "mathis", days_ago=2),
             call(500_000, "mathilde"),
-            call(None, None, purpose=CallPurpose.WATCH),  # Nestor's own work, of unknown cost
+            call(None, None, purpose=CallPurpose.ALERT),  # Nestor's own work, of unknown cost
             call(9_000_000, "mathis", days_ago=40),  # before the default 30 days
         ):
             await admin.nestor.journal.publish(spent)

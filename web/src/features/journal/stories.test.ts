@@ -102,10 +102,10 @@ describe("stories", () => {
     expect(thread.turns.map((t) => [t.user?.id, t.steps.length])).toEqual([["9", 1]]);
   });
 
-  it("chains a watch from its trigger to the follow-up, wherever the steps were said", () => {
-    const w = { watch: "W" };
+  it("chains an alert from its ring to the follow-up, wherever the steps were said", () => {
+    const w = { alert: "W" };
     const items = [
-      ev({ id: "trig", type: "watch.triggered", kind: "watch", links: w }),
+      ev({ id: "trig", type: "alert.rang", kind: "alert", links: w }),
       ev({ id: "cons", type: "initiative.considered", kind: "delivery", links: { ...w, delivery: "d" } }),
       ev({
         id: "said",
@@ -123,7 +123,7 @@ describe("stories", () => {
       }),
     ];
     const [chain] = buildStories(items) as Chain[];
-    expect(chain?.subject).toEqual({ type: "watch", id: "W" });
+    expect(chain?.subject).toEqual({ type: "alert", id: "W" });
     expect(chain?.items.map((i) => i.id)).toEqual(["trig", "cons", "said", "relance"]);
   });
 

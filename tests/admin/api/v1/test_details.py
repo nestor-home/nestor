@@ -10,7 +10,7 @@ from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.connectors import Status
-from nestor.modules.initiative import Watch
+from nestor.modules.initiative import Alert
 from nestor.modules.satellites import Device, Manifest
 from nestor.testing.satellites import SOFTWARE, pair_by_code
 
@@ -49,7 +49,7 @@ async def test_people_say_since_when_they_are_where_they_are(tmp_path: Path) -> 
         assert (await api.get("/api/v1/household/people/nobody")).json()["error"]["code"] == "person_unknown"
 
 
-async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_path: Path) -> None:
+async def test_a_task_an_alert_a_satellite_and_an_account_open_one_by_one(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
         member = await admin.account("mathilde", Role.MEMBER, "mathilde")
@@ -57,7 +57,9 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
         mine = await nestor.tasks.start_task("Dépôt", title="Dépôt", origin=TELEGRAM, owner=MATHIS)
         await asyncio.sleep(0.01)
         await nestor.tasks.stop(mine.id)
-        watch = await nestor.watch_book.create(Watch(title="Le colis", what="le colis", owner=MATHIS))
+        alert = await nestor.alert_book.create(
+            Alert(title="Le colis", instruction="x", condition="le colis", kinds=("mail",), owner=MATHIS)
+        )
         await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE))
         owner, guest = await admin.api(), await admin.api("mathilde")
 
@@ -67,8 +69,8 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
         assert (await guest.get(f"/api/v1/tasks/{theirs.id}")).status_code == 200
         assert (await guest.get(f"/api/v1/tasks/{mine.id}")).json()["error"]["code"] == "task_unknown"
 
-        assert (await owner.get(f"/api/v1/watches/{watch.id}")).json()["what"] == "le colis"
-        assert (await guest.get(f"/api/v1/watches/{watch.id}")).status_code == 404
+        assert (await owner.get(f"/api/v1/alerts/{alert.id}")).json()["condition"] == "le colis"
+        assert (await guest.get(f"/api/v1/alerts/{alert.id}")).status_code == 404
 
         assert (await owner.get("/api/v1/satellites/mic")).json()["room"] == "bureau"
         assert (await owner.get("/api/v1/satellites/nope")).status_code == 404

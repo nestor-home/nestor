@@ -41,7 +41,7 @@ src/nestor/
 │   │                     (the standard: https://nestorhome.dev/docs/satellites/protocol/)
 │   ├── initiative/       what the agent says unprompted
 │   │   ├── delivery/     the courier and its presence-aware policy
-│   │   └── watches/      durable watches, inbound sources, triage
+│   │   └── alerts/       alerts rung by a time or by items from inbound sources, triage
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, lifecycle
@@ -66,7 +66,7 @@ contracts adapters implement), `events.py` (what it writes to the log), `service
 or a file named after its class when there are several), `assistant.py` (the tools and instruction
 section the central agent gets from it), and an `__init__.py` that exposes the public names. Split a
 module into sub-packages as soon as it holds more than one concept (`cognition/model`,
-`cognition/delegation`, `initiative/delivery`, `initiative/watches`); tests mirror the same tree.
+`cognition/delegation`, `initiative/delivery`, `initiative/alerts`); tests mirror the same tree.
 
 New modules (memory, home, initiative, channels, identity, perception) and the `runtime/` and
 `adapters/` packages are created when their first ticket lands, not before.
@@ -249,7 +249,7 @@ The admin is built around what the household does, not around the server's modul
 - **Add where it is listed.** Wherever a page lists things one can add (a person's accounts, the household,
   the devices), the way to add one is there: an `AddCard` closing the grid, or a button in the section's `aside`
   that opens the form in place or leads to it with what is already known (`?owner=` for a person's account).
-  What only the agent creates (reminders, watches, tasks) offers to ask it.
+  What only the agent creates (alerts, tasks) offers to ask it.
 - **Visual, not flat.** A card leads with a mark (tile, avatar, logo), then its title in medium weight, then one
   muted line; a state is a colour and a word, never a colour alone. Titles in the display face (`display-2` for
   a page, `display-3` for a section, `font-serif` 1.35rem for a card that stands for a thing), everything else
@@ -288,11 +288,11 @@ tokens and cost) and a self-contained `report.html`; replies are cached in `.ben
 model, request, repetition and seed. Neither folder is committed.
 
 A suite is a plugin: a `nestor.bench.Suite` in the `nestor.benches` entry-point group, with its JSONL
-dataset next to its code (`src/nestor/bench/suites/watch_triage/` is the example). It reads the records
+dataset next to its code (`src/nestor/bench/suites/alert_triage/` is the example). It reads the records
 into cases, runs one case with the trial's models (every call measured and replayable) and sums the
 results into metrics and findings, whose labels are Fluent messages. A suite calls the models of the roles
 it measures; with a single model in the variant, every role takes it.
-`models: {fake: {type: language, provider: watch-triage-fake}}` runs watch-triage without a network.
+`models: {fake: {type: language, provider: alert-triage-fake}}` runs alert-triage without a network.
 
 ## Docker
 

@@ -12,9 +12,8 @@ from datetime import datetime, time
 from enum import StrEnum
 from typing import Any
 
-from nestor.core import Capability, ContractError, PersonId
+from nestor.core import Capability, ContractError, Day, PersonId
 from nestor.modules.home import Presence
-from nestor.modules.initiative.schedules.types import Day
 
 PROTOCOL = "nestor.satellite/1"  # the version this core's messages follow
 # Every version this core accepts from devices: a later core may serve a device one version behind

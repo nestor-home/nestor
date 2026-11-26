@@ -49,7 +49,7 @@ class SlotOut(BaseModel):
 
 
 class ConfigSchemaOut(BaseModel):
-    sections: dict[str, dict[str, Any]]  # persona, household (one person), agent, watches, initiative, admin, data_dir
+    sections: dict[str, dict[str, Any]]  # persona, household (one person), agent, alerts, initiative, admin, data_dir
     section_titles: dict[str, str]
     slots: dict[str, SlotOut]  # models, channels, executors, tools, inbound, home, connectors
     suggestions: list[Suggest]  # what a field's `x-nestor.suggest_keys` and `suggest_values` may name

@@ -30,8 +30,7 @@ class Source(StrEnum):
 
     TASK = "task"  # a delegated task ended
     TOOL = "tool"  # a call that went on in the background answered
-    WATCH = "watch"  # a watch matched
-    SCHEDULE = "schedule"  # a wake-up is due
+    ALERT = "alert"  # an alert rang
     MESSAGE = "message"  # a message to pass on
     CONFIRMATION = "confirmation"  # a sensitive action to confirm, or its result
 
@@ -65,14 +64,14 @@ SILENT = "[SILENT]"  # opens the answer to a notification with nothing to tell; 
 
 @dataclass(frozen=True, slots=True)
 class Notification:
-    """What Nestor brings into a conversation by itself, as a tool's result comes back to a model: a task ended, a
-    watch matched, a message to pass on. It opens a turn as a person's message does, the answer follows, and both
+    """What Nestor brings into a conversation by itself, as a tool's result comes back to a model: a task ended, an
+    alert rang, a message to pass on. It opens a turn as a person's message does, the answer follows, and both
     stay in the conversation's history. `text` gives the facts and what to do; how to answer is the persona's. It may
     go unanswered when there is nothing to tell (a check that found nothing), unless `must_tell`: a message someone
     asked to pass on, a confirmation to ask for, where saying nothing is a failure.
 
-    `thread` is what it continues: a recurring wake-up and the tasks started from its turns share one, so that what was
-    told in it is read back before the next one is answered, and only what is new is told."""
+    `thread` is what it continues: an alert that rings again and the tasks started from its turns share one, so that
+    what was told in it is read back before the next one is answered, and only what is new is told."""
 
     text: str
     about: About

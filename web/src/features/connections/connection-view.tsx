@@ -140,8 +140,8 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
           <Figure label={t("conn-figure-confirm")} value={c.confirm_writes ? t("conn-yes") : t("conn-no")}>
             {t("conn-confirm-writes-hint")}
           </Figure>
-          <Figure label={t("conn-figure-watches")} value={c.watches}>
-            {t("conn-figure-watches-note", { count: c.watches })}
+          <Figure label={t("conn-figure-alerts")} value={c.alerts}>
+            {t("conn-figure-alerts-note", { count: c.alerts })}
           </Figure>
         </ul>
       </Section>

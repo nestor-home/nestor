@@ -1,6 +1,6 @@
 """Connectors: third-party services plugged in from the admin: Gmail, IMAP mailboxes, remote MCP servers.
 
-A connector declares how it is authorised and what it brings (tools, inbound items for watches); a
+A connector declares how it is authorised and what it brings (tools, inbound items for alerts); a
 connection is one account plugged into it, owned by a person. Tokens live in an encrypted vault and
 never reach the model or the journal.
 """

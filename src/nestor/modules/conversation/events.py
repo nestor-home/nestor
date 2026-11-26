@@ -38,7 +38,7 @@ class SpeakerDeclared(Event, event_type="speaker.declared"):
 
 
 class NotificationTurn(Event, event_type="conversation.turn.notification"):
-    """A notification Nestor brought into the conversation (a task's result, a watch, a message to pass on): it opens
+    """A notification Nestor brought into the conversation (a task's result, an alert, a message to pass on): it opens
     the turn its answer belongs to. Said by nobody in the conversation; `person` is whom it is for."""
 
     address: Address

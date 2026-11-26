@@ -1,4 +1,4 @@
-"""New Outlook inbox messages as watch items, read by when they were received.
+"""New Outlook inbox messages as items for alerts, read by when they were received.
 
 Cursor (kept in the connection's `Access` state): the reception time of the last message yielded, plus the ids
 yielded at or after it (bounded), so that messages received in the same second are neither repeated nor skipped, and

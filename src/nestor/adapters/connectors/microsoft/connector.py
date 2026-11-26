@@ -1,4 +1,4 @@
-"""The Microsoft 365 connector: Outlook mail (read only, and new mail for watches) and calendar, OneDrive (read only)
+"""The Microsoft 365 connector: Outlook mail (read only, and new mail for alerts) and calendar, OneDrive (read only)
 and To Do of each connected account, work or personal, through Microsoft Graph."""
 
 from collections.abc import Sequence

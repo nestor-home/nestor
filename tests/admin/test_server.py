@@ -11,7 +11,7 @@ import pytest
 
 from nestor.admin import AdminServer, AdminSettings
 from nestor.core import ContractError, ProviderError
-from nestor.modules.initiative import Incoming, Watch, WatchTriggered
+from nestor.modules.initiative import Alert, AlertRang, Incoming
 from nestor.runtime import ConfigError, Nestor
 from nestor.runtime.app import run_until_stopped
 from nestor.runtime.config import parse_config
@@ -81,15 +81,17 @@ def test_a_service_configured_twice_is_refused(tmp_path: Path) -> None:
         Nestor(parse_config(text, {}), Harness(tmp_path).registry(), environ={"NESTOR_SECRET_KEY": "k" * 40})
 
 
-async def test_a_mail_arriving_in_a_connected_mailbox_triggers_a_watch(tmp_path: Path) -> None:
-    verdict = '{"matches": [{"watch": "w1", "summary": "Colis livré."}]}'
+async def test_a_mail_arriving_in_a_connected_mailbox_rings_an_alert(tmp_path: Path) -> None:
+    verdict = '{"matches": [{"alert": "a1", "summary": "Colis livré."}]}'
     async with Harness(tmp_path, replies=(verdict, "Ton colis est arrivé.")) as admin:
         assert admin.nestor.connections
-        assert admin.nestor.watch_book.kinds.keys() == {"mail"}, "watches may watch what connectors bring"
+        assert admin.nestor.alert_book.kinds.keys() == {"mail"}, "alerts may wait for what connectors bring"
         await admin.nestor.connections.connect("imap", None, {"server": "s", "password": "p"})
-        await admin.nestor.watch_book.create(Watch(id="w1", title="Le colis", what="le colis"))
-        triggered = admin.nestor.journal.subscribe(WatchTriggered)
+        await admin.nestor.alert_book.create(
+            Alert(id="a1", title="Le colis", instruction="Préviens", condition="le colis", kinds=("mail",))
+        )
+        rang = admin.nestor.journal.subscribe(AlertRang)
         await asyncio.sleep(0.05)
         admin.imap.inbox.deliver(Incoming(source="imap", kind="mail", title="Votre colis Colissimo"))
-        event = await triggered.next(timeout_s=2)
-        assert isinstance(event, WatchTriggered) and event.summary == "Colis livré."
+        event = await rang.next(timeout_s=2)
+        assert isinstance(event, AlertRang) and event.summary == "Colis livré."

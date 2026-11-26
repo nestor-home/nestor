@@ -60,7 +60,7 @@ class ReasonOut(BaseModel):
 
 
 class OriginOut(BaseModel):
-    """Where something was asked for: a task, a watch."""
+    """Where something was asked for: a task, an alert."""
 
     session: str  # the conversation it was asked in
     channel: str

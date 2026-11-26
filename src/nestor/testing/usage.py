@@ -97,7 +97,7 @@ class UsageStoreContract:
 
     async def test_what_conversations_cost_leaves_the_background_work_out(self) -> None:
         async with self.opened() as store:
-            await store.add([line(1, NOV), line(2, NOV, cost=500_000, conversation=None, purpose=CallPurpose.WATCH)])
+            await store.add([line(1, NOV), line(2, NOV, cost=500_000, conversation=None, purpose=CallPurpose.ALERT)])
             totals = await store.totals(UsageFilter())
         assert (totals.cost, totals.conversed) == (Money(1_500_000), Money(1_000_000))
 
@@ -105,7 +105,7 @@ class UsageStoreContract:
         async with self.opened() as store:
             await store.add([
                 line(1, NOV),
-                line(2, NOV + timedelta(hours=1), person=None, purpose=CallPurpose.WATCH),  # Nestor's own work
+                line(2, NOV + timedelta(hours=1), person=None, purpose=CallPurpose.ALERT),  # Nestor's own work
                 line(3, NOV + timedelta(hours=2), person=PersonId("lea")),
                 line(4, NOV + timedelta(days=1)),
             ])  # fmt: skip

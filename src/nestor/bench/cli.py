@@ -1,9 +1,9 @@
 """`nestor bench`: list the suites, run one against variants, compare runs, report on one.
 
     nestor bench list
-    nestor bench run watch-triage --variant a.yaml --variant b.yaml [--repeat 3] [--cases mine.jsonl] [--replay]
-    nestor bench compare bench-results/watch-triage/<run> bench-results/watch-triage/<run>
-    nestor bench report bench-results/watch-triage/<run>
+    nestor bench run alert-triage --variant a.yaml --variant b.yaml [--repeat 3] [--cases mine.jsonl] [--replay]
+    nestor bench compare bench-results/alert-triage/<run> bench-results/alert-triage/<run>
+    nestor bench report bench-results/alert-triage/<run>
 
 Results go to `./bench-results/<suite>/<started>-<variant>/` and recorded replies to `./.bench-cache/`.
 """

@@ -1,7 +1,7 @@
 """Double and contract suite for inbound sources."""
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Mapping
 
 from nestor.modules.initiative import InboundEventSource, Incoming
 
@@ -20,13 +20,23 @@ class Inbox:
 
 
 class QueuedSource(InboundEventSource):
-    """Yields what arrives in its inbox, resuming after the last acknowledged item."""
+    """Yields what arrives in its inbox, resuming after the last acknowledged item. `structured` plays a webhook,
+    whose items say exactly what happened."""
 
     name = "queued-source"
 
-    def __init__(self, inbox: Inbox | None = None, *, kinds: tuple[str, ...] = ("mail",)) -> None:
+    def __init__(
+        self,
+        inbox: Inbox | None = None,
+        *,
+        kinds: tuple[str, ...] = ("mail",),
+        structured: bool = False,
+        follows: Mapping[str, tuple[str, ...]] | None = None,
+    ) -> None:
         self.inbox = inbox or Inbox()
-        self.kinds = kinds
+        self.kinds, self.structured = kinds, structured
+        if follows is not None:
+            self.follows = follows
 
     async def items(self) -> AsyncGenerator[Incoming]:
         while True:

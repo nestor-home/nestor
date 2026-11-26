@@ -2,8 +2,8 @@
 that ended (its report, its question, its failure), a tool call that went on in the background. Each is delivered once
 to whoever asked, even across restarts; a question a task waits on is recalled a few times, then waits in the admin.
 
-What a person asked for is always told, whatever it found: they wait for it. What Nestor started by itself (a wake-up
-that delegates, a watch) may end in silence when there is nothing new; a failure and a question are always told."""
+What a person asked for is always told, whatever it found: they wait for it. What Nestor started by itself (an alert
+that delegates) may end in silence when there is nothing new; a failure and a question are always told."""
 
 import asyncio
 import contextlib

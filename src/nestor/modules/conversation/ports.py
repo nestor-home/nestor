@@ -15,7 +15,7 @@ class Layer(StrEnum):
     """Where a section goes in the instructions, which run from the most stable to the most variable so that a
     provider's prompt cache keeps the most of them."""
 
-    HOUSEHOLD = "household"  # changes now and then, the same for everyone: what is remembered, the watches
+    HOUSEHOLD = "household"  # changes now and then, the same for everyone: what is remembered, the alerts
     TURN = "turn"  # changes from a turn to the next, or depends on who speaks: the tasks running
 
 

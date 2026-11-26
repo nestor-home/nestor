@@ -76,8 +76,7 @@ journal-subject = { $subject ->
         [cancelled] annulée
        *[other] { $status }
     }
-    [watch] veille { $id }
-    [schedule] rappel { $id }
+    [alert] alerte { $id }
     [tool] résultat d'un outil{ $status ->
         [failed] {" "}(en échec)
        *[other] {""}
@@ -119,38 +118,37 @@ journal-detail-tried = { $count ->
    *[other] Essayé : { $tried }
 }
 
-journal-schedule-created = { $recurring ->
-    [yes] Rappel régulier programmé : { $title }
-   *[no] Rappel programmé : { $title }
+journal-alert-created = { $trigger ->
+    [at] Alerte programmée : { $title }
+    [times] Alerte régulière programmée : { $title }
+   *[events] Alerte sur { $kinds } : { $title }
 }
-journal-schedule-fired = C'est l'heure du rappel { $id }
-journal-schedule-cancelled = Rappel { $id } annulé
-journal-watch-created = Veille créée : { $title }
-journal-watch-sorted = { $unsorted ->
+journal-alert-sorted = { $unsorted ->
     [yes] « { $item } » non trié : le modèle n'a pas répondu
    *[no] { $matched ->
         [0] « { $item } » vérifié pour { $asked } { $asked ->
-            [one] veille
-           *[other] veilles
+            [one] alerte
+           *[other] alertes
         } : aucune ne correspond
        *[other] « { $item } » vérifié pour { $asked } { $asked ->
-            [one] veille
-           *[other] veilles
+            [one] alerte
+           *[other] alertes
         } : { $matched } { $matched ->
             [one] correspond
            *[other] correspondent
         }
     }
 }
-journal-watch-triggered = { $urgent ->
-    [yes] Veille { $watch } déclenchée par « { $item } » (urgent)
-   *[no] Veille { $watch } déclenchée par « { $item } »
+journal-alert-rang = L'alerte { $alert } a sonné : { $cause ->
+    [due] c'était l'heure
+    [event] l'événement { $kind } est arrivé (« { $item } »)
+   *[match] « { $item } » correspond
 }
-journal-watch-ended = Veille { $watch } { $reason ->
-    [matched] déclenchée
-    [expired] expirée
+journal-alert-ended = Alerte { $alert } { $reason ->
+    [rang] terminée : elle a sonné
     [cancelled] annulée
-   *[other] { $reason }
+    [expired] expirée
+   *[done] terminée : plus rien ne peut la faire sonner
 }
 
 journal-memory-recorded = { $drawn ->

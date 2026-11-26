@@ -1,4 +1,4 @@
-"""Asking a model for a whole answer, text or JSON: the side calls that sort, summarize or title (watches, memory,
+"""Asking a model for a whole answer, text or JSON: the side calls that sort, summarize or title (alerts, memory,
 conversations), not the agent."""
 
 import json

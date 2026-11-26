@@ -1,6 +1,6 @@
 /**
  * A day of Richie at the Martin's, as the journal records it: linked events that the admin turns
- * into threads (a conversation and its tool calls) and chains (a watch triggered → announced →
+ * into threads (a conversation and its tool calls) and chains (an alert rang → announced →
  * followed up; a task started → progressing → delivered). Times are minutes before "now". Written
  * in English, the French of each text beside it (`fr`).
  */
@@ -35,7 +35,7 @@ import {
   OFFICE,
   ref,
   SCHOOL_TRIP,
-  SCHOOL_TRIP_WATCH,
+  SCHOOL_TRIP_ALERT,
   SHOPPING,
   SHOPPING_STEER,
   SHOPPING_STEP,
@@ -176,7 +176,7 @@ export function day(now = Date.now()): JournalEvent[] {
     ev({ ...base, ago, links });
   }
 
-  // -- yesterday: a watch is born, a task fails ---------------------------------------------------
+  // -- yesterday: an alert is born, a task fails ---------------------------------------------------
   const born = ev({
     ago: 60 * 28,
     type: "conversation.turn.user",
@@ -191,12 +191,12 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60 * 28 - 0.2,
-    type: "watch.created",
-    title: `Watch created: ${SCHOOL_TRIP_WATCH}`,
+    type: "alert.created",
+    title: `Alert set on mail: ${SCHOOL_TRIP_ALERT}`,
     detail: SCHOOL_TRIP,
     people: [ref("lea")],
     channels: ["telegram"],
-    links: { session: "s-hier", turn: "t-hier", watch: "w-9d41" },
+    links: { session: "s-hier", turn: "t-hier", alert: "a-9d41" },
     cause: born,
   });
   ev({
@@ -485,13 +485,13 @@ export function day(now = Date.now()): JournalEvent[] {
     cause: offPeak,
   });
 
-  // the school: a watch triggered, announced by voice, then followed up in writing
-  const w = { watch: "w-9d41" };
+  // the school: an alert rang, announced by voice, then followed up in writing
+  const w = { alert: "a-9d41" };
   const confirmed = fr("Friday's trip confirmed", "Sortie de vendredi confirmée");
   const trig = ev({
     ago: 230,
-    type: "watch.triggered",
-    title: `Watch 9d41 triggered by “${confirmed}”`,
+    type: "alert.rang",
+    title: `Alert 9d41 rang: “${confirmed}” matched`,
     detail: fr(
       "The school confirms Friday's trip; pack a picnic.",
       "L'école confirme la sortie de vendredi ; prévoir un pique-nique.",
@@ -504,7 +504,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 229.6,
     type: "initiative.considered",
-    title: "Decided to speak to Léa: watch 9d41",
+    title: "Decided to speak to Léa: alert 9d41",
     reason: `Léa is in the ${LIVING_ROOM}`,
     cause: trig,
     detail: fr("Planned: aloud on voice (living room)", "Prévu : à voix haute sur voice (salon)"),
@@ -517,7 +517,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 229.4,
     type: "initiative.delivered",
-    title: "Message passed on: watch 9d41",
+    title: "Message passed on: alert 9d41",
     detail: fr(
       "“Léa, the school has replied: Friday's trip is on.”",
       "« Léa, l'école a répondu : la sortie de vendredi est maintenue. »",
@@ -536,7 +536,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 199.4,
     type: "initiative.delivered",
-    title: "Message passed on: watch 9d41 (follow-up)",
+    title: "Message passed on: alert 9d41 (follow-up)",
     detail: fr(
       "“The school confirms Friday's trip. Remember the picnic.”",
       "« L'école confirme la sortie de vendredi. Pense au pique-nique. »",
@@ -553,7 +553,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: fr("Thanks! Put it in the family calendar.", "Merci ! Mets-la dans l'agenda de la famille."),
     people: [ref("lea")],
     channels: ["telegram"],
-    links: { ...s3, turn: "u-3", watch: "w-9d41" },
+    links: { ...s3, turn: "u-3", alert: "a-9d41" },
   });
   ev({
     ago: 189.9,
@@ -675,12 +675,12 @@ export function day(now = Date.now()): JournalEvent[] {
     links: { satellite: "esp32-kitchen" },
   });
 
-  // the school watch: voice fails (satellite offline), writing takes over
-  const w2 = { watch: "w-2b77" };
+  // the school alert: voice fails (satellite offline), writing takes over
+  const w2 = { alert: "a-2b77" };
   const trig2 = ev({
     ago: 96,
-    type: "watch.triggered",
-    title: `Watch 2b77 triggered by “${fr("Museum trip on Friday", "Sortie au musée vendredi")}”`,
+    type: "alert.rang",
+    title: `Alert 2b77 rang: “${fr("Museum trip on Friday", "Sortie au musée vendredi")}” matched`,
     detail: fr(
       "Jean-Moulin school asks for a signed permission slip before Thursday.",
       "L'école Jean-Moulin demande une autorisation signée avant jeudi.",
@@ -691,7 +691,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 95.6,
     type: "initiative.considered",
-    title: "Decided to speak to Mathis: watch 2b77",
+    title: "Decided to speak to Mathis: alert 2b77",
     reason: `Mathis is in the ${OFFICE}`,
     cause: trig2,
     detail: fr(
@@ -707,7 +707,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 95.5,
     type: "initiative.undeliverable",
-    title: "Message not passed on: watch 2b77",
+    title: "Message not passed on: alert 2b77",
     detail: fr(
       "Tried: voice (office). Satellite reachy-office no longer answers.",
       "Essayé : voice (bureau). Le satellite reachy-office ne répond plus.",
@@ -721,7 +721,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 95.4,
     type: "initiative.delivered",
-    title: "Message passed on: watch 2b77",
+    title: "Message passed on: alert 2b77",
     detail: fr(
       "“The school wants the permission slip for Friday's trip by Thursday.”",
       "« L'école demande l'autorisation pour la sortie de vendredi, avant jeudi. »",
@@ -735,28 +735,28 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 85,
     type: "initiative.considered",
-    title: "Decided to speak to Mathis: schedule sc-tv",
+    title: "Decided to speak to Mathis: alert a-tv",
     reason: "Mathis is away",
     detail: fr("Planned: in writing on telegram", "Prévu : par écrit sur telegram"),
     people: [ref("mathis")],
     channels: ["telegram"],
     tone: "decision",
-    links: { delivery: "schedule:sc-tv" },
+    links: { delivery: "alert:a-tv" },
   });
   ev({
     ago: 84.8,
     type: "initiative.withheld",
-    title: "Nothing to tell: schedule sc-tv",
+    title: "Nothing to tell: alert a-tv",
     people: [ref("mathis")],
     channels: ["telegram"],
-    links: { delivery: "schedule:sc-tv" },
+    links: { delivery: "alert:a-tv" },
   });
 
   // a reminder Odile never received
   ev({
     ago: 80,
     type: "initiative.considered",
-    title: "Decided to speak to Odile: schedule sc-lunch",
+    title: "Decided to speak to Odile: alert a-lunch",
     reason: "no presence information: back to the conversation it came from",
     detail: fr("Planned: in writing on telegram", "Prévu : par écrit sur telegram"),
     people: [ref("odile")],
@@ -767,7 +767,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 79.9,
     type: "initiative.undeliverable",
-    title: "Message not passed on: schedule sc-lunch",
+    title: "Message not passed on: alert a-lunch",
     detail: fr("Telegram: the recipient has blocked the bot.", "Telegram : le bot a été bloqué par la destinataire."),
     people: [ref("odile")],
     channels: ["telegram"],
@@ -1205,36 +1205,36 @@ export function day(now = Date.now()): JournalEvent[] {
     links: { ...whatsapp, turn: "u-w1" },
   });
 
-  // a feed and a page, sorted against the watches; a feed entry matches
+  // a feed and a page, sorted against the alerts; a feed entry matches
   ev({
     ago: 465,
-    type: "watch.sorted",
-    title: `“${fr("Town hall: summer timetable", "Mairie : horaires d'été")}” checked against 1 watch: none match`,
+    type: "alert.sorted",
+    title: `“${fr("Town hall: summer timetable", "Mairie : horaires d'été")}” checked against 1 alert: none match`,
     brand: "web-page",
   });
   const beta = fr("Python 3.15 beta 1 released", "Sortie de Python 3.15 bêta 1");
   ev({
     ago: 458.2,
-    type: "watch.sorted",
-    title: `“${beta}” checked against 1 watch: 1 matched`,
+    type: "alert.sorted",
+    title: `“${beta}” checked against 1 alert: 1 matched`,
     brand: "rss",
   });
   const lwn = ev({
     ago: 458,
-    type: "watch.triggered",
-    title: `Watch f31a triggered by “${beta}”`,
+    type: "alert.rang",
+    title: `Alert f31a rang: “${beta}” matched`,
     detail: fr("LWN covers the first beta of Python 3.15.", "LWN présente la première bêta de Python 3.15."),
     brand: "rss",
-    links: { watch: "w-f31a" },
+    links: { alert: "a-f31a" },
   });
   ev({
     ago: 457.8,
     type: "initiative.delivered",
-    title: "Message passed on: watch f31a",
+    title: "Message passed on: alert f31a",
     detail: fr("“LWN has a piece on Python 3.15 beta 1.”", "« LWN a un article sur Python 3.15 bêta 1. »"),
     people: [ref("mathis")],
     channels: ["slack"],
-    links: { watch: "w-f31a", delivery: "d-lwn" },
+    links: { alert: "a-f31a", delivery: "d-lwn" },
     cause: lwn,
   });
 
@@ -1332,30 +1332,30 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 433,
     type: "initiative.delivered",
-    title: "Message passed on: schedule sc-bins",
+    title: "Message passed on: alert a-bins",
     detail: fr("“Bins out tonight.”", "« Les poubelles ce soir. »"),
     people: [ref("jules")],
     channels: ["ntfy"],
-    links: { delivery: "schedule:sc-bins" },
+    links: { delivery: "alert:a-bins" },
   });
 
   // the washing machine's webhook, and the message posted to Home Assistant's automation
   const cycle = fr("washing-machine · cycle finished", "washing-machine · cycle terminé");
   const machine = ev({
     ago: 427,
-    type: "watch.triggered",
-    title: `Watch h5e0 triggered by “${cycle}”`,
+    type: "alert.rang",
+    title: `Alert h5e0 rang: the event washing-machine arrived (“${cycle}”)`,
     detail: fr("The 40 °C cycle is done.", "Le cycle à 40 °C est fini."),
     brand: "webhook",
-    links: { watch: "w-h5e0" },
+    links: { alert: "a-h5e0" },
   });
   ev({
     ago: 426.9,
     type: "initiative.delivered",
-    title: "Message passed on: watch h5e0",
+    title: "Message passed on: alert h5e0",
     detail: fr("“The washing machine is done.”", "« La machine est finie. »"),
     channels: ["webhook"],
-    links: { watch: "w-h5e0", delivery: "d-machine" },
+    links: { alert: "a-h5e0", delivery: "d-machine" },
     cause: machine,
   });
 

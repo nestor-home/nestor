@@ -94,7 +94,7 @@ class ConnectorInfo:
     oauth: OAuthSpec | None = None
     fields: tuple[SecretField, ...] = ()  # SECRET auth, and non-OAuth settings (server URL…)
     setup: Message | None = None  # step-by-step guide shown before connecting (create an OAuth client…)
-    inbound: tuple[str, ...] = ()  # kinds of items it can feed watches with ("mail")
+    inbound: tuple[str, ...] = ()  # kinds of items it can feed alerts with ("mail")
     brand: str | None = None  # the vendor, as a slug people recognise ("google")
     services: tuple[Service, ...] = ()  # what a message names with `@`; none: the account as a whole, by its kind
     presets: tuple[Preset, ...] = ()  # well-known services, offered in the catalogue

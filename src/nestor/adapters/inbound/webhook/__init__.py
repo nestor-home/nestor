@@ -1,6 +1,8 @@
-"""Webhooks as watch items: a service of one's own (GitHub, a Home Assistant automation, n8n, a script) posts JSON to
-`POST /hooks/<name>` on Nestor's webhook port, and each post becomes an item of the kind its hook declares:
-"tell me when a release of nestor is published", "when the washing machine is done".
+"""Webhooks as items for alerts: a service of one's own (GitHub, a Home Assistant automation, n8n, a script) posts
+JSON to `POST /hooks/<name>` on Nestor's webhook port, and each post becomes an item of the kind its hook declares,
+whose parsed JSON the item carries (`Incoming.data`). Its kind says exactly what happened: an alert on it without a
+condition rings as each post arrives, without the triage model ("tell me when the washing machine is done"); with a
+condition ("when a release of nestor is published"), the triage model reads the post.
 
 Each hook has its secret. A post proves it holds it in either of two ways: a signature of its body,
 `X-Hub-Signature-256: sha256=<HMAC-SHA256>` as GitHub signs (or `X-Nestor-Signature`, as Nestor's own webhook channel

@@ -22,10 +22,8 @@ scope-name = { $scope ->
     [memory-manage-own] gérer ses propres souvenirs
     [tasks-manage] gérer toutes les tâches
     [tasks-manage-own] gérer ses propres tâches
-    [watches-manage-all] gérer toutes les veilles
-    [watches-manage-own] gérer ses propres veilles
-    [schedules-manage-all] gérer tous les rappels
-    [schedules-manage-own] gérer ses propres rappels
+    [alerts-manage-all] gérer toutes les alertes
+    [alerts-manage-own] gérer ses propres alertes
     [messages-read-all] lire tous les messages et confirmations
     [messages-read-own] lire ses propres messages et confirmations
     [media-view] regarder les caméras qui lui sont ouvertes
@@ -78,7 +76,7 @@ auth-kind = { $auth ->
    *[other] { $auth }
 }
 
-schedule-day = { $day ->
+weekday = { $day ->
     [mon] lundi
     [tue] mardi
     [wed] mercredi
@@ -86,6 +84,16 @@ schedule-day = { $day ->
     [fri] vendredi
     [sat] samedi
    *[sun] dimanche
+}
+alert-frequency = { $frequency ->
+    [once] Une fois
+    [every_time] À chaque fois
+   *[until_rung] Jusqu'à avoir dit quelque chose
+}
+alert-rang-because = { $cause ->
+    [due] C'était l'heure
+    [event] L'événement { $kind } est arrivé : { $item }
+   *[match] « { $item } » correspond
 }
 home-granularity = { $granularity ->
     [home] qui est à la maison
@@ -126,8 +134,7 @@ journal-kind = { $kind ->
     [delivery] Prises de parole
     [tool] Outils
     [task] Tâches
-    [watch] Veilles
-    [schedule] Rappels
+    [alert] Alertes
     [memory] Souvenirs
     [connection] Connexions
     [presence] Présence
@@ -162,7 +169,7 @@ usage-purpose = { $purpose ->
     [turn] réponses
     [notification] notifications
     [title] titres
-    [watch] veilles
+    [alert] alertes
     [consolidation] mémoire
     [indexing] recherche dans la mémoire
     [enrollment] enregistrement de voix

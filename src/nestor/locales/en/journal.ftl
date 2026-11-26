@@ -77,8 +77,7 @@ journal-subject = { $subject ->
         [cancelled] cancelled
        *[other] { $status }
     }
-    [watch] watch { $id }
-    [schedule] reminder { $id }
+    [alert] alert { $id }
     [tool] result of a tool{ $status ->
         [failed] {" "}(failed)
        *[other] {""}
@@ -120,35 +119,34 @@ journal-detail-tried = { $count ->
    *[other] Tried: { $tried }
 }
 
-journal-schedule-created = { $recurring ->
-    [yes] Recurring reminder set: { $title }
-   *[no] Reminder set: { $title }
+journal-alert-created = { $trigger ->
+    [at] Alert set for a moment: { $title }
+    [times] Recurring alert set: { $title }
+   *[events] Alert set on { $kinds }: { $title }
 }
-journal-schedule-fired = Reminder { $id } due
-journal-schedule-cancelled = Reminder { $id } cancelled
-journal-watch-created = Watch created: { $title }
-journal-watch-sorted = { $unsorted ->
+journal-alert-sorted = { $unsorted ->
     [yes] “{ $item }” not sorted: the model did not answer
    *[no] { $matched ->
         [0] “{ $item }” checked against { $asked } { $asked ->
-            [one] watch
-           *[other] watches
+            [one] alert
+           *[other] alerts
         }: none match
        *[other] “{ $item }” checked against { $asked } { $asked ->
-            [one] watch
-           *[other] watches
+            [one] alert
+           *[other] alerts
         }: { $matched } matched
     }
 }
-journal-watch-triggered = { $urgent ->
-    [yes] Watch { $watch } triggered by “{ $item }” (urgent)
-   *[no] Watch { $watch } triggered by “{ $item }”
+journal-alert-rang = Alert { $alert } rang: { $cause ->
+    [due] its time came
+    [event] the event { $kind } arrived (“{ $item }”)
+   *[match] “{ $item }” matched
 }
-journal-watch-ended = Watch { $watch } { $reason ->
-    [matched] triggered
-    [expired] expired
+journal-alert-ended = Alert { $alert } { $reason ->
+    [rang] ended: it rang
     [cancelled] cancelled
-   *[other] { $reason }
+    [expired] expired
+   *[done] ended: nothing left to ring it
 }
 
 journal-memory-recorded = { $drawn ->

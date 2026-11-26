@@ -10,8 +10,7 @@ _MEMBER = _OWN | {
     Scope.HOUSEHOLD_READ,
     Scope.OWN_CONNECTIONS,
     Scope.TASKS_MANAGE_OWN,
-    Scope.WATCHES_MANAGE_OWN,
-    Scope.SCHEDULES_MANAGE_OWN,
+    Scope.ALERTS_MANAGE_OWN,
     Scope.MEDIA_VIEW,  # each device still lists who may (`MediaAccess`)
     Scope.MEDIA_CALL,
     Scope.USAGE_READ_OWN,
@@ -25,8 +24,7 @@ _ADMIN = _MEMBER | {
     Scope.JOURNAL_READ_ALL,
     Scope.MEMORY_MANAGE_ALL,
     Scope.TASKS_MANAGE,
-    Scope.WATCHES_MANAGE_ALL,
-    Scope.SCHEDULES_MANAGE_ALL,
+    Scope.ALERTS_MANAGE_ALL,
     Scope.MESSAGES_READ_ALL,
     Scope.USAGE_READ_ALL,
 }

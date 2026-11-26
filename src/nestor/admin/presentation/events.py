@@ -68,6 +68,10 @@ from nestor.modules.home import PresenceChanged
 from nestor.modules.household import Household
 from nestor.modules.identity import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
 from nestor.modules.initiative import (
+    AlertCreated,
+    AlertEnded,
+    AlertRang,
+    AlertSorted,
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
@@ -75,14 +79,7 @@ from nestor.modules.initiative import (
     MessageDelivered,
     MessageRequested,
     MessageUndelivered,
-    ScheduleCancelled,
-    ScheduleCreated,
-    ScheduleFired,
     ToolResultDelivered,
-    WatchCreated,
-    WatchEnded,
-    WatchSorted,
-    WatchTriggered,
 )
 from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested
 from nestor.modules.journal import Entry, FileRef
@@ -132,8 +129,7 @@ class Kind(StrEnum):
     DELIVERY = "delivery"
     TOOL = "tool"
     TASK = "task"
-    WATCH = "watch"
-    SCHEDULE = "schedule"
+    ALERT = "alert"
     MEMORY = "memory"
     CONNECTION = "connection"
     PRESENCE = "presence"
@@ -194,8 +190,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         ExecutorKeyIssued,
         ExecutorKeyRevoked,
     ),
-    Kind.WATCH: (WatchCreated, WatchSorted, WatchTriggered, WatchEnded),
-    Kind.SCHEDULE: (ScheduleCreated, ScheduleFired, ScheduleCancelled),
+    Kind.ALERT: (AlertCreated, AlertSorted, AlertRang, AlertEnded),
     Kind.MEMORY: (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized),
     Kind.CONNECTION: (ConnectionCreated, ConnectionChanged, ConnectionRemoved),
     Kind.PRESENCE: (PresenceChanged,),
@@ -262,7 +257,7 @@ def unknown_message(event_type: str, fields: Mapping[str, object] | None = None)
 
 def subject(about: About, *, follow_up: bool = False) -> dict[str, str]:
     """What an unprompted message was about, as arguments of `journal-subject`: `task 3f2a completed`, `tool c1
-    returned` (a call that went on in the background), `schedule s1`, `message 7c undelivered` (telling whoever
+    returned` (a call that went on in the background), `alert a1`, `message 7c undelivered` (telling whoever
     asked that it did not get through)."""
     return {"subject": about.source.value, "id": about.id, "status": about.status, "follow_up": _yes(follow_up)}
 
@@ -435,17 +430,6 @@ class EventDescriber:
                 people=[e.requested_by, e.to],
                 channels=[e.origin],
             ),
-            ScheduleCreated: lambda e: self._line(
-                e,
-                Message.of("journal-schedule-created", recurring=_yes(e.once_at is None), title=e.title),
-                detail=e.instruction,
-                people=[e.owner],
-                channels=[e.created_in],
-            ),
-            ScheduleFired: lambda e: self._line(e, Message.of("journal-schedule-fired", id=e.schedule_id)),
-            ScheduleCancelled: lambda e: self._line(
-                e, Message.of("journal-schedule-cancelled", id=e.schedule_id), people=[e.by]
-            ),
             MessageDelivered: lambda e: self._line(
                 e, Message.of("journal-message-delivered", id=e.message_id), channels=[e.address]
             ),
@@ -475,17 +459,22 @@ class EventDescriber:
                 channels=e.tried,
                 tone=Tone.WARNING,
             ),
-            WatchCreated: lambda e: self._line(
+            AlertCreated: lambda e: self._line(
                 e,
-                Message.of("journal-watch-created", title=e.title),
-                detail=e.what,
+                Message.of(
+                    "journal-alert-created",
+                    trigger="at" if e.at_moment else "times" if e.times else "events",
+                    kinds=", ".join(e.kinds),
+                    title=e.title,
+                ),
+                detail="\n".join(filter(None, (e.condition, e.instruction))),
                 people=[e.owner],
                 channels=[e.created_in],
             ),
-            WatchSorted: lambda e: self._line(
+            AlertSorted: lambda e: self._line(
                 e,
                 Message.of(
-                    "journal-watch-sorted",
+                    "journal-alert-sorted",
                     item=e.item_title,
                     matched=len(e.matched),
                     asked=len(e.asked),
@@ -493,12 +482,20 @@ class EventDescriber:
                 ),
                 tone=Tone.WARNING if e.unsorted else Tone.NORMAL,
             ),
-            WatchTriggered: lambda e: self._line(
+            AlertRang: lambda e: self._line(
                 e,
-                Message.of("journal-watch-triggered", watch=e.watch_id, item=e.item_title, urgent=_yes(e.urgent)),
+                Message.of(
+                    "journal-alert-rang",
+                    alert=e.alert_id,
+                    cause=e.cause,
+                    item=e.item_title or "",
+                    kind=e.item_kind or "",
+                ),
                 detail=e.summary,
             ),
-            WatchEnded: lambda e: self._line(e, Message.of("journal-watch-ended", watch=e.watch_id, reason=e.reason)),
+            AlertEnded: lambda e: self._line(
+                e, Message.of("journal-alert-ended", alert=e.alert_id, reason=e.reason), people=[e.by]
+            ),
             MemoryRecorded: lambda e: self._line(
                 e,
                 Message.of("journal-memory-recorded", drawn=_yes(e.episode is not None)),

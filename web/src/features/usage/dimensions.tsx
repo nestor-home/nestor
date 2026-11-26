@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   AudioLines,
+  BellRing,
   BookMarked,
   CircleDashed,
   Heading,
   Megaphone,
   MessageSquareText,
-  Radar,
   Search,
   Workflow,
 } from "lucide-react";
@@ -31,7 +31,7 @@ export const PURPOSE_ICON: Record<CallPurpose, LucideIcon> = {
   turn: MessageSquareText,
   notification: Megaphone,
   title: Heading,
-  watch: Radar,
+  alert: BellRing,
   consolidation: BookMarked,
   indexing: Search,
   enrollment: AudioLines,

@@ -30,7 +30,7 @@ export function filtersOf(url: URL): JournalFilters | string[] {
     session: text(url, "session"),
     conversation: text(url, "conversation"),
     task: text(url, "task"),
-    watch: text(url, "watch"),
+    alert: text(url, "alert"),
     connection: text(url, "connection"),
     satellite: text(url, "satellite"),
   };

@@ -1,5 +1,5 @@
 /**
- * The journal: everything that happened, as stories (a conversation and its tool calls, a watch that fired and
+ * The journal: everything that happened, as stories (a conversation and its tool calls, an alert that rang and
  * what followed, a task's run), newest first, day by day. Its lanes, search and filters live in the URL; an event
  * opens in its sheet with the raw record. `/` searches, `j` and `k` move between entries, `p` pauses the live edge.
  */
@@ -32,15 +32,15 @@ const TYPING = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 /** The lanes most read, each a set of kinds; "problems" is what went wrong, whatever its kind. */
 const LANES = {
   talk: ["conversation", "tool"],
-  own: ["delivery", "schedule"],
+  own: ["delivery"],
   tasks: ["task"],
-  watches: ["watch"],
+  alerts: ["alert"],
   memory: ["memory"],
 } as const satisfies Record<string, readonly Kind[]>;
 
 type Lane = "all" | keyof typeof LANES | "problems" | "custom";
 
-const LANE_IDS = ["all", "talk", "own", "tasks", "watches", "memory", "problems"] as const satisfies readonly Lane[];
+const LANE_IDS = ["all", "talk", "own", "tasks", "alerts", "memory", "problems"] as const satisfies readonly Lane[];
 
 function laneOf({ kinds, tone }: JournalSearch): Lane {
   if (!kinds?.length) return tone === "warning" ? "problems" : tone ? "custom" : "all";

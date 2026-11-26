@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, ChevronRight, Megaphone, MessageSquareText, Radar, Workflow } from "lucide-react";
+import { ArrowUpRight, BellRing, ChevronRight, Megaphone, MessageSquareText, Workflow } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { type JournalItem, taskQuery, watchQuery } from "@/api";
+import { alertQuery, type JournalItem, taskQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { Avatar, IconTile, type TileTone } from "@/components/marks";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -28,7 +28,7 @@ interface Props {
   unfolded?: boolean;
 }
 
-/** One story of the journal: a conversation, what a task or a watch went through, or a lone event. */
+/** One story of the journal: a conversation, what a task or an alert went through, or a lone event. */
 export function StoryCard({ story, ...props }: Props & { story: Story }) {
   if (story.type === "thread") return <ThreadCard thread={story} {...props} />;
   if (story.type === "chain") return <ChainCard chain={story} {...props} />;
@@ -298,14 +298,14 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
         return (
           <Link
             key={item.id}
-            to={isTask ? "/tasks/$taskId" : "/watches/$watchId"}
-            params={isTask ? { taskId: item.links.task ?? "" } : { watchId: item.links.watch ?? "" }}
+            to={isTask ? "/tasks/$taskId" : "/alerts/$alertId"}
+            params={isTask ? { taskId: item.links.task ?? "" } : { alertId: item.links.alert ?? "" }}
             className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-paper-sunken px-3 py-1 text-body text-ink hover:bg-rule"
           >
             {isTask ? (
               <Workflow className="size-3.5 shrink-0 text-kind-task" aria-hidden="true" />
             ) : (
-              <Radar className="size-3.5 shrink-0 text-kind-watch" aria-hidden="true" />
+              <BellRing className="size-3.5 shrink-0 text-kind-alert" aria-hidden="true" />
             )}
             <span className="truncate">{say(item)}</span>
             <ArrowUpRight className="size-3 shrink-0 text-ink-faint" aria-hidden="true" />
@@ -368,8 +368,8 @@ const kindDot = (kind: string) =>
     ? "bg-sage"
     : kind === "task"
       ? "bg-kind-task"
-      : kind === "watch"
-        ? "bg-kind-watch"
+      : kind === "alert"
+        ? "bg-kind-alert"
         : "bg-ink-faint";
 
 function CallDetail({ call, open }: { call: ToolCall; open: (position: number) => void }) {
@@ -417,13 +417,13 @@ function Code({ label, children }: { label: string; children: string }) {
   );
 }
 
-// -- what a task, a watch or a message of its own went through ------------------------------------------
+// -- what a task, an alert or a message of its own went through ------------------------------------------
 
 function useChainHead(chain: Chain): { title: string; link: ReactNode; icon: LucideIcon; tone: TileTone } {
   const t = useT();
   const { type, id } = chain.subject;
   const task = useQuery({ ...taskQuery(id), enabled: type === "task", refetchInterval: false, retry: false });
-  const watch = useQuery({ ...watchQuery(id), enabled: type === "watch", retry: false }).data;
+  const alert = useQuery({ ...alertQuery(id), enabled: type === "alert", retry: false }).data;
   if (type === "task") {
     const name = task.data?.title ?? chain.items.find((i) => is(i, "taskStarted"))?.message.args.title;
     return {
@@ -437,14 +437,14 @@ function useChainHead(chain: Chain): { title: string; link: ReactNode; icon: Luc
       ),
     };
   }
-  if (type === "watch") {
+  if (type === "alert") {
     return {
-      icon: Radar,
-      tone: "watch",
-      title: t("jr-chain-watch", { what: watch?.title ?? id }),
+      icon: BellRing,
+      tone: "alert",
+      title: t("jr-chain-alert", { what: alert?.title ?? id }),
       link: (
-        <Link to="/watches/$watchId" params={{ watchId: id }} className={LINK}>
-          {t("jr-chain-watch-link")} <ArrowUpRight className="size-3.5" aria-hidden="true" />
+        <Link to="/alerts/$alertId" params={{ alertId: id }} className={LINK}>
+          {t("jr-chain-alert-link")} <ArrowUpRight className="size-3.5" aria-hidden="true" />
         </Link>
       ),
     };
@@ -523,9 +523,9 @@ function ChainStep({
 }
 
 const sourced = (item: JournalItem): item is JournalItem & { brand: string } =>
-  Boolean(item.brand) && (is(item, "watchTriggered") || is(item, "watchSorted"));
+  Boolean(item.brand) && (is(item, "alertRang") || is(item, "alertSorted"));
 
-/** What brought an item a watch looked at: the account it came to, the feed, the page or the webhook. */
+/** What brought an item an alert looked at: the account it came to, the feed, the page or the webhook. */
 function Source({ item }: { item: JournalItem }) {
   if (!sourced(item)) return null;
   return <KindName kind={item.brand} className="text-ink-muted" />;

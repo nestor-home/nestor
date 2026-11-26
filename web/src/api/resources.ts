@@ -266,7 +266,7 @@ export const api = {
     unwrap(client.GET("/api/v1/usage/calls", { params: { query } })),
   usagePrices: () => unwrap(client.GET("/api/v1/usage/prices")),
 
-  // tasks, watches, memories
+  // tasks, alerts, memories
   tasks: (archived = false) => unwrap(client.GET("/api/v1/tasks", { params: { query: { archived } } })),
   task: (id: Id) => unwrap(client.GET("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } } })),
   directTask: (id: Id, text: string) =>
@@ -276,13 +276,10 @@ export const api = {
     unwrap(client.PATCH("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } }, body: { title } })),
   archiveTask: (id: Id) =>
     unwrap(client.POST("/api/v1/tasks/{task_id}/archive", { params: { path: { task_id: id } } })),
-  watches: () => unwrap(client.GET("/api/v1/watches")),
-  watch: (id: Id) => unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
-  cancelWatch: (id: Id) =>
-    done(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })),
-  schedules: () => unwrap(client.GET("/api/v1/schedules")),
-  cancelSchedule: (id: Id) =>
-    done(client.POST("/api/v1/schedules/{schedule_id}/cancel", { params: { path: { schedule_id: id } } })),
+  alerts: () => unwrap(client.GET("/api/v1/alerts")),
+  alert: (id: Id) => unwrap(client.GET("/api/v1/alerts/{alert_id}", { params: { path: { alert_id: id } } })),
+  cancelAlert: (id: Id) =>
+    done(client.POST("/api/v1/alerts/{alert_id}/cancel", { params: { path: { alert_id: id } } })),
   messages: () => unwrap(client.GET("/api/v1/messages")),
 
   // the admin's chat (the answer's stream is read in `features/chat/live.ts`)

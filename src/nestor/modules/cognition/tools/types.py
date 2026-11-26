@@ -89,8 +89,8 @@ class ToolFailed(NestorError):
     """A tool could not do what was asked; the message is shown to the model, so it says why."""
 
 
-# the `title` argument of a tool that creates something the household finds again in a list (a task, a wake-up, a
-# watch): the model names it as it creates it, short enough for a card and for a question that quotes it
+# the `title` argument of a tool that creates something the household finds again in a list (a task, an
+# alert): the model names it as it creates it, short enough for a card and for a question that quotes it
 TITLE_CHARS = 80
 TITLE: Mapping[str, object] = {
     "type": "string",

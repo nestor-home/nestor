@@ -11,7 +11,7 @@ from nestor.runtime.plugins import AdapterSettings, RequiredSecret
 
 class Hook(AdapterSettings):
     name: str = Field(pattern=r"^[A-Za-z0-9_-]+$")  # its address: /hooks/<name>
-    kind: str = Field(pattern=r"^[a-z][a-z0-9_.-]*$")  # what its posts are, for watches: "github", "washing-machine"
+    kind: str = Field(pattern=r"^[a-z][a-z0-9_.-]*$")  # what its posts are, for alerts: "github", "washing-machine"
     secret: RequiredSecret
 
 

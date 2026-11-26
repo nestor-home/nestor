@@ -24,9 +24,9 @@ const IDS = {
   taskEnded: ["journal-task-turn-ended"],
   taskDelivered: ["journal-task-turn-delivered"],
   taskReminded: ["journal-task-reminded"],
-  watchCreated: ["journal-watch-created"],
-  watchSorted: ["journal-watch-sorted"],
-  watchTriggered: ["journal-watch-triggered"],
+  alertCreated: ["journal-alert-created"],
+  alertSorted: ["journal-alert-sorted"],
+  alertRang: ["journal-alert-rang"],
   considered: ["journal-delivery-considered"],
   delivered: ["journal-delivered"],
   withheld: ["journal-delivery-withheld"],
@@ -42,5 +42,5 @@ export function is(item: Pick<JournalItem, "message">, sort: EventSort): boolean
   return (IDS[sort] as readonly string[]).includes(item.message.id);
 }
 
-/** Started a story of its own (a task, a watch) from inside a conversation. */
-export const starts = (item: Pick<JournalItem, "message">) => is(item, "taskStarted") || is(item, "watchCreated");
+/** Started a story of its own (a task, an alert) from inside a conversation. */
+export const starts = (item: Pick<JournalItem, "message">) => is(item, "taskStarted") || is(item, "alertCreated");

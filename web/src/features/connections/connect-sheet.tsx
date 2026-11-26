@@ -44,7 +44,7 @@ export function ConnectSheet({
               <ServiceTile kind={connector.data.brand ?? connector.data.kind} />
               <span>
                 {authLabel(connector.data.auth)}
-                {connector.data.inbound.length ? ` · ${t("conn-feeds-watches")}` : ""}
+                {connector.data.inbound.length ? ` · ${t("conn-feeds-alerts")}` : ""}
               </span>
             </p>
             {connector.data.auth === "oauth2" ? <OAuthClientSection connector={connector.data} /> : null}

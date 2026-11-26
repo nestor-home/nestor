@@ -3,7 +3,7 @@ import { MessageSquareText } from "lucide-react";
 import { useT } from "@/i18n";
 import { KindMark, kindName } from "@/lib/brands";
 
-/** Where something was asked (a task, a watch, a reminder): the conversation in the journal, and its channel. */
+/** Where something was asked (a task, an alert): the conversation in the journal, and its channel. */
 export function OriginLink({ origin }: { origin: { session: string; channel: string } }) {
   const t = useT();
   return (

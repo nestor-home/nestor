@@ -3,7 +3,7 @@
  * - a thread is one conversation (`links.conversation`): each turn (`links.turn`) with what it
  *   caused (tool calls paired by `links.call`, the answer, an interruption, a memory), in order;
  * - a chain follows one subject through its steps: a task (started, progress, ended, delivered),
- *   a watch (triggered, announced, followed up) or a lone delivery;
+ *   an alert (rung, announced, followed up) or a lone delivery;
  * - anything else stays a single event.
  * Stories are ordered by their latest event, so a story that moves comes back to the top.
  */
@@ -20,7 +20,7 @@ export interface ToolCall {
 export type Step =
   | { type: "event"; item: JournalItem }
   | { type: "call"; call: ToolCall }
-  | { type: "spawn"; item: JournalItem }; // started a story of its own (a task, a watch)
+  | { type: "spawn"; item: JournalItem }; // started a story of its own (a task, an alert)
 
 export interface Turn {
   id: Id;
@@ -44,7 +44,7 @@ export interface Thread extends Common {
 
 export interface Chain extends Common {
   type: "chain";
-  subject: { type: "task" | "watch" | "delivery"; id: Id };
+  subject: { type: "task" | "alert" | "delivery"; id: Id };
 }
 
 export interface Single extends Common {
@@ -56,7 +56,7 @@ export type Story = Thread | Chain | Single;
 
 const CONVERSATIONAL = new Set<Kind>(["conversation", "tool", "memory"]);
 
-/** Which story an event belongs to. Tasks and watches win over the conversation they came from. */
+/** Which story an event belongs to. Tasks and alerts win over the conversation they came from. */
 export function storyKey(item: JournalItem): string {
   const { links } = item;
   const talk = links.conversation
@@ -66,7 +66,7 @@ export function storyKey(item: JournalItem): string {
       : null;
   if (talk && CONVERSATIONAL.has(item.kind) && !links.task) return talk;
   if (links.task) return `task:${links.task}`;
-  if (links.watch) return `watch:${links.watch}`;
+  if (links.alert) return `alert:${links.alert}`;
   if (links.delivery) return `delivery:${links.delivery}`;
   if (talk) return talk;
   return `event:${item.id}`;
@@ -116,7 +116,7 @@ export function buildStories(items: readonly JournalItem[]): Story[] {
         filter: type === "conversation" ? { conversation: id } : { session: id },
         turns: turnsOf(sorted, spawned),
       });
-    else if (type === "task" || type === "watch" || type === "delivery")
+    else if (type === "task" || type === "alert" || type === "delivery")
       stories.push({ ...common, type: "chain", subject: { type, id } });
     else if (sorted[0]) stories.push({ ...common, type: "single", item: sorted[0] });
   }

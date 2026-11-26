@@ -1,4 +1,4 @@
-/** Ongoing: what waits for an answer, what runs, what is planned and what is watched, and acting on each. */
+/** Ongoing: what waits for an answer, what runs, the alerts kept and why each rang, and acting on each. */
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
@@ -45,30 +45,40 @@ describe("ongoing", () => {
     expect(await screen.findByText(/no longer waits for your go-ahead/)).toBeInTheDocument();
   });
 
-  it("opens a reminder in place with when it runs, and cancels it once confirmed", async () => {
+  it("lists every alert in one place with what rings it and why it last rang", async () => {
+    renderApp("/activity");
+    const alerts = await part(/^Alerts/);
+    expect(await within(alerts).findByText("Saturday, Sunday · 09:00")).toBeInTheDocument();
+    expect(within(alerts).getByText("every day · 10:00")).toBeInTheDocument();
+    expect(within(alerts).getByText("Until it has told something")).toBeInTheDocument();
+    const machine = within(alerts).getByRole("button", { name: /Washing machine done/ });
+    expect(machine).toHaveTextContent("The event washing-machine arrived: cycle · done");
+    const school = within(alerts).getByRole("button", { name: /Jules's school/ });
+    expect(school).toHaveTextContent("“Canteen menu for next week” matched");
+  });
+
+  it("opens an alert in place and cancels it once confirmed", async () => {
     const user = userEvent.setup();
     renderApp("/activity");
-    const planned = await part(/^Planned/);
-    expect(await within(planned).findByText("Saturday, Sunday · 09:00")).toBeInTheDocument();
-    expect(within(planned).getByText("every day · 10:00")).toBeInTheDocument();
-    await user.click(within(planned).getByRole("button", { name: /Buy bread/ }));
-    const sheet = await screen.findByRole("dialog", { name: "Buy bread" });
-    await user.click(within(sheet).getByRole("button", { name: "Cancel the reminder" }));
-    await user.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel the reminder" }),
-    );
-    await waitFor(() => expect(db.schedules.map((s) => s.id)).not.toContain("sc-bread"));
-    expect(await screen.findByText("Cancelled: it will not run again.")).toBeInTheDocument();
+    const alerts = await part(/^Alerts/);
+    await user.click(await within(alerts).findByRole("button", { name: /Samsung TV price/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Samsung TV price" });
+    expect(within(sheet).getByText("Below €1,600")).toBeInTheDocument();
+    expect(within(sheet).getByText("Rang 8 times")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Cancel the alert…" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel the alert" }));
+    await waitFor(() => expect(db.alerts.map((a) => a.id)).not.toContain("a-tv"));
+    expect(await screen.findByText("Cancelled: it will not ring again.")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("keeps one lane when asked: only what is watched, with how often each fired", async () => {
+  it("keeps one lane when asked: only the alerts", async () => {
     const user = userEvent.setup();
     renderApp("/activity");
-    await part(/^Being watched/);
-    await user.click(screen.getByRole("button", { name: /^Watches/ }));
-    expect(screen.queryByRole("region", { name: /^Planned/ })).not.toBeInTheDocument();
-    const watched = await part(/^Being watched/);
-    expect(within(watched).getAllByRole("button").length).toBe(db.watches.length);
+    await part(/^Alerts/);
+    await user.click(screen.getByRole("button", { name: /^Alerts/ }));
+    expect(screen.queryByRole("region", { name: /^Being done/ })).not.toBeInTheDocument();
+    const alerts = await part(/^Alerts/);
+    expect(within(alerts).getAllByRole("button").length).toBe(db.alerts.length);
   });
 });

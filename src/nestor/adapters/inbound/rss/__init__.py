@@ -1,5 +1,5 @@
-"""News feeds (RSS and Atom) as watch items of the kind `feed`: "tell me when Linux 7 is out", "when LWN writes about
-sqlite".
+"""News feeds (RSS and Atom) as items for alerts, of the kind `feed`: "tell me when Linux 7 is out", "when LWN writes
+about sqlite".
 
 Each feed is checked in turn every `every_s` (15 minutes by default, never less than a minute), with the `ETag` and
 `Last-Modified` it last sent, so that an unchanged feed answers `304` without a body. An entry is new when its id

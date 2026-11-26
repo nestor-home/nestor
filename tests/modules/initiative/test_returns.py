@@ -428,13 +428,13 @@ async def test_a_tool_slower_than_a_wake_up_s_turn_comes_back_in_the_wake_up_s_t
     done = asyncio.Event()
     model = ScriptedModel(ToolCall("c1", "count_mails"), f"{SILENT} en cours", "Tu as 12 mails non lus.")
     home = Home(model=model, tools=[slow_tool(done)])
-    woken = Notification("Compte les mails de Mathis.", About(Source.SCHEDULE, "s1"), thread="schedule:s1")
+    woken = Notification("Compte les mails de Mathis.", About(Source.ALERT, "a1"), thread="alert:a1")
     async with home.returns():
         await home.courier.deliver(MATHIS, woken, origin=TELEGRAM)
         done.set()
         await until(home.journal, ToolResultDelivered)
     [returned] = await home.journal.history(NotificationTurn)
-    assert (returned.about.source, returned.thread) == (Source.TOOL, "schedule:s1")
+    assert (returned.about.source, returned.thread) == (Source.TOOL, "alert:a1")
 
 
 async def test_a_picture_drawn_after_the_turn_goes_with_the_answer_that_brings_it() -> None:

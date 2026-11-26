@@ -2,6 +2,7 @@
 
 import type {
   Account,
+  Alert,
   Confirmation,
   Connection,
   Connector,
@@ -13,14 +14,12 @@ import type {
   Messages,
   PairingMethodId,
   Satellite,
-  Schedule,
   Service,
   SystemInfo,
   TaskThread,
   Tool,
   Updates,
   Voice,
-  Watch,
 } from "@/api";
 import { chats, type MockChat } from "./chats";
 import type { ConfigDb } from "./config";
@@ -59,9 +58,8 @@ export interface Db {
   additions: MockAddition[];
   satellites: Satellite[];
   tasks: TaskThread[];
-  watches: Watch[];
+  alerts: Alert[];
   inbound: string[]; // what the inbound sources of the file bring (feeds, pages, webhooks), beside the accounts'
-  schedules: Schedule[];
   messages: Messages;
   confirmations: Confirmation[];
   home: Home | null;
@@ -103,9 +101,8 @@ export function fresh(): Db {
     additions: [],
     satellites,
     tasks,
-    watches: fixtures.watches(),
+    alerts: fixtures.alerts(),
     inbound: brought(doc),
-    schedules: fixtures.schedules(),
     messages: fixtures.messages(),
     confirmations: fixtures.confirmations(),
     home: fixtures.home(

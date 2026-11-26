@@ -171,18 +171,34 @@ export function stress(db: Db, now = Date.now()): void {
       },
     ],
   });
-  db.watches.unshift({
-    id: `w-${"fedcba9876543210".repeat(2)}`,
+  db.alerts.unshift({
+    id: `a-${"fedcba9876543210".repeat(2)}`,
     title: `${LONG_WORD} replies to ${LONG_NAME}`,
-    what: `Tell ${LONG_NAME} when ${LONG_WORD} replies about ${LONG_URL}`,
-    owner: MARIE,
+    instruction: `Tell ${LONG_NAME} at once`,
+    condition: `${LONG_WORD} replies about ${LONG_URL}`,
+    trigger: "events",
+    at: null,
+    times: [],
+    days: [],
     kinds: ["mail"],
-    once: false,
-    created_at: at(300),
+    frequency: "until_rung",
     until: null,
+    urgent: true,
+    owner: MARIE,
     origin: { session: "s-stress", channel: "web" },
-    triggered: 0,
-    last_triggered_at: null,
+    created_at: at(300),
+    next_due: null,
+    rang: 1,
+    rings: [
+      {
+        at: at(30),
+        cause: "match",
+        due_at: null,
+        item_title: `${LONG_WORD} ${LONG_URL}`,
+        item_kind: "mail",
+        summary: `${LONG_WORD} replied to ${LONG_NAME}`,
+      },
+    ],
   });
   db.memories.unshift({
     id: "m-stress",

@@ -259,8 +259,8 @@ class AgentConfig(Section):
     tool_result_chars: int = Field(default=RESULT_CHARS, ge=1000, le=200_000)
 
 
-class WatchesConfig(Section):
-    """The model that sorts incoming items for the watches: the agent's written one by default."""
+class AlertsConfig(Section):
+    """The model that sorts incoming items for the alerts: the agent's written one by default."""
 
     model: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)
 
@@ -332,13 +332,13 @@ class NestorConfig(Section):
     # role checks the model's type
     models: dict[str, ModelConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
-    watches: WatchesConfig = WatchesConfig()
+    alerts: AlertsConfig = AlertsConfig()
     memory: MemoryConfig = MemoryConfig()
     voices: VoicesConfig = VoicesConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
-    inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
+    inbound: tuple[AdapterConfig, ...] = ()  # sources alerts can wait for (a mailbox, a webhook…)
     home: ComponentConfig | None = None  # the home system (Home Assistant): presence and actions
     initiative: InitiativeConfig = InitiativeConfig()
     admin: AdminConfig | None = None
@@ -380,9 +380,9 @@ class NestorConfig(Section):
         )
         return value
 
-    @field_validator("watches")
+    @field_validator("alerts")
     @classmethod
-    def _watches(cls, value: WatchesConfig, info: ValidationInfo) -> WatchesConfig:
+    def _alerts(cls, value: AlertsConfig, info: ValidationInfo) -> AlertsConfig:
         _known(info, {"model": value.model})
         return value
 
@@ -399,7 +399,7 @@ class NestorConfig(Section):
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `titles`, `watches`,
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `titles`, `alerts`,
         `consolidation`.
         `answering` are the models that answer (not those that embed): with a single one, every role takes it. A model
         that is only some model's fallback does not count: it answers when that one fails."""
@@ -419,7 +419,7 @@ class NestorConfig(Section):
             "spoken": self.agent.spoken or written,
             "written": written,
             "titles": self.agent.titles or written,
-            "watches": self.watches.model or written,
+            "alerts": self.alerts.model or written,
             "consolidation": self.memory.consolidation or written,
         }
 

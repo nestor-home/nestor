@@ -72,11 +72,11 @@ function useRelated(item: JournalItem): Related[] {
       value: links.task,
       link: { to: "/tasks/$taskId", params: { taskId: links.task } },
     });
-  if (links.watch)
+  if (links.alert)
     related.push({
-      label: tr("jr-related-watch"),
-      value: links.watch,
-      link: { to: "/watches/$watchId", params: { watchId: links.watch } },
+      label: tr("jr-related-alert"),
+      value: links.alert,
+      link: { to: "/alerts/$alertId", params: { alertId: links.alert } },
     });
   if (links.connection)
     related.push({

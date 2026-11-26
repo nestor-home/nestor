@@ -40,7 +40,7 @@
 
   /* two quiet hues that only tell event kinds apart in the journal */
   --kind-task: light-dark(#4a5a7c, #9fb0d4);
-  --kind-watch: light-dark(#7a4a68, #cf9dbd);
+  --kind-alert: light-dark(#7a4a68, #cf9dbd);
 
   /* the series of a chart, in this order and never cycled (a seventh is "other", --rule-strong): ember leads.
      Each step was checked with the dataviz validator against --paper-raised in both themes (lightness band,

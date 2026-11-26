@@ -1,4 +1,4 @@
-"""One inbound source over every connected account that can feed watches (each mailbox…).
+"""One inbound source over every connected account that can feed alerts (each mailbox…).
 
 Connections plugged in or removed while Nestor runs are followed or dropped without a restart.
 """

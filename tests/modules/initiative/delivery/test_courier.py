@@ -41,8 +41,8 @@ from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 TELEGRAM = Address("telegram", "42")
 SALON = Address("voice", "salon")
-PARCEL = About(Source.WATCH, "colis")
-PRICE = About(Source.SCHEDULE, "prix")
+PARCEL = About(Source.ALERT, "colis")
+PRICE = About(Source.ALERT, "prix")
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),), reach=TELEGRAM)
 
 
@@ -122,7 +122,7 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
     async with sender:
         assert (
             await sender.deliver(
-                MATHIS, Notification("Mail de la banque.", About(Source.WATCH, "banque")), private=True
+                MATHIS, Notification("Mail de la banque.", About(Source.ALERT, "banque")), private=True
             )
             == TELEGRAM
         )
@@ -169,7 +169,7 @@ async def test_a_private_message_that_cannot_be_written_is_never_said_aloud_in_f
     assert isinstance(telegram, Messaging)
     telegram.refuses = True
     async with sender:
-        bank = Notification("Mail de la banque.", About(Source.WATCH, "banque"))
+        bank = Notification("Mail de la banque.", About(Source.ALERT, "banque"))
         assert await sender.deliver(MATHIS, bank, private=True) is None
     assert voice.sent == [] and len(await journal.history(DeliveryFailed)) == 1
 
@@ -179,7 +179,7 @@ async def test_a_private_message_with_nothing_to_tell_is_neither_written_nor_ann
     model = ScriptedModel(f"{SILENT} une publicité", "Mail de la banque.")
     sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model)
     async with sender:
-        bank = Notification("Mail de la banque.", About(Source.WATCH, "banque"))
+        bank = Notification("Mail de la banque.", About(Source.ALERT, "banque"))
         assert await sender.deliver(MATHIS, bank, private=True) == TELEGRAM
     assert voice.sent == telegram.sent == [] and len(model.requests) == 1
     assert [w.reason for w in await journal.history(DeliveryWithheld)] == ["une publicité"]

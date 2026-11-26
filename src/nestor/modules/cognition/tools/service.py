@@ -46,7 +46,7 @@ class Toolbox(Component):
     It is also where who asked matters, the same for every tool:
     - a sensitive call is confirmed by the person who asks: in the conversation on their own account (the model
       calls again with `confirmed`, unless that account is enough: `account_vouches`), in writing on that account when
-      asked aloud on a shared device or in a turn nobody takes part in (a wake-up);
+      asked aloud on a shared device or in a turn nobody takes part in (an alert);
     - a tool on someone's own data (`owner`) serves them only, and what it finds for a voice nobody recognised is
       written to them rather than said in the room.
     """
@@ -204,7 +204,7 @@ class Toolbox(Component):
             raise ToolFailed(f"{tool.name} needs to know for sure who asks: they ask from their own account")
         if tool.risk_of(arguments) is Risk.SENSITIVE and not confirmed:
             # in place only in a live conversation on their account: aloud on a satellite, or in a turn nobody
-            # takes part in (a wake-up), the person confirms in writing
+            # takes part in (an alert), the person confirms in writing
             if context.speaker.by is not Identified.ACCOUNT or context.exchange is None:
                 return Made(await self._confirm_in_writing(call, tool, context))
             if not tool.account_vouches and call.arguments.get("confirmed") is not True:

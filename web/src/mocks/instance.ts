@@ -1,7 +1,7 @@
 /**
  * The one instance every screen of the mock describes: Richie, serving the Martin household. Its configuration
  * file is the source of what exists (models, channels, executors, tools, inbound sources, the home, connectors,
- * the people and where they are written to); what runs, who is reached where and what a watch can follow are
+ * the people and where they are written to); what runs, who is reached where and what an alert can wait for are
  * read from it here, never typed again. What the file cannot know (health, versions, presence) is in `fixtures`.
  */
 import type { Component, ConfigDocument, ModelType } from "@/api";
@@ -132,7 +132,7 @@ export function document(): ConfigDocument {
       },
     },
     agent: { spoken: "haiku", written: "sonnet" },
-    watches: { model: "haiku" },
+    alerts: { model: "haiku" },
     channels: [
       {
         kind: "satellites",
@@ -337,7 +337,7 @@ export function household(
   }));
 }
 
-/** What the inbound sources of the file bring to watches, beside the mail of connected accounts. */
+/** What the inbound sources of the file bring to alerts, beside the mail of connected accounts. */
 export function brought(doc: ConfigDocument): string[] {
   const kinds = entries(doc, "inbound").flatMap((source) => {
     if (source.kind === "rss") return ["feed"];

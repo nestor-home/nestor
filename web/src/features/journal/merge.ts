@@ -15,7 +15,7 @@ export function matches(item: JournalItem, f: JournalFilters): boolean {
     (!f.session || item.links.session === f.session) &&
     (!f.conversation || item.links.conversation === f.conversation) &&
     (!f.task || item.links.task === f.task) &&
-    (!f.watch || item.links.watch === f.watch) &&
+    (!f.alert || item.links.alert === f.alert) &&
     (!f.connection || item.links.connection === f.connection) &&
     (!f.satellite || item.links.satellite === f.satellite)
   );

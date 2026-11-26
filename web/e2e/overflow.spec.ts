@@ -9,7 +9,7 @@ import { expect, test } from "./clock";
  */
 const LONG_WORD = "Antidisestablishmentarianismincomprehensibilitiesoverthink-60";
 const TASK = `t-${"0123456789abcdef".repeat(2)}`;
-const WATCH = `w-${"fedcba9876543210".repeat(2)}`;
+const ALERT = `a-${"fedcba9876543210".repeat(2)}`;
 
 const ROUTES = [
   "/",
@@ -22,7 +22,7 @@ const ROUTES = [
   "/settings",
   "/people/marie-amelie",
   "/memories",
-  `/watches/${WATCH}`,
+  `/alerts/${ALERT}`,
   `/tasks/${TASK}`,
   "/connections",
   "/connections/c-gmail-mathis",

@@ -13,6 +13,7 @@ from fastapi.routing import APIRoute
 
 from nestor.admin.api.v1.accounts import routes as accounts
 from nestor.admin.api.v1.agent import routes as agent
+from nestor.admin.api.v1.alerts import routes as alerts
 from nestor.admin.api.v1.chat import routes as chat
 from nestor.admin.api.v1.config import routes as config
 from nestor.admin.api.v1.config.schemas import ConfigSchemaOut
@@ -29,14 +30,12 @@ from nestor.admin.api.v1.media import routes as media
 from nestor.admin.api.v1.memories import routes as memories
 from nestor.admin.api.v1.messages import routes as messages
 from nestor.admin.api.v1.satellites import routes as satellites
-from nestor.admin.api.v1.schedules import routes as schedules
 from nestor.admin.api.v1.security import json_only
 from nestor.admin.api.v1.session import routes as session
 from nestor.admin.api.v1.system import routes as system
 from nestor.admin.api.v1.tasks import routes as tasks
 from nestor.admin.api.v1.usage import routes as usage
 from nestor.admin.api.v1.voices import routes as voices
-from nestor.admin.api.v1.watches import routes as watches
 from nestor.admin.presentation import CATEGORIES, Phrasebook
 from nestor.core.i18n import Localizer
 from nestor.modules.accounts import GRANTS
@@ -77,8 +76,7 @@ RESOURCES = (
     media,
     tasks,
     executors,
-    watches,
-    schedules,
+    alerts,
     messages,
     confirmations,
     memories,

@@ -179,7 +179,7 @@ function ServiceCard({
           foot={
             <span>
               {authLabel(c.auth)}
-              {c.inbound.length ? ` · ${t("conn-feeds-watches")}` : ""}
+              {c.inbound.length ? ` · ${t("conn-feeds-alerts")}` : ""}
             </span>
           }
         />

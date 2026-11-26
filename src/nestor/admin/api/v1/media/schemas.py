@@ -6,8 +6,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, PlainSerializer, WithJsonSchema
 
 from nestor.admin.api.v1.shared import People, PersonRef
-from nestor.core import PersonId
-from nestor.modules.initiative.schedules.types import Day
+from nestor.core import Day, PersonId
 from nestor.modules.satellites import WEEK, LiveSession, MediaAccess, Off, Offer, Privacy, Purpose, QuietHours
 
 

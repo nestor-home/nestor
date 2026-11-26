@@ -507,9 +507,9 @@
       "title": "AgentConfig",
       "type": "object"
     },
-    "watches": {
+    "alerts": {
       "additionalProperties": false,
-      "description": "The model that sorts incoming items for the watches: the agent's written one by default.",
+      "description": "The model that sorts incoming items for the alerts: the agent's written one by default.",
       "properties": {
         "model": {
           "anyOf": [
@@ -524,24 +524,24 @@
           "title": "Model",
           "x-nestor": {
             "field": "model",
-            "title_id": "config-watches-model",
-            "help_id": "config-watches-model-help",
+            "title_id": "config-alerts-model",
+            "help_id": "config-alerts-model-help",
             "fallback_title_id": "config-field-model",
             "secret": false,
             "secret_values": false,
             "advanced": false,
-            "group": "watches",
+            "group": "alerts",
             "reference": "models",
             "model_type": "language",
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
             "title": "Modèle de tri",
-            "help": "Choisit les veilles concernées par chaque élément reçu. Par défaut, le modèle à l'écrit."
+            "help": "Lit chaque mail, article de flux ou page reçu face aux alertes qui l'attendent. Par défaut, le modèle à l'écrit."
           }
         }
       },
-      "title": "WatchesConfig",
+      "title": "AlertsConfig",
       "type": "object"
     },
     "memory": {
@@ -1091,7 +1091,7 @@
     "persona": "Personnage",
     "household": "Foyer",
     "agent": "Agent",
-    "watches": "Veilles",
+    "alerts": "Alertes",
     "memory": "Mémoire",
     "initiative": "Initiative",
     "admin": "Administration",
@@ -11734,7 +11734,7 @@
                     "suggest_keys": null,
                     "suggest_values": null,
                     "title": "Type",
-                    "help": "Ce que sont ses envois, pour les veilles, ex. github."
+                    "help": "Ce que sont ses envois, pour les alertes, ex. lave-vaisselle. Une alerte dessus sonne à chaque envoi."
                   }
                 },
                 "secret": {

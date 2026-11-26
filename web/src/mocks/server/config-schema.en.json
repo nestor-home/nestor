@@ -507,9 +507,9 @@
       "title": "AgentConfig",
       "type": "object"
     },
-    "watches": {
+    "alerts": {
       "additionalProperties": false,
-      "description": "The model that sorts incoming items for the watches: the agent's written one by default.",
+      "description": "The model that sorts incoming items for the alerts: the agent's written one by default.",
       "properties": {
         "model": {
           "anyOf": [
@@ -524,24 +524,24 @@
           "title": "Model",
           "x-nestor": {
             "field": "model",
-            "title_id": "config-watches-model",
-            "help_id": "config-watches-model-help",
+            "title_id": "config-alerts-model",
+            "help_id": "config-alerts-model-help",
             "fallback_title_id": "config-field-model",
             "secret": false,
             "secret_values": false,
             "advanced": false,
-            "group": "watches",
+            "group": "alerts",
             "reference": "models",
             "model_type": "language",
             "brands": null,
             "suggest_keys": null,
             "suggest_values": null,
             "title": "Sorting model",
-            "help": "Picks the watches each incoming item concerns. The written model by default."
+            "help": "Reads each incoming mail, feed entry or page against the alerts waiting for it. The written model by default."
           }
         }
       },
-      "title": "WatchesConfig",
+      "title": "AlertsConfig",
       "type": "object"
     },
     "memory": {
@@ -1091,7 +1091,7 @@
     "persona": "Persona",
     "household": "Household",
     "agent": "Agent",
-    "watches": "Watches",
+    "alerts": "Alerts",
     "memory": "Memory",
     "initiative": "Initiative",
     "admin": "Admin",
@@ -11734,7 +11734,7 @@
                     "suggest_keys": null,
                     "suggest_values": null,
                     "title": "Kind",
-                    "help": "What its posts are, for watches, e.g. github."
+                    "help": "What its posts are, for alerts, e.g. dishwasher. An alert on it rings as each post arrives."
                   }
                 },
                 "secret": {

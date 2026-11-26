@@ -1,7 +1,7 @@
 # Le connecteur Microsoft 365 : son nom, sa description et le guide affiché avant de le connecter.
 
 connector-microsoft-title = Microsoft 365
-connector-microsoft-description = Mails Outlook (lecture seule, les nouveaux mails alimentent les veilles) et agenda, OneDrive (lecture seule) et To Do, pour un compte professionnel ou personnel.
+connector-microsoft-description = Mails Outlook (lecture seule, les nouveaux mails peuvent faire sonner les alertes) et agenda, OneDrive (lecture seule) et To Do, pour un compte professionnel ou personnel.
 connector-microsoft-setup =
     Nestor se connecte à Microsoft avec votre propre inscription d'application. Comptez une dizaine
     de minutes, une seule fois par foyer.

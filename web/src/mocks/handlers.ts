@@ -79,8 +79,7 @@ const MISSING = {
   memory: "memory_unknown",
   invitation: "invitation_unknown",
   satellite: "satellite_unknown",
-  watch: "watch_unknown",
-  schedule: "schedule_unknown",
+  alert: "alert_unknown",
   confirmation: "confirmation_unknown",
 } as const;
 
@@ -1310,7 +1309,7 @@ export const handlers = [
     return json(satellite.access satisfies In<"MediaAccessOut">);
   }),
 
-  // -- tasks, watches, memories -----------------------------------------------------------------
+  // -- tasks, alerts, memories -----------------------------------------------------------------
   http.get(`${API}/tasks`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
@@ -1432,24 +1431,31 @@ export const handlers = [
     return found ? file(found.kind) : notFound("attachment");
   }),
 
-  http.get(`${API}/watches`, ({ request }) => {
+  http.get(`${API}/alerts`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const kinds = [...new Set([...db.connectors.flatMap((c) => c.inbound), ...db.inbound])];
-    return json({ watches: db.watches, kinds } satisfies In<"WatchesOut">);
+    const kinds = [...new Set([...db.connectors.flatMap((c) => c.inbound), ...db.inbound])].sort();
+    // as the server lists them: soonest due first, then those that wait for items, newest first
+    const listed = [...db.alerts].sort(
+      (a, b) =>
+        Number(!a.next_due) - Number(!b.next_due) ||
+        (a.next_due && b.next_due ? a.next_due.localeCompare(b.next_due) : b.created_at.localeCompare(a.created_at)),
+    );
+    return json({ alerts: listed, kinds, timezone: "Europe/Paris" } satisfies In<"AlertsOut">);
   }),
 
-  http.get(`${API}/watches/:id`, ({ request, params }) => {
+  http.get(`${API}/alerts/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const watch = db.watches.find((w) => w.id === params.id);
-    return watch ? json(watch) : notFound("watch");
+    const alert = db.alerts.find((a) => a.id === params.id);
+    return alert ? json(alert) : notFound("alert");
   }),
 
-  http.post(`${API}/watches/:id/cancel`, ({ request, params }) => {
+  http.post(`${API}/alerts/:id/cancel`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    db.watches = db.watches.filter((w) => w.id !== params.id);
+    if (!db.alerts.some((a) => a.id === params.id)) return notFound("alert");
+    db.alerts = db.alerts.filter((a) => a.id !== params.id);
     save();
     return noContent();
   }),
@@ -1501,21 +1507,6 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     return json(usage.PRICES satisfies In<"PricesOut">);
-  }),
-
-  http.get(`${API}/schedules`, ({ request }) => {
-    const refused = guard(request);
-    if (refused) return refused;
-    return json({ schedules: db.schedules, timezone: "Europe/Paris" } satisfies In<"SchedulesOut">);
-  }),
-
-  http.post(`${API}/schedules/:id/cancel`, ({ request, params }) => {
-    const refused = guard(request);
-    if (refused) return refused;
-    if (!db.schedules.some((s) => s.id === params.id)) return notFound("schedule");
-    db.schedules = db.schedules.filter((s) => s.id !== params.id);
-    save();
-    return noContent();
   }),
 
   http.get(`${API}/messages`, ({ request }) => {
@@ -1592,7 +1583,7 @@ export const handlers = [
       quiet_hours: hours,
       upcoming: [
         {
-          delivery: "watch:w-2b77",
+          delivery: "alert:a-2b77",
           person: refOf("mathis"),
           spoken_on: "voice:bureau",
           written_on: "telegram:mathis",
@@ -1802,7 +1793,7 @@ function plug(
     brand: connector?.brand ?? null,
     last_used_at: null,
     calls_today: 0,
-    watches: 0,
+    alerts: 0,
   };
   db.connections.push(connection);
   db.tools[connection.id] = replaced ? (db.tools[replaced.id] ?? []) : toolsOf(kind);
