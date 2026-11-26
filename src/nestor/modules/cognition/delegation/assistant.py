@@ -163,8 +163,8 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         executors = "\n".join(f"- {e.name}: {e.description}" for e in self.tasks.executors.values())
         return (
             f"{HOW_TO_DELEGATE}\n\nYour executors and what they can really do:\n{executors}\n"
-            "Nothing else: hand a request over only to an executor whose description covers it; for any other, say "
-            "right away that you cannot, without starting a task."
+            "Nothing else: hand a request over only to an executor whose description covers it; for any other, start "
+            "no task and say you cannot, with what could be added (about_nestor)."
         )
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:

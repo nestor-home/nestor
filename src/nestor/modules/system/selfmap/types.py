@@ -80,7 +80,8 @@ class Card:
 class Standing(StrEnum):
     PLUGGED = "plugged"  # in the configuration, running
     INSTALLED = "installed"  # installed, not in the configuration
-    MISSING = "missing"  # what it imports is not installed, or it is a package of its own
+    MISSING = "missing"  # what it imports is not installed
+    ELSEWHERE = "elsewhere"  # a package of its own, run on a device that pairs with this server
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

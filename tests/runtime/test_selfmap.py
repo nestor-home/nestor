@@ -33,7 +33,7 @@ def test_the_map_says_what_is_plugged_installed_or_missing(tmp_path: Path) -> No
     assert (parts["idle"].standing, parts["idle"].install) == (Standing.INSTALLED, None)
     assert (parts["needy"].standing, parts["needy"].install) == (Standing.MISSING, "pip install 'nestor-absent[x]'")
     reachy = parts["nestor-reachy"]
-    assert (reachy.capability, reachy.standing) == (Capability.SATELLITE, Standing.MISSING)
+    assert (reachy.capability, reachy.standing) == (Capability.SATELLITE, Standing.ELSEWHERE)
 
     nestor.channels[0].health = lambda: Health.DEGRADED
     assert describe(plugged).startswith("- memory (channel; plugged in as memory, degraded): A test double.")

@@ -16,7 +16,7 @@ def _satellite(id: str, summary: str, docs: str, install: str) -> Part:
         id=id,
         capability=Capability.SATELLITE,
         card=Card(summary=summary, docs=docs, needs=(Need.HARDWARE,)),
-        standing=Standing.MISSING,
+        standing=Standing.ELSEWHERE,
         install=install,
     )
 
@@ -57,7 +57,7 @@ _EXTRAS = re.compile(r"\[([^\]]*)\]")
 
 def survey(registry: Registry, plugged: Iterable[Plugged]) -> SelfMap:
     """Each installed plugin as plugged (its configured instances), installed or missing (what it imports is not
-    installed), and the ecosystem's packages."""
+    installed), and the ecosystem's packages, which run elsewhere."""
     instances: dict[tuple[str, str], list[Plugged]] = {}
     for one in plugged:
         instances.setdefault((one.family, one.id), []).append(one)

@@ -39,9 +39,8 @@ language = Plugin(
     serves=LanguageModel,
     card=Card(
         summary="Thinks and answers with any model behind an OpenAI-compatible API: OpenRouter, OpenAI, Mistral, "
-        "Groq, Vercel, or a local server (Ollama, llama.cpp, vLLM).",
+        "Groq, Vercel (each with its key), or a local server (Ollama, llama.cpp, vLLM).",
         docs="models#choose-a-provider",
-        needs=(Need.KEY,),
     ),
 )
 embedding = Plugin(
@@ -51,10 +50,9 @@ embedding = Plugin(
     build_embedding,
     serves=EmbeddingModel,
     card=Card(
-        summary="Searches memories by meaning with an embedding model behind an OpenAI-compatible API, hosted or "
-        "local.",
+        summary="Searches memories by meaning with an embedding model behind an OpenAI-compatible API, hosted (with "
+        "its key) or local.",
         docs="models#search-by-meaning",
-        needs=(Need.KEY,),
     ),
 )
 image = Plugin(
@@ -77,9 +75,9 @@ transcription = Plugin(
     requires="nestor-home[voice]",
     serves=TranscriptionModel,
     card=Card(
-        summary="Hears speech with any OpenAI-compatible transcription API (OpenAI, Groq, a local Whisper server).",
+        summary="Hears speech with any OpenAI-compatible transcription API (OpenAI or Groq with a key, a local "
+        "Whisper server).",
         docs="voice#choose-providers",
-        needs=(Need.KEY,),
     ),
 )
 speech = Plugin(
@@ -90,9 +88,8 @@ speech = Plugin(
     requires="nestor-home[voice]",
     serves=SpeechModel,
     card=Card(
-        summary="Speaks with any OpenAI-compatible speech API (OpenAI, a local Kokoro server).",
+        summary="Speaks with any OpenAI-compatible speech API (OpenAI with a key, a local Kokoro server).",
         docs="voice#choose-providers",
-        needs=(Need.KEY,),
     ),
 )
 

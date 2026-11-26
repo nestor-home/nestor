@@ -20,7 +20,8 @@ _IGNORED = frozenset(  # words of any question
 
 
 class SelfMap:
-    """Every part Nestor knows of, plugged or not, in a stable order: plugged first, then installed, then missing."""
+    """Every part Nestor knows of, plugged or not, in a stable order: plugged first, then installed, missing, and the
+    packages that run elsewhere."""
 
     def __init__(self, parts: Iterable[Part]) -> None:
         order = list(Standing)
@@ -56,8 +57,10 @@ def describe(part: Part) -> str:
         standing = f"plugged in as {', '.join(part.names)}{unwell}"
     elif part.standing is Standing.INSTALLED:
         standing = "installed, not configured"
-    else:
+    elif part.standing is Standing.MISSING:
         standing = f"not installed: {part.install}"
+    else:
+        standing = f"runs on a device of its own, paired with this server: {part.install}"
     needs = f" Needs: {', '.join(n.value for n in part.card.needs)}." if part.card.needs else ""
     return f"- {part.id} ({part.capability.value}; {standing}): {part.card.summary}{needs} Docs: {part.card.url}"
 

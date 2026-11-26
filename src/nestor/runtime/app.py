@@ -510,6 +510,7 @@ class Nestor:
             *([self.executor_keys] if self.executor_keys else []),  # after the vault
             *self.tools,
             *home,  # its presence and its tools
+            self.documentation,  # read by about_nestor
             self.toolbox,  # after its tools: its calls in the background stop first
             self.tasks,
             *self.channels,
@@ -527,7 +528,6 @@ class Nestor:
             self.titles,
             self.consolidator,
             *updates,
-            self.documentation,
         ]
 
     async def __aenter__(self) -> Self:

@@ -1,5 +1,5 @@
 """A release feed that says what it is told and an installer that succeeds or fails on demand, for
-tests of the updates and the admin."""
+tests of the updates and the admin; documentation served from memory, and the contract every documentation passes."""
 
 import asyncio
 
@@ -59,3 +59,39 @@ class StaticDocumentation(Documentation):
         if self.offline or slug not in self.pages:
             raise ProviderError("docs", f"no page {slug!r}", transient=True)
         return self.pages[slug]
+
+
+# the page every documentation under contract serves as `tools`
+PAGE = "# Tools\n\n## Search\n\nAll engines serve one `web_search`.\n"
+
+
+class DocumentationContract:
+    """Mix into a `Test…` class. `documentation()` serves `PAGE` as `tools` and no other page; `unreachable()` cannot
+    read any."""
+
+    def documentation(self) -> Documentation:
+        raise NotImplementedError
+
+    def unreachable(self) -> Documentation:
+        raise NotImplementedError
+
+    async def test_a_page_is_its_markdown(self) -> None:
+        async with self.documentation() as docs:
+            assert await docs.page("tools") == PAGE
+
+    async def test_a_page_it_lacks_is_a_provider_error(self) -> None:
+        async with self.documentation() as docs:
+            try:
+                await docs.page("nope")
+            except ProviderError:
+                return
+        raise AssertionError("a page it lacks must raise ProviderError")
+
+    async def test_unreachable_it_is_a_transient_provider_error(self) -> None:
+        async with self.unreachable() as docs:
+            try:
+                await docs.page("tools")
+            except ProviderError as error:
+                assert error.transient, "it may be readable later"
+                return
+        raise AssertionError("an unreachable documentation must raise ProviderError")

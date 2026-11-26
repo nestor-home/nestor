@@ -1,6 +1,7 @@
 """The documentation read online: a page in Markdown from nestorhome.dev, read once, and an error the agent can answer
-around when the site cannot be reached. Names resolve through a fake DNS; pages through mocked HTTP."""
+around when the site cannot be reached or is too slow. Names resolve through a fake DNS; pages through mocked HTTP."""
 
+import asyncio
 from collections.abc import Iterator
 
 import httpx
@@ -12,10 +13,9 @@ from nestor.core import ProviderError
 from nestor.modules.system.selfmap.assistant import anchor, excerpt
 from nestor.runtime.plugins import BUILT_IN, Registry
 from nestor.runtime.selfmap import survey
+from nestor.testing.system import PAGE, DocumentationContract, StaticDocumentation
 
 from ..dns import resolve
-
-TOOLS = "# Tools\n\n## Search\n\nAll engines serve one `web_search`.\n"
 
 
 @pytest.fixture(autouse=True)
@@ -29,27 +29,44 @@ def site() -> Iterator[respx.MockRouter]:
         yield router
 
 
-async def test_a_page_is_its_markdown_read_once(site: respx.MockRouter) -> None:
-    route = site.get("https://nestorhome.dev/docs/tools.md").respond(200, text=TOOLS)
+class TestSiteDocumentation(DocumentationContract):
+    @pytest.fixture(autouse=True)
+    def pages(self, site: respx.MockRouter) -> None:
+        site.get("https://nestorhome.dev/docs/tools.md").respond(200, text=PAGE)
+        site.get(host="nestorhome.dev").respond(404, text="Not found")
+
+    def documentation(self) -> SiteDocumentation:
+        return SiteDocumentation()
+
+    def unreachable(self) -> SiteDocumentation:
+        return SiteDocumentation("https://unknown.example/docs")  # a name the DNS does not know
+
+
+class TestStaticDocumentation(DocumentationContract):
+    def documentation(self) -> StaticDocumentation:
+        return StaticDocumentation({"tools": PAGE})
+
+    def unreachable(self) -> StaticDocumentation:
+        return StaticDocumentation({"tools": PAGE}, offline=True)
+
+
+async def test_a_page_is_read_once(site: respx.MockRouter) -> None:
+    route = site.get("https://nestorhome.dev/docs/tools.md").respond(200, text=PAGE)
     async with SiteDocumentation() as docs:
-        assert await docs.page("tools") == TOOLS
-        assert await docs.page("tools") == TOOLS
+        assert await docs.page("tools") == PAGE
+        assert await docs.page("tools") == PAGE
     assert route.call_count == 1
 
 
-@pytest.mark.parametrize(
-    "answer", [httpx.Response(404, text="Not found"), httpx.ConnectError("offline")], ids=["no page", "offline"]
-)
-async def test_a_page_that_cannot_be_read_is_a_provider_error(
-    site: respx.MockRouter, answer: httpx.Response | Exception
-) -> None:
-    site.get("https://nestorhome.dev/docs/nope.md").mock(
-        side_effect=answer if isinstance(answer, Exception) else None,
-        return_value=answer if isinstance(answer, httpx.Response) else None,
-    )
-    async with SiteDocumentation() as docs:
-        with pytest.raises(ProviderError):
-            await docs.page("nope")
+async def test_a_site_too_slow_is_a_provider_error_within_the_timeout(site: respx.MockRouter) -> None:
+    async def slow(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(1)
+        return httpx.Response(200, text=PAGE)
+
+    site.get("https://nestorhome.dev/docs/tools.md").mock(side_effect=slow)
+    async with SiteDocumentation(timeout_s=0.1) as docs:
+        with pytest.raises(ProviderError, match="took longer"):
+            await docs.page("tools")
 
 
 @pytest.mark.live
