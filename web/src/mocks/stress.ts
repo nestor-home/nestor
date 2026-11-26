@@ -193,7 +193,6 @@ export function stress(db: Db, now = Date.now()): void {
       {
         at: at(30),
         cause: "match",
-        due_at: null,
         item_title: `${LONG_WORD} ${LONG_URL}`,
         item_kind: "mail",
         summary: `${LONG_WORD} replied to ${LONG_NAME}`,

@@ -26,7 +26,6 @@ act-for = For
 act-started = Since
 act-found = Found
 act-next = Next
-act-no-source = Alerts can only ring at times.
 act-no-source-hint = For { $assistant } to tell you when something arrives, connect a source: a mail account, a feed, a web page, a webhook.
 act-connect-account = Connect an account
 act-add-source = Add a source

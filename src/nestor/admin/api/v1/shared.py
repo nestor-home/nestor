@@ -1,13 +1,19 @@
 """What every resource builds on: a request body, a person as the front names them, a message as data. A shape
 one resource owns and another sends lives in the owner's `schemas.py`."""
 
-from pydantic import BaseModel, ConfigDict
+from datetime import time
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, PlainSerializer, WithJsonSchema
 
 from nestor.admin.presentation import Phrasebook
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address
 from nestor.modules.household import Household
+
+HH_MM = {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
+type Clock = Annotated[time, PlainSerializer(lambda t: t.strftime("%H:%M")), WithJsonSchema(HH_MM)]  # HH:MM both ways
 
 
 class Input(BaseModel):

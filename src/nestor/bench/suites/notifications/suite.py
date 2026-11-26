@@ -49,7 +49,7 @@ from nestor.modules.conversation import (
     Source,
 )
 from nestor.modules.household import Account, Household, Person
-from nestor.modules.initiative import Alert, Frequency, Incoming, Ring, RingCause
+from nestor.modules.initiative import Alert, Incoming, Ring, RingCause
 from nestor.modules.initiative.alerts import ring_instruction
 from nestor.modules.initiative.returns import turn_instruction
 from nestor.modules.journal import Journal
@@ -200,19 +200,14 @@ def _rang(data: Mapping[str, Any], timezone: str) -> str:
     """An alert ringing now: on a mail the triage matched when the case gives one, else at its time (due now: an
     alert dated otherwise reads as late)."""
     now = datetime.now(ZoneInfo(timezone))
-    alert = Alert(
-        title=str(data["title"]),
-        instruction=str(data["instruction"]),
-        condition=data.get("condition"),
-        at=None if "subject" in data else now,
-        kinds=("mail",) if "subject" in data else (),
-        frequency=Frequency.ONCE,
-        owner=PERSON.id,
-    )
+    condition = data.get("condition")
+    title, instruction = str(data["title"]), str(data["instruction"])
     if "subject" not in data:
+        alert = Alert(title=title, instruction=instruction, condition=condition, at=now, owner=PERSON.id)
         return ring_instruction(
             alert, Ring(id="bench", at=now, cause=RingCause.DUE, due_at=now), PERSON, timezone, None
         )
+    alert = Alert(title=title, instruction=instruction, condition=condition, kinds=("mail",), owner=PERSON.id)
     mail = Incoming(
         source="gmail-mathis",
         kind="mail",

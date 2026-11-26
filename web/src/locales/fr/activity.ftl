@@ -26,7 +26,6 @@ act-for = Pour
 act-started = Depuis
 act-found = Trouvé
 act-next = Prochain
-act-no-source = Les alertes ne sonnent qu'à heure fixe.
 act-no-source-hint = Pour que { $assistant } vous dise quand quelque chose arrive, connectez une source : un compte de mail, un flux, une page web, un webhook.
 act-connect-account = Connecter un compte
 act-add-source = Ajouter une source

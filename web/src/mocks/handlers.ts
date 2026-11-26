@@ -1441,7 +1441,7 @@ export const handlers = [
         Number(!a.next_due) - Number(!b.next_due) ||
         (a.next_due && b.next_due ? a.next_due.localeCompare(b.next_due) : b.created_at.localeCompare(a.created_at)),
     );
-    return json({ alerts: listed, kinds, timezone: "Europe/Paris" } satisfies In<"AlertsOut">);
+    return json({ alerts: listed, kinds } satisfies In<"AlertsOut">);
   }),
 
   http.get(`${API}/alerts/:id`, ({ request, params }) => {

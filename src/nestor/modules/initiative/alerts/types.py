@@ -67,7 +67,7 @@ class Alert:
     title: str  # the short name the household knows it by: "Colis de la poussette"
     instruction: str  # what Nestor does when it rings, in its words: "tell Mathis the parcel arrived"
     at: datetime | None = None  # aware
-    times: tuple[time, ...] = ()  # in the household's clock
+    times: tuple[time, ...] = ()  # in the household's clock, earliest first
     days: tuple[Day, ...] = ()  # every day when empty
     kinds: tuple[str, ...] = ()
     condition: str | None = None  # in plain language: "the price is under 135 $"
@@ -84,10 +84,15 @@ class Alert:
             raise ContractError("an alert rings at a moment (`at`), at `times`, or on `kinds` of items: exactly one")
         if self.days and not self.times:
             raise ContractError("`days` go with `times`")
+        object.__setattr__(self, "times", tuple(sorted(self.times)))
 
     @property
     def trigger(self) -> Trigger:
         return Trigger.AT if self.at is not None else Trigger.TIMES if self.times else Trigger.EVENTS
+
+    def concerns(self, kind: str, owner: PersonId | None) -> bool:
+        """Whether an item of `kind` that came to `owner` (`None`: nobody's) is for it: never someone else's."""
+        return kind in self.kinds and not (self.owner and owner and self.owner != owner)
 
     def next_due(self, after: datetime, timezone: str) -> datetime | None:
         """The first time it is due strictly after `after` (aware); `None` for items, and once a moment has passed."""
@@ -99,9 +104,9 @@ class Alert:
         local = after.astimezone(zone)
         for offset in range(8):
             day = local.date() + timedelta(days=offset)
-            if self.days and list(Day)[day.weekday()] not in self.days:
+            if self.days and Day.of(day) not in self.days:
                 continue
-            for moment in sorted(self.times):
+            for moment in self.times:
                 due = datetime.combine(day, moment, tzinfo=zone)
                 if due > after:
                     return due

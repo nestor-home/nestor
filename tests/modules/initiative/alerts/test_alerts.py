@@ -71,6 +71,13 @@ NO = '{"matches": []}'
 ALL_DAY = QuietHours(time(0), time(23, 59, 59, 999_999))
 
 
+async def wake(keeper: AlertKeeper) -> int:
+    """Wake the keeper on its clock; how many alerts rang, as the journal tells."""
+    before = len(await keeper.journal.history(AlertRang))
+    await keeper.wake_due()
+    return len(await keeper.journal.history(AlertRang)) - before
+
+
 def paris(day: int, hour: int, minute: int = 0) -> datetime:
     return datetime(2026, 11, day, hour, minute, tzinfo=PARIS)  # the 2nd is a Monday
 
@@ -441,12 +448,12 @@ async def test_an_alert_rings_once_each_time_it_is_due_with_its_tools_and_tells_
             times=["08:00"],
             frequency="every_time",
         )
-        assert await home.keeper.wake_due() == 0
+        assert await wake(home.keeper) == 0
         home.clock.now = paris(2, 8, 1)
-        assert await home.keeper.wake_due() == 1
-        assert await home.keeper.wake_due() == 0, "once for each time it is due"
+        assert await wake(home.keeper) == 1
+        assert await wake(home.keeper) == 0, "once for each time it is due"
         home.clock.now = paris(3, 8)
-        assert await home.keeper.wake_due() == 1
+        assert await wake(home.keeper) == 1
 
     assert [e.due_at for e in await home.journal.history(AlertRang)] == [paris(2, 8), paris(3, 8)]
     woken = home.writer.requests[0].messages[-1].content
@@ -468,13 +475,13 @@ async def test_a_condition_checked_until_it_has_rung_goes_on_while_silent_and_en
             frequency="until_rung",
         )
         home.clock.now = paris(2, 21, 1)
-        assert await home.keeper.wake_due() == 1
+        assert await wake(home.keeper) == 1
         assert created["alert_id"] in home.book.alerts, "nothing told yet: it checks again tomorrow"
         home.clock.now = paris(3, 21, 1)
-        assert await home.keeper.wake_due() == 1
+        assert await wake(home.keeper) == 1
         assert home.book.alerts == {}
         home.clock.now = paris(4, 21, 1)
-        assert await home.keeper.wake_due() == 0
+        assert await wake(home.keeper) == 0
 
     asked = home.writer.requests[0].messages[-1].content
     assert "Its condition: the Nvidia share is under 135 $. Check it with your tools first" in asked
@@ -494,7 +501,7 @@ async def test_an_alert_with_nothing_to_tell_sends_nothing_and_leaves_no_turn() 
             frequency="every_time",
         )
         home.clock.now = paris(2, 10, 1)
-        assert await home.keeper.wake_due() == 1
+        assert await wake(home.keeper) == 1
 
     assert len(home.writer.requests) == 2, "it checked once, and nothing was tried anywhere else"
     assert home.telegram.sent == []
@@ -517,8 +524,8 @@ async def test_an_alert_that_fails_does_not_stop_the_others_nor_rings_again(fail
             title="Ouvre les volets", instruction="Ouvre les volets", times=["08:00"], frequency="every_time"
         )
         home.clock.now = paris(2, 8, 1)
-        assert await home.keeper.wake_due() == 2
-        assert await home.keeper.wake_due() == 0, "a failed ring is not retried in a loop"
+        assert await wake(home.keeper) == 2
+        assert await wake(home.keeper) == 0, "a failed ring is not retried in a loop"
 
     woken = [r.messages[-1].content for r in home.writer.requests]
     assert "Ouvre les volets" in woken[-1]
@@ -535,8 +542,8 @@ async def test_an_alert_missed_while_stopped_rings_once_when_back_then_follows_i
     home.clock.now = paris(5, 12)  # stopped for three days
     home.build()
     async with home.book:
-        assert await home.keeper.wake_due() == 1
-        assert await home.keeper.wake_due() == 0
+        assert await wake(home.keeper) == 1
+        assert await wake(home.keeper) == 0
         assert home.book.next_due(next(iter(home.book.alerts.values()))) == paris(6, 8)
 
 
@@ -563,7 +570,7 @@ async def test_a_moment_ends_once_rung_a_cancelled_one_never_rings_and_an_expire
         with pytest.raises(ToolFailed, match="no active alert"):
             await cancel.run({"alert_id": daily["alert_id"]}, context)
         home.clock.now = paris(3, 9, 5)
-        assert await home.keeper.wake_due() == 1, "the moment only: one was cancelled, one ended before its time"
+        assert await wake(home.keeper) == 1, "the moment only: one was cancelled, one ended before its time"
         assert home.book.alerts == {}
     home.build()
     async with home.book:
@@ -634,7 +641,7 @@ async def test_a_recurring_alert_reads_what_it_and_its_tasks_told_before_and_tel
         await tool.run({**arguments, "frequency": "every_time"}, context)
         for day in (2, 3):
             clock.now = paris(day, 9, 1)
-            assert await keeper.wake_due() == 1
+            assert await wake(keeper) == 1
             await result_answered()
 
     monday, tuesday = (r.messages[0].content for r in model.requests[2::3])

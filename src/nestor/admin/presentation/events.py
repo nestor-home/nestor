@@ -463,7 +463,7 @@ class EventDescriber:
                 e,
                 Message.of(
                     "journal-alert-created",
-                    trigger="at" if e.at_moment else "times" if e.times else "events",
+                    trigger=e.alert.trigger,
                     kinds=", ".join(e.kinds),
                     title=e.title,
                 ),

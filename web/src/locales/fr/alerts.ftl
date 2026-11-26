@@ -31,7 +31,6 @@ alert-urgent = Urgente : dite tout de suite, même aux heures calmes
 alert-so-far = Jusqu'ici
 alert-rings = Pourquoi elle a sonné
 alert-rings-empty = Elle n'a pas encore sonné.
-alert-last-rang = A sonné
 alert-found = Son déroulé
 alert-found-empty = Rien pour l'instant.
 alert-asked-in = Demandée dans

@@ -14115,7 +14115,7 @@
           },
           "times": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Clock"
             },
             "type": "array",
             "title": "Times"
@@ -14240,17 +14240,12 @@
             },
             "type": "array",
             "title": "Kinds"
-          },
-          "timezone": {
-            "type": "string",
-            "title": "Timezone"
           }
         },
         "type": "object",
         "required": [
           "alerts",
-          "kinds",
-          "timezone"
+          "kinds"
         ],
         "title": "AlertsOut"
       },
@@ -15845,7 +15840,7 @@
           "sun"
         ],
         "title": "Day",
-        "description": "A day of the week, Monday first (`list(Day)[date.weekday()]`)."
+        "description": "A day of the week, Monday first."
       },
       "DeliveredOut": {
         "properties": {
@@ -19028,18 +19023,6 @@
           "cause": {
             "$ref": "#/components/schemas/RingCause"
           },
-          "due_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due At"
-          },
           "item_title": {
             "anyOf": [
               {
@@ -19071,13 +19054,12 @@
         "required": [
           "at",
           "cause",
-          "due_at",
           "item_title",
           "item_kind",
           "summary"
         ],
         "title": "RingOut",
-        "description": "One time it rang, and why: its time came (`due_at`), an event arrived, or an item matched (`summary` says\nhow)."
+        "description": "One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how)."
       },
       "Risk": {
         "type": "string",

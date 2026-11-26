@@ -14,15 +14,14 @@ import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { BrandMark, type BrandSlug, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { rangBecause, weekdayLabel } from "@/lib/labels";
+import { frequencyLabel, rangBecause, weekdayLabel } from "@/lib/labels";
 import { useCan } from "@/lib/session";
 
 /** The mark of what items ring an alert: the kinds Nestor's sources bring, else a brand (a webhook named `github`). */
 const KIND_MARKS: Record<string, BrandSlug> = { mail: "email", feed: "rss", page: "web-page" };
 
 /** The brand that stands for a kind of item. */
-export const kindBrand = (kind: string | undefined): BrandSlug =>
-  (kind && (KIND_MARKS[kind] ?? brandOf(kind))) || "webhook";
+const kindBrand = (kind: string | undefined): BrandSlug => (kind && (KIND_MARKS[kind] ?? brandOf(kind))) || "webhook";
 
 /** An alert's mark: the source it waits for, or a clock for one that rings at times. */
 export function AlertMark({ alert, size }: { alert: Alert; size?: TileSize }) {
@@ -49,6 +48,17 @@ export function rings(alert: Alert): string {
     return `${days} · ${alert.times.join(", ")}`;
   }
   return tr("alert-on-kinds", { kinds: alert.kinds.map((kind) => tr("alert-kind", { kind })).join(", ") });
+}
+
+/** How often it rings, and whether it is told at once. */
+export function AlertFrequency({ alert }: { alert: Alert }) {
+  const t = useT();
+  return (
+    <>
+      <span className="block">{frequencyLabel(alert.frequency)}</span>
+      {alert.urgent ? <span className="block text-meta text-ink-muted">{t("alert-urgent")}</span> : null}
+    </>
+  );
 }
 
 /** Why it rang, and when: "Its time came · 2 h ago". */

@@ -43,9 +43,9 @@ class FollowUp:
 
 
 @dataclass(frozen=True, slots=True)
-class _Sent:
+class Sent:
     """A conversation took a notification: `said` whether the agent had something to tell there, `False` when it
-    withheld it."""
+    withheld it (`DeliveryWithheld`)."""
 
     address: Address
     said: bool
@@ -91,11 +91,12 @@ class Courier(Component):
         urgent: bool = False,
         private: bool = False,
         to: Address | None = None,
-    ) -> Address | None:
-        """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
-        when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
-        conversation. A notification with nothing to tell is withheld there (`DeliveryWithheld`) and leaves no turn,
-        unless it `must_tell`: then it goes on to the next place.
+    ) -> Sent | None:
+        """Deliver now what `notification` brings to `person`; returns where and whether the agent told something
+        there, or `None` (logged as `DeliveryFailed`) when nothing could take it. Wherever it goes, the notification
+        and its answer become a turn of that conversation. A notification with nothing to tell is withheld there
+        (`DeliveryWithheld`, `said` false) and leaves no turn, unless it `must_tell`: then it goes on to the next
+        place.
         `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
         waits for them once the content is written; aloud in full only with nowhere to write. Files (a document a
@@ -138,18 +139,18 @@ class Courier(Component):
                 said = NOTICE if private else FILES_NOTICE
                 notice = replace(notification, text=f"{notification.text}\n\n{said}", files=())
                 await self._send(person, plan.spoken, Medium.SPOKEN, notice)
-            return written_to.address
+            return written_to
         aloud = plan.spoken and not (private and written_first)
         if aloud and plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
             if plan.follow_up and spoken.said:
                 self._watch_reaction(person, plan, notification)
-            return spoken.address
+            return spoken
         if (
             plan.written
             and not written_first
             and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification))
         ):
-            return written_to.address
+            return written_to
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
             DeliveryFailed(
@@ -179,7 +180,7 @@ class Courier(Component):
         notification: Notification,
         *,
         follow_up: bool = False,
-    ) -> _Sent | None:
+    ) -> Sent | None:
         """Compose the answer to `notification` for this conversation once it is free, send it, then record both as
         its turn. `None`: this conversation could not take it, the model could not write it, or it wrote nothing
         for a notification that had to be told."""
@@ -205,7 +206,7 @@ class Courier(Component):
                     source=self.name, address=address, about=notification.about, person=who, reason=draft.reason
                 )
             )
-            return _Sent(address, said=False)
+            return Sent(address, said=False)
         # recorded once it is sure to go, as an answer to a voice message is
         files = await self.agent.attachments.outgoing(draft.text, draft.files, channel.sends, voiced=draft.voiced)
         try:  # sent without holding the conversation: a voice says it once the person is answered
@@ -217,7 +218,7 @@ class Courier(Component):
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=notification.about, person=who, follow_up=follow_up)
         )
-        return _Sent(address, said=True)
+        return Sent(address, said=True)
 
     def _watch_reaction(self, person: Person | None, plan: Plan, notification: Notification) -> None:
         assert plan.spoken is not None and plan.written is not None

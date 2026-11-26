@@ -34,7 +34,7 @@ import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { AlertKind, AlertMark, CancelAlert, RangBecause, rings } from "@/features/alerts/parts";
+import { AlertFrequency, AlertKind, AlertMark, CancelAlert, RangBecause, rings } from "@/features/alerts/parts";
 import { TaskCardBody, TaskLine, TaskStateMark } from "@/features/tasks/parts";
 import { TaskSheet } from "@/features/tasks/tasks";
 import { useT } from "@/i18n";
@@ -77,6 +77,7 @@ export function ActivityView() {
   const ready = listed.filter((x) => x.state === "ready");
   const put = archived.data?.tasks ?? [];
   const kept = alerts.data?.alerts ?? []; // soonest due first, then those that wait for items
+  const noSource = alerts.data?.kinds.length === 0;
   const others = lane === "running" ? 0 : asks.length + questions.length + pending.length;
   const waiting = asks.length + questions.length + pending.length + asking.length;
   const lanes = (
@@ -197,9 +198,9 @@ export function ActivityView() {
             </RowList>
           ) : (
             <Empty
-              hint={alerts.data?.kinds.length === 0 ? t("act-no-source-hint", { assistant: me.assistant }) : undefined}
+              hint={noSource ? t("act-no-source-hint", { assistant: me.assistant }) : undefined}
               action={
-                alerts.data?.kinds.length === 0 ? (
+                noSource ? (
                   <span className="flex flex-wrap gap-2">
                     <Link to="/connections/catalogue" className={buttonVariants({ variant: "outline", size: "sm" })}>
                       {t("act-connect-account")}
@@ -453,8 +454,7 @@ function AlertPanel({ alert: a, onDone }: { alert: Alert; onDone: () => void }) 
         {a.next_due ? <Fact term={t("act-next")}>{moment(a.next_due)}</Fact> : null}
         {a.condition ? <Fact term={t("alert-condition")}>{a.condition}</Fact> : null}
         <Fact term={t("alert-frequency-term")}>
-          {frequencyLabel(a.frequency)}
-          {a.urgent ? <span className="block text-meta text-ink-muted">{t("alert-urgent")}</span> : null}
+          <AlertFrequency alert={a} />
         </Fact>
         <Fact term={t("act-for")}>{personName(a.owner)}</Fact>
         <Fact term={t("alert-so-far")}>

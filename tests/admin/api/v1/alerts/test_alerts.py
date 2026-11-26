@@ -48,7 +48,7 @@ async def test_alerts_come_soonest_first_with_why_they_rang_each_to_whom_it_was_
 
         listed = (await owner.get("/api/v1/alerts")).json()
         assert [a["id"] for a in listed["alerts"]] == [soon.id, weekly.id, parcel.id]
-        assert (listed["timezone"], listed["kinds"]) == ("Europe/Paris", ["mail"])
+        assert listed["kinds"] == ["mail"]
         first, second, third = listed["alerts"]
         assert (first["trigger"], first["urgent"], first["frequency"]) == ("at", True, "once")
         assert first["origin"] == {"session": "telegram:42", "channel": "telegram"}

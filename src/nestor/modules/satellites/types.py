@@ -8,7 +8,7 @@ itself; what it may do is decided when a household member approves the pairing.
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from enum import StrEnum
 from typing import Any
 
@@ -286,7 +286,7 @@ class QuietHours:
 
     def covers(self, now: datetime) -> bool:
         """Whether `now`, in the household's time, falls in this slot."""
-        today, yesterday, moment = WEEK[now.weekday()], WEEK[now.weekday() - 1], now.time()
+        today, yesterday, moment = Day.of(now), Day.of(now - timedelta(days=1)), now.time()
         if self.start < self.end:
             return today in self.days and self.start <= moment < self.end
         return (today in self.days and moment >= self.start) or (yesterday in self.days and moment < self.end)

@@ -1,11 +1,10 @@
 """What the media routes take and send."""
 
-from datetime import time
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, PlainSerializer, WithJsonSchema
+from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.shared import People, PersonRef
+from nestor.admin.api.v1.shared import Clock, People, PersonRef
 from nestor.core import Day, PersonId
 from nestor.modules.satellites import WEEK, LiveSession, MediaAccess, Off, Offer, Privacy, Purpose, QuietHours
 
@@ -68,10 +67,6 @@ class MediaSessionOut(BaseModel):
             audio=live.audio,
             max_s=live.max_s,
         )
-
-
-HH_MM = {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"}
-type Clock = Annotated[time, PlainSerializer(lambda t: t.strftime("%H:%M")), WithJsonSchema(HH_MM)]  # HH:MM both ways
 
 
 class QuietHoursIO(BaseModel):

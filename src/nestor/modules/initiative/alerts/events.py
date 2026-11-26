@@ -1,11 +1,11 @@
 """Events of alerts: created, an item sorted against them, rung (before Nestor follows it, with why), ended (with
 why)."""
 
-from datetime import datetime
+from datetime import datetime, time
 
-from nestor.core import Event, PersonId
+from nestor.core import Day, Event, PersonId
 from nestor.modules.channels import Address, Exchange
-from nestor.modules.initiative.alerts.types import AlertEnd, Frequency, RingCause
+from nestor.modules.initiative.alerts.types import Alert, AlertEnd, Frequency, RingCause
 
 
 class AlertCreated(Event, event_type="alert.created"):
@@ -26,6 +26,25 @@ class AlertCreated(Event, event_type="alert.created"):
     owner: PersonId | None = None
     created_in: Address | None = None
     exchange: Exchange | None = None
+
+    @property
+    def alert(self) -> Alert:
+        return Alert(
+            id=self.alert_id,
+            title=self.title,
+            instruction=self.instruction,
+            at=self.at_moment,
+            times=tuple(time.fromisoformat(t) for t in self.times),
+            days=tuple(Day(d) for d in self.days),
+            kinds=self.kinds,
+            condition=self.condition,
+            frequency=self.frequency,
+            until=self.until,
+            urgent=self.urgent,
+            owner=self.owner,
+            created_in=self.created_in,
+            created_at=self.at,
+        )
 
 
 class AlertSorted(Event, event_type="alert.sorted"):

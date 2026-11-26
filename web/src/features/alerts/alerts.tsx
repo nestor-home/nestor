@@ -14,9 +14,8 @@ import { Empty, Failure, Loading } from "@/components/states";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { moment } from "@/lib/dates";
-import { frequencyLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
-import { AlertMark, CancelAlert, RangBecause, rings } from "./parts";
+import { AlertFrequency, AlertMark, CancelAlert, RangBecause, rings } from "./parts";
 
 export function AlertDetail({ id }: { id: string }) {
   const t = useT();
@@ -73,8 +72,7 @@ function Loaded({ alert: a, trail }: { alert: Alert; trail: Crumb[] }) {
               <p className="mt-auto flex items-center gap-3 text-ink">
                 <IconTile icon={Repeat} size="sm" />
                 <span className="min-w-0">
-                  <span className="block">{frequencyLabel(a.frequency)}</span>
-                  {a.urgent ? <span className="block text-meta text-ink-muted">{t("alert-urgent")}</span> : null}
+                  <AlertFrequency alert={a} />
                 </span>
               </p>
             </div>

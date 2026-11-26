@@ -16,7 +16,7 @@ from nestor.modules.initiative.alerts.events import AlertSorted
 from nestor.modules.initiative.alerts.ports import InboundEventSource
 from nestor.modules.initiative.alerts.triage import Triage, describe
 from nestor.modules.initiative.alerts.types import Alert, AlertEnd, Frequency, Incoming, Ring, RingCause, Trigger
-from nestor.modules.initiative.delivery import Courier, DeliveryWithheld
+from nestor.modules.initiative.delivery import Courier
 
 log = logging.getLogger(__name__)
 IDLE_S = 3600.0  # the longest sleep between two looks at the clock, against drift and clock changes
@@ -58,28 +58,24 @@ class AlertKeeper(Component):
                 await worker
         self._workers = []
 
-    async def wake_due(self) -> int:
-        """Ring every alert whose time has come, each once, and end those that can no longer ring; how many rang. One
-        whose `until` passed ends first: it never rings late."""
+    async def wake_due(self) -> None:
+        """Ring every alert whose time has come, each once, and end those that can no longer ring. One whose `until`
+        passed ends first: it never rings late."""
         await self.book.settle()
-        due = self.book.due()
-        for alert, due_at in due:
+        for alert, due_at in self.book.due():
             await self._ring(alert, RingCause.DUE, due_at=due_at)
         await self.book.settle()
-        return len(due)
 
     async def handle(self, item: Incoming) -> None:
         """Ring the alerts an item is for: at once those on a structured kind without a condition, the others when the
         triage model reads the item as what they wait for (one call for all of them)."""
-        concerned = [
-            a
-            for a in self.book.alerts.values()
-            if item.kind in a.kinds and not (a.owner and item.owner and a.owner != item.owner)  # not someone else's
-        ]
-        exact = item.kind in self.book.structured
-        for alert in [a for a in concerned if exact and a.condition is None]:
+        exact, judged = [], []
+        for alert in self.book.alerts.values():
+            if alert.concerns(item.kind, item.owner):
+                at_once = item.kind in self.book.structured and alert.condition is None
+                (exact if at_once else judged).append(alert)
+        for alert in exact:
             await self._ring(alert, RingCause.EVENT, item=item)
-        judged = [a for a in concerned if not (exact and a.condition is None)]
         if not judged:
             return
         matches = await self.triage.matches(judged, item)
@@ -118,7 +114,7 @@ class AlertKeeper(Component):
             thread=About(Source.ALERT, alert.id).key,  # each time it rings, it reads what it told before
         )
         try:  # where it was set, or wherever its owner is reached; a delivery nothing took is journaled
-            address = await self.courier.deliver(
+            sent = await self.courier.deliver(
                 owner,
                 notification,
                 origin=alert.created_in,
@@ -130,11 +126,8 @@ class AlertKeeper(Component):
             return
         if alert.id not in self.book.alerts:
             return
-        if alert.frequency is Frequency.UNTIL_RUNG and address is not None and not await self._withheld(about):
+        if alert.frequency is Frequency.UNTIL_RUNG and sent is not None and sent.said:
             await self.book.end(alert.id, AlertEnd.RANG)
-
-    async def _withheld(self, about: About) -> bool:
-        return any(e.about.same(about) for e in await self.journal.history(DeliveryWithheld))
 
     async def _consume(self, source: InboundEventSource) -> None:
         async for item in source.items():

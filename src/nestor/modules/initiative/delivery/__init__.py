@@ -1,6 +1,6 @@
 """Delivery: where an unprompted message goes (presence, satellites, quiet hours) and getting it there."""
 
-from nestor.modules.initiative.delivery.courier import Courier, FollowUp
+from nestor.modules.initiative.delivery.courier import Courier, FollowUp, Sent
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
 from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan, QuietHours
 
@@ -14,4 +14,5 @@ __all__ = [
     "FollowUp",
     "Plan",
     "QuietHours",
+    "Sent",
 ]

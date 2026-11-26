@@ -7,6 +7,7 @@ answer, its second try), differing only in how many alerts each call judges:
 An item the model cannot sort is unsorted for the alerts of that call, and matches none of them.
 """
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -37,11 +38,9 @@ async def decide(
         return []
     triage = Triage(model, language=language)
     calls = [concerned] if algorithm is Algorithm.BATCH else [[a] for a in concerned]
-    decisions = []
-    for judged in calls:
-        matches = await triage.matches(judged, item)
-        decisions.extend(
-            Decision(alert=a.id, matches=matches is not None and a.id in matches, unsorted=matches is None)
-            for a in judged
-        )
-    return decisions
+    answers = await asyncio.gather(*(triage.matches(judged, item) for judged in calls))  # the calls are independent
+    return [
+        Decision(alert=a.id, matches=matches is not None and a.id in matches, unsorted=matches is None)
+        for judged, matches in zip(calls, answers, strict=True)
+        for a in judged
+    ]

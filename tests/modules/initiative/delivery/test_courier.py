@@ -30,6 +30,7 @@ from nestor.modules.initiative import (
     DeliveryFailed,
     DeliveryPolicy,
     DeliveryWithheld,
+    Sent,
 )
 from nestor.modules.initiative.delivery.courier import FILES_NOTICE
 from nestor.modules.journal import FileRef, Journal
@@ -108,7 +109,7 @@ async def followed(sender: Courier) -> None:
 async def test_an_unanswered_announcement_is_followed_by_a_message() -> None:
     sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
-        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == SALON
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == Sent(SALON, said=True)
         await followed(sender)
     assert [a for a, _ in voice.sent] == [SALON]
     assert [a for a, _ in telegram.sent] == [TELEGRAM]
@@ -120,12 +121,9 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
     """Others may be in the room: they hear that something came, not what it says."""
     sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=10)
     async with sender:
-        assert (
-            await sender.deliver(
-                MATHIS, Notification("Mail de la banque.", About(Source.ALERT, "banque")), private=True
-            )
-            == TELEGRAM
-        )
+        assert await sender.deliver(
+            MATHIS, Notification("Mail de la banque.", About(Source.ALERT, "banque")), private=True
+        ) == Sent(TELEGRAM, said=True)
         assert sender.scheduled() == (), "already written: no follow-up"
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
 
@@ -140,7 +138,7 @@ async def test_a_result_with_a_file_is_written_with_it_and_the_room_hears_what_i
         done = Notification(
             "Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(FileRef(devis, "devis.pdf"),)
         )
-        assert await sender.deliver(MATHIS, done) == TELEGRAM
+        assert await sender.deliver(MATHIS, done) == Sent(TELEGRAM, said=True)
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
     assert [(f.name, f.data) for f in telegram.files[0]] == [("devis.pdf", b"%PDF devis")]
     assert FILES_NOTICE in str(model.requests[1].messages[-1].content), "aloud, it says the files were written"
@@ -158,7 +156,7 @@ async def test_a_result_with_a_file_is_said_aloud_when_it_cannot_be_written() ->
         done = Notification(
             "Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(FileRef(devis, "devis.pdf"),)
         )
-        assert await sender.deliver(MATHIS, done) == SALON
+        assert await sender.deliver(MATHIS, done) == Sent(SALON, said=True)
     assert voice.sent == [(SALON, "Le devis corrigé est prêt.")] and voice.files == [()]
     assert "devis.pdf" not in str(model.requests[-1].messages[0].content), "it is not told the file goes with it"
 
@@ -180,7 +178,7 @@ async def test_a_private_message_with_nothing_to_tell_is_neither_written_nor_ann
     sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model)
     async with sender:
         bank = Notification("Mail de la banque.", About(Source.ALERT, "banque"))
-        assert await sender.deliver(MATHIS, bank, private=True) == TELEGRAM
+        assert await sender.deliver(MATHIS, bank, private=True) == Sent(TELEGRAM, said=False)
     assert voice.sent == telegram.sent == [] and len(model.requests) == 1
     assert [w.reason for w in await journal.history(DeliveryWithheld)] == ["une publicité"]
 
@@ -214,7 +212,7 @@ async def test_closing_drops_pending_follow_ups() -> None:
 async def test_someone_away_gets_a_message_straight_away() -> None:
     sender, _, voice, telegram = courier(StaticPresence(Granularity.HOME).set("mathis", home=False))
     async with sender:
-        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == TELEGRAM
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == Sent(TELEGRAM, said=True)
     assert voice.sent == [] and len(telegram.sent) == 1
 
 
@@ -242,7 +240,7 @@ async def test_a_notification_waits_for_the_answer_being_written() -> None:
     async with sender:
         reply = asyncio.create_task(sender.agent.respond(asked).collect())
         await asyncio.sleep(0.01)  # the answer is being written
-        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == TELEGRAM
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) == Sent(TELEGRAM, said=True)
         await reply
 
     turns = await journal.history(UserTurn, NotificationTurn, AssistantTurn)
@@ -256,7 +254,7 @@ async def test_a_check_that_found_nothing_is_withheld_with_its_reason_in_the_jou
     sender.agent.models = ModelChoice.single(ScriptedModel(f"{SILENT} toujours 1 799 €, au-dessus du seuil"))
     async with sender:
         reminder = Notification("A wake-up is due now: check the price of the TV.", PRICE)
-        assert await sender.deliver(MATHIS, reminder) == TELEGRAM
+        assert await sender.deliver(MATHIS, reminder) == Sent(TELEGRAM, said=False)
 
     assert voice.sent == telegram.sent == []
     (withheld,) = await journal.history(DeliveryWithheld)
@@ -307,7 +305,7 @@ async def test_a_result_for_someone_speaking_by_voice_message_goes_back_as_one()
                 InboundMessage(address=TELEGRAM, sender=Sender("42"), text="", attachments=(asked,))
             ).collect()
             done = Notification("The update is finished.", About(Source.TASK, "t1", "completed"))
-            assert await sender.deliver(MATHIS, done) == TELEGRAM
+            assert await sender.deliver(MATHIS, done) == Sent(TELEGRAM, said=True)
         assert telegram.sent[-1] == (TELEGRAM, "La mise à jour est finie.")
         recorded = [(f.kind, f.data) for f in telegram.files[-1]]
         assert recorded == ([(AttachmentKind.VOICE, OGG + "La mise à jour est finie.".encode())] if voiced else []), (

@@ -3,9 +3,9 @@
 import asyncio
 from collections import Counter
 from collections.abc import Callable, Iterable
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime
 
-from nestor.core import Component, Day, PersonId, new_id, utc_now
+from nestor.core import Component, PersonId, new_id, utc_now
 from nestor.modules.channels import Exchange
 from nestor.modules.initiative.alerts.events import AlertCreated, AlertEnded, AlertRang
 from nestor.modules.initiative.alerts.ports import InboundEventSource
@@ -61,7 +61,7 @@ class AlertBook(Component):
             title=alert.title,
             instruction=alert.instruction,
             at_moment=alert.at,
-            times=tuple(t.strftime("%H:%M") for t in sorted(alert.times)),
+            times=tuple(f"{t:%H:%M}" for t in alert.times),
             days=alert.days,
             kinds=alert.kinds,
             condition=alert.condition,
@@ -144,7 +144,7 @@ class AlertBook(Component):
 
     def _take(self, event: object) -> None:
         if isinstance(event, AlertCreated):
-            self.alerts[event.alert_id] = _alert(event)
+            self.alerts[event.alert_id] = event.alert
             self._since[event.alert_id] = event.at  # the event's time: due from its creation on
         elif isinstance(event, AlertRang) and (alert := self.alerts.get(event.alert_id)):
             if event.due_at is not None:
@@ -157,25 +157,6 @@ class AlertBook(Component):
             self.rings.pop(event.alert_id, None)
             self.rang.pop(event.alert_id, None)
         self.changed.set()
-
-
-def _alert(event: AlertCreated) -> Alert:
-    return Alert(
-        id=event.alert_id,
-        title=event.title,
-        instruction=event.instruction,
-        at=event.at_moment,
-        times=tuple(time.fromisoformat(t) for t in event.times),
-        days=tuple(Day(d) for d in event.days),
-        kinds=event.kinds,
-        condition=event.condition,
-        frequency=event.frequency,
-        until=event.until,
-        urgent=event.urgent,
-        owner=event.owner,
-        created_in=event.created_in,
-        created_at=event.at,
-    )
 
 
 def _ring(event: AlertRang) -> Ring:

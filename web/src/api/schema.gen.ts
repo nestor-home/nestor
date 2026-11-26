@@ -1968,7 +1968,7 @@ export interface components {
             /** At */
             at: string | null;
             /** Times */
-            times: string[];
+            times: components["schemas"]["Clock"][];
             /** Days */
             days: components["schemas"]["Day"][];
             /** Kinds */
@@ -1998,8 +1998,6 @@ export interface components {
             alerts: components["schemas"]["AlertOut"][];
             /** Kinds */
             kinds: string[];
-            /** Timezone */
-            timezone: string;
         };
         /** AnswerIn */
         AnswerIn: {
@@ -2510,7 +2508,7 @@ export interface components {
         CostBasis: "reported" | "priced" | "free" | "nothing" | "unknown";
         /**
          * Day
-         * @description A day of the week, Monday first (`list(Day)[date.weekday()]`).
+         * @description A day of the week, Monday first.
          * @enum {string}
          */
         Day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -3609,8 +3607,7 @@ export interface components {
         RingCause: "due" | "event" | "match";
         /**
          * RingOut
-         * @description One time it rang, and why: its time came (`due_at`), an event arrived, or an item matched (`summary` says
-         *     how).
+         * @description One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how).
          */
         RingOut: {
             /**
@@ -3619,8 +3616,6 @@ export interface components {
              */
             at: string;
             cause: components["schemas"]["RingCause"];
-            /** Due At */
-            due_at: string | null;
             /** Item Title */
             item_title: string | null;
             /** Item Kind */

@@ -2,34 +2,23 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from nestor.admin.api.v1.shared import OriginOut, People, PersonRef
+from nestor.admin.api.v1.shared import Clock, OriginOut, People, PersonRef
 from nestor.core import Day
-from nestor.modules.initiative import Alert, AlertBook, Frequency, Ring, RingCause, Trigger
+from nestor.modules.initiative import Alert, AlertBook, Frequency, RingCause, Trigger
 
 
 class RingOut(BaseModel):
-    """One time it rang, and why: its time came (`due_at`), an event arrived, or an item matched (`summary` says
-    how)."""
+    """One time it rang, and why: its time came, an event arrived, or an item matched (`summary` says how)."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     at: datetime
     cause: RingCause
-    due_at: datetime | None
     item_title: str | None
     item_kind: str | None
     summary: str
-
-    @classmethod
-    def of(cls, ring: Ring) -> "RingOut":
-        return cls(
-            at=ring.at,
-            cause=ring.cause,
-            due_at=ring.due_at,
-            item_title=ring.item_title,
-            item_kind=ring.item_kind,
-            summary=ring.summary,
-        )
 
 
 class AlertOut(BaseModel):
@@ -39,7 +28,7 @@ class AlertOut(BaseModel):
     condition: str | None  # what must hold to tell, in the person's words
     trigger: Trigger
     at: datetime | None  # `at`: its moment
-    times: list[str]  # `times`: its times of day, "HH:MM" in the household's clock
+    times: list[Clock]  # `times`: its times of day, in the household's clock
     days: list[Day]  # `times`: its days; empty: every day
     kinds: list[str]  # `events`: the kinds of items it waits for ("mail", "dishwasher")
     frequency: Frequency
@@ -62,7 +51,7 @@ class AlertOut(BaseModel):
             condition=alert.condition,
             trigger=alert.trigger,
             at=alert.at,
-            times=[t.strftime("%H:%M") for t in sorted(alert.times)],
+            times=list(alert.times),
             days=list(alert.days),
             kinds=list(alert.kinds),
             frequency=alert.frequency,
@@ -73,11 +62,10 @@ class AlertOut(BaseModel):
             created_at=alert.created_at,
             next_due=book.next_due(alert),
             rang=book.rang[alert.id],
-            rings=[RingOut.of(r) for r in reversed(book.rings.get(alert.id, ()))],
+            rings=[RingOut.model_validate(r) for r in reversed(book.rings.get(alert.id, ()))],
         )
 
 
 class AlertsOut(BaseModel):
     alerts: list[AlertOut]  # soonest due first, then those that wait for items, newest first
     kinds: list[str]  # what the plugged sources can bring; empty: alerts ring only at times
-    timezone: str  # the household's clock, which `times` are in

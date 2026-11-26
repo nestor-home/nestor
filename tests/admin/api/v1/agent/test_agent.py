@@ -86,7 +86,7 @@ async def test_the_quiet_hours_and_scheduled_follow_ups_are_readable_each_to_who
         spoken = await admin.nestor.courier.deliver(
             mathis, Notification("Le colis est arrivé.", About(Source.ALERT, "a1"))
         )
-        assert spoken is not None and str(spoken) == "voice:salon"
+        assert spoken is not None and str(spoken.address) == "voice:salon"
         initiative = (await (await admin.api()).get("/api/v1/agent/initiative")).json()
         assert initiative["quiet_hours"] == {"start": start, "end": end, "timezone": "Europe/Paris", "active": False}
         (follow_up,) = initiative["upcoming"]

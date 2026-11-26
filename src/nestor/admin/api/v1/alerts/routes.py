@@ -27,7 +27,6 @@ async def list_alerts(request: Request, caller: Manager) -> AlertsOut:
     return AlertsOut(
         alerts=[AlertOut.of(a, book, people) for a in book.upcoming() if reaches_alert(caller, a)],
         kinds=sorted(book.kinds),
-        timezone=book.timezone,
     )
 
 

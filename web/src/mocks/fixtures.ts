@@ -1173,7 +1173,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(60 * 14),
           cause: "due",
-          due_at: minutes(60 * 14),
           item_title: null,
           item_kind: null,
           summary: "",
@@ -1197,7 +1196,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(60 * 24 * 3),
           cause: "due",
-          due_at: minutes(60 * 24 * 3),
           item_title: null,
           item_kind: null,
           summary: "",
@@ -1233,7 +1231,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(230),
           cause: "match",
-          due_at: null,
           item_title: fr("Planetarium trip: reply needed", "Sortie au planétarium : réponse attendue"),
           item_kind: "mail",
           summary: fr("The school asks for the permission slip.", "L'école demande l'autorisation de sortie."),
@@ -1255,7 +1252,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(96),
           cause: "match",
-          due_at: null,
           item_title: fr("Canteen menu for next week", "Menu de la cantine de la semaine prochaine"),
           item_kind: "mail",
           summary: fr("A message from Jules's school.", "Un message de l'école de Jules."),
@@ -1277,7 +1273,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(458),
           cause: "match",
-          due_at: null,
           item_title: "Python 3.15 beta 1",
           item_kind: "feed",
           summary: fr("The first beta of Python 3.15 is out.", "La première bêta de Python 3.15 est sortie."),
@@ -1312,7 +1307,6 @@ export function alerts(): Alert[] {
         {
           at: minutes(427),
           cause: "event",
-          due_at: null,
           item_title: "cycle · done",
           item_kind: "washing-machine",
           summary: "",

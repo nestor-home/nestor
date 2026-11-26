@@ -31,7 +31,6 @@ alert-urgent = Urgent: told at once, even in quiet hours
 alert-so-far = So far
 alert-rings = Why it rang
 alert-rings-empty = It has not rung yet.
-alert-last-rang = Last rang
 alert-found = What it went through
 alert-found-empty = Nothing yet.
 alert-asked-in = Asked in
