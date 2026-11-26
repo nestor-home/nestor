@@ -92,8 +92,9 @@ class Alert:
         return Trigger.AT if self.at is not None else Trigger.TIMES if self.times else Trigger.EVENTS
 
     def concerns(self, kind: str, owner: PersonId | None) -> bool:
-        """Whether an item of `kind` that came to `owner` (`None`: nobody's) is for it: never someone else's."""
-        return kind in self.kinds and not (self.owner and owner and self.owner != owner)
+        """Whether an item of `kind` that came to `owner` (`None`: nobody's) is for it: an item that came to someone
+        is only for that person's own alerts, never for the household's, so private content is never told in a room."""
+        return kind in self.kinds and (owner is None or self.owner == owner)
 
     def next_due(self, after: datetime, timezone: str) -> datetime | None:
         """The first time it is due strictly after `after` (aware); `None` for items, and once a moment has passed."""

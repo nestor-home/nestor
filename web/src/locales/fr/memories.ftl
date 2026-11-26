@@ -49,7 +49,7 @@ mem-place-option = { $shelf ->
 mem-tied = Gardé jusqu'à
 mem-tied-to = { $kind ->
     [task] la fin de sa tâche
-    [alert] la fin de sa veille
+    [alert] la fin de son alerte
    *[other] la fin de { $kind }
 }
 mem-move = Déplacer…
@@ -68,7 +68,7 @@ mem-retired = { $reason ->
     [merged] Fusionné avec un autre souvenir
     [stale] Mis de côté, périmé
    *[ended] { $tie ->
-        [alert] Mis de côté : sa veille est finie
+        [alert] Mis de côté : son alerte est finie
        *[task] Mis de côté : sa tâche est finie
     }
 }
