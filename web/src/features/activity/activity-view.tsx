@@ -178,12 +178,14 @@ export function ActivityView() {
                         {a.condition ?? a.instruction}
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-meta text-ink-muted">
-                        <span>{rings(a)}</span>
-                        <span>{frequencyLabel(a.frequency)}</span>
+                        <span className="min-w-0">{rings(a)}</span>
+                        <span className="min-w-0">{frequencyLabel(a.frequency)}</span>
                         {a.rings[0] ? (
-                          <span className="inline-flex items-center gap-1.5 text-ink">
-                            <BellRing className="size-3.5 text-ember" aria-hidden="true" />
-                            <RangBecause ring={a.rings[0]} />
+                          <span className="flex min-w-0 items-baseline gap-1.5 text-ink">
+                            <BellRing className="size-3.5 shrink-0 translate-y-0.5 text-ember" aria-hidden="true" />
+                            <span className="min-w-0">
+                              <RangBecause ring={a.rings[0]} />
+                            </span>
                           </span>
                         ) : null}
                       </span>
