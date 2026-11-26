@@ -61,6 +61,10 @@ describe("the system page", () => {
     expect(within(sheet).getByText("mcp", { selector: "dd" })).toBeVisible();
     expect(within(sheet).getByText(/Nothing goes through it for now/)).toBeVisible();
     expect(within(sheet).getByRole("link", { name: "Configure" })).toHaveAttribute("href", "/config/tools");
+    expect(within(sheet).getByRole("link", { name: "Documentation" })).toHaveAttribute(
+      "href",
+      "https://nestorhome.dev/docs/tools/#a-server-in-the-configuration",
+    );
   });
 
   it("restarts only once confirmed, then waits for the instance", async () => {

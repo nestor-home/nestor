@@ -5,6 +5,7 @@ import asyncio
 
 from nestor.core import ProviderError
 from nestor.modules.system import Installer, ReleaseFeed, Releases
+from nestor.modules.system.selfmap import Card, Documentation
 
 
 class StaticReleaseFeed(ReleaseFeed):
@@ -38,3 +39,23 @@ class FakeInstaller(Installer):
         if self.fails:
             raise ProviderError("installer", f"{version} refused the configuration", transient=False)
         self.installed.append(version)
+
+
+# the card of a plugin that only tests register
+DOUBLE = Card(summary="A test double.", docs="plugins")
+
+
+class StaticDocumentation(Documentation):
+    """Serves `pages` by slug; unreadable (a transient `ProviderError`) while `offline` or for a page it lacks."""
+
+    name = "static-documentation"
+
+    def __init__(self, pages: dict[str, str] | None = None, *, offline: bool = False) -> None:
+        self.pages, self.offline = dict(pages or {}), offline
+        self.read: list[str] = []
+
+    async def page(self, slug: str) -> str:
+        self.read.append(slug)
+        if self.offline or slug not in self.pages:
+            raise ProviderError("docs", f"no page {slug!r}", transient=True)
+        return self.pages[slug]

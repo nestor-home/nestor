@@ -119,7 +119,10 @@ async def test_a_delegated_task_keeps_it_working_until_it_ends() -> None:
         assert (
             await world.changed(
                 lambda: world.tasks.start_task(
-                    "Réserver le restaurant", title="Réserver le restaurant", origin=TELEGRAM
+                    "Réserver le restaurant",
+                    title="Réserver le restaurant",
+                    origin=TELEGRAM,
+                    executor="scripted-executor",
                 )
             )
             is Activity.WORKING

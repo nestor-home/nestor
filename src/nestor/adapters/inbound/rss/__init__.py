@@ -11,8 +11,18 @@ Feeds on the household's own network are refused, as `read_page` refuses pages (
 
 from nestor.adapters.inbound.rss.settings import RssSettings, build
 from nestor.adapters.inbound.rss.source import FeedSource
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
 __all__ = ["FeedSource", "RssSettings", "build", "plugin"]
 
-plugin = Plugin(Family.INBOUND, "rss", RssSettings, build)
+plugin = Plugin(
+    Family.INBOUND,
+    "rss",
+    RssSettings,
+    build,
+    card=Card(
+        summary="Watches follow RSS and Atom feeds: Nestor tells when a new entry matches what someone asked.",
+        docs="tools#feeds-pages-and-webhooks",
+    ),
+)

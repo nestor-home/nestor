@@ -11,8 +11,19 @@ unprompted goes through the person's other channels.
 """
 
 from nestor.adapters.channels.openai_api.settings import OpenAIApiSettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "openai-api", OpenAIApiSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "openai-api",
+    OpenAIApiSettings,
+    build,
+    card=Card(
+        summary="Lets other apps talk to Nestor as if it were an OpenAI model (Open WebUI, LibreChat, Home Assistant, "
+        "a script).",
+        docs="channels#choose-channels",
+    ),
+)
 
 __all__ = ["plugin"]

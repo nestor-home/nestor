@@ -28,15 +28,47 @@ from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.cognition.images import ImageModel
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
 language = Plugin(
-    Family.MODEL, "openai-compatible", OpenAICompatibleLanguageSettings, build_language, serves=LanguageModel
+    Family.MODEL,
+    "openai-compatible",
+    OpenAICompatibleLanguageSettings,
+    build_language,
+    serves=LanguageModel,
+    card=Card(
+        summary="Thinks and answers with any model behind an OpenAI-compatible API: OpenRouter, OpenAI, Mistral, "
+        "Groq, Vercel, or a local server (Ollama, llama.cpp, vLLM).",
+        docs="models#choose-a-provider",
+        needs=(Need.KEY,),
+    ),
 )
 embedding = Plugin(
-    Family.MODEL, "openai-compatible", OpenAICompatibleEmbeddingSettings, build_embedding, serves=EmbeddingModel
+    Family.MODEL,
+    "openai-compatible",
+    OpenAICompatibleEmbeddingSettings,
+    build_embedding,
+    serves=EmbeddingModel,
+    card=Card(
+        summary="Searches memories by meaning with an embedding model behind an OpenAI-compatible API, hosted or "
+        "local.",
+        docs="models#search-by-meaning",
+        needs=(Need.KEY,),
+    ),
 )
-image = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleImageSettings, build_image, serves=ImageModel)
+image = Plugin(
+    Family.MODEL,
+    "openai-compatible",
+    OpenAICompatibleImageSettings,
+    build_image,
+    serves=ImageModel,
+    card=Card(
+        summary="Draws and edits pictures with an image model behind an OpenAI-compatible API (OpenAI, OpenRouter).",
+        docs="models#pictures",
+        needs=(Need.KEY,),
+    ),
+)
 transcription = Plugin(
     Family.MODEL,
     "openai-compatible",
@@ -44,6 +76,11 @@ transcription = Plugin(
     build_transcription,
     requires="nestor-home[voice]",
     serves=TranscriptionModel,
+    card=Card(
+        summary="Hears speech with any OpenAI-compatible transcription API (OpenAI, Groq, a local Whisper server).",
+        docs="voice#choose-providers",
+        needs=(Need.KEY,),
+    ),
 )
 speech = Plugin(
     Family.MODEL,
@@ -52,6 +89,11 @@ speech = Plugin(
     build_speech,
     requires="nestor-home[voice]",
     serves=SpeechModel,
+    card=Card(
+        summary="Speaks with any OpenAI-compatible speech API (OpenAI, a local Kokoro server).",
+        docs="voice#choose-providers",
+        needs=(Need.KEY,),
+    ),
 )
 
 __all__ = ["embedding", "image", "language", "speech", "transcription"]

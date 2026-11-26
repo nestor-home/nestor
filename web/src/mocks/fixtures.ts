@@ -39,6 +39,7 @@ import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
 import { document, household, type Plugged, plugged, publicUrl, SCHEMAS } from "./instance";
 import { render } from "./messages";
+import pluginDocs from "./server/plugin-docs.json";
 import grants from "./server/role-scopes.json";
 
 export const ASSISTANT = "Richie";
@@ -1609,6 +1610,7 @@ export function components(doc: ConfigDocument, running: Running): Component[] {
       health,
       health_detail: observed.health_detail ?? told(p, health, running),
       details: {},
+      docs: (pluginDocs as Record<string, string>)[`${p.slot}/${p.plugin}`] ?? null,
     };
   });
   const paired = running.satellites.map((s): Component => {
@@ -1626,6 +1628,7 @@ export function components(doc: ConfigDocument, running: Running): Component[] {
       health: s.connected ? "started" : "unavailable",
       health_detail: s.connected ? s.room : fr(`Offline for ${offline} min`, `Hors ligne depuis ${offline} min`),
       details: { room: s.room },
+      docs: null,
     };
   });
   return [...configured, ...paired];

@@ -27,6 +27,7 @@ from pydantic_core import PydanticCustomError
 from nestor.core import Component, ContractError, Model, ModelType
 from nestor.core.i18n import Locale, Localizer
 from nestor.modules.connectors import Connector
+from nestor.modules.system.selfmap import Capability, Card
 
 ENTRY_POINTS = "nestor.adapters"
 
@@ -86,12 +87,16 @@ class Services:
 
 @dataclass(frozen=True, slots=True)
 class Plugin[S: AdapterSettings]:
+    """`card`: how it describes itself to the agent (what it lets Nestor do, what it needs, its page of the
+    documentation), so that it appears in the map of Nestor (`SelfMap`) whether it is configured or not."""
+
     family: Family
     kind: str
     settings: type[S]
     build: Callable[[S, str, Services], Component | Connector]  # settings, the instance name, services
     requires: str | None = None  # the optional dependencies `build` imports, as a pip requirement ("pkg[extra]")
     serves: type[Model] | None = None  # the type of model a plugin of the model family builds: it must say
+    card: Card = field(kw_only=True)
 
     def __post_init__(self) -> None:
         if (self.family is Family.MODEL) != (self.serves is not None):
@@ -102,6 +107,12 @@ class Plugin[S: AdapterSettings]:
     @property
     def model_type(self) -> ModelType | None:
         return self.serves.type if self.serves is not None else None
+
+    @property
+    def capability(self) -> Capability:
+        if self.serves is not None:
+            return Capability.model(self.serves.type)
+        return _CAPABILITIES[self.family]
 
     @property
     def id(self) -> str:
@@ -125,6 +136,15 @@ class Plugin[S: AdapterSettings]:
                 f"(no module {(missing.name or '').partition('.')[0]!r}): pip install '{self.requires}'"
             ) from None
 
+
+_CAPABILITIES = {
+    Family.EXECUTOR: Capability.EXECUTOR,
+    Family.CHANNEL: Capability.CHANNEL,
+    Family.HOME: Capability.HOME,
+    Family.TOOLS: Capability.TOOLS,
+    Family.INBOUND: Capability.INBOUND,
+    Family.CONNECTOR: Capability.CONNECTOR,
+}
 
 BUILT_IN = "nestor-home"  # the distribution of Nestor's own plugins
 
@@ -185,6 +205,10 @@ class Registry:
     def origin(self, family: Family, id: str) -> Distribution | None:
         """Where an installed plugin comes from; `None` for one registered by code (tests)."""
         return self._origins.get((family, id))
+
+    def plugins(self) -> list[Plugin[Any]]:
+        """Every plugin installed, in the order they were registered."""
+        return list(self._plugins.values())
 
     def ids(self, family: Family) -> list[str]:
         """The ids of the plugins installed for a family (`Plugin.id`), sorted."""

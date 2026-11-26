@@ -14,18 +14,22 @@
 {"case": "r13", "said": "Quels sont les horaires de la déchetterie de Villeurbanne ce samedi ?", "expected": [["tool:find_place", "tool:web_search"], ["delegate:hermes", "tool:read_page"]], "label": "recherche web"}
 {"case": "r14", "said": "Cherche les dernières nouvelles sur la grève SNCF de cette semaine", "expected": [["tool:web_search"], ["delegate:hermes"]], "label": "actualité"}
 {"case": "r15", "said": "Écris un script Python qui renomme les photos d'un dossier par date, teste-le et donne-le-moi", "expected": [["delegate:hermes", "delegate:claude-code", "delegate:codex"]], "label": "calcul dans le conteneur"}
-{"case": "r16", "said": "Corrige le test qui échoue dans mon dépôt nestor, sur mon Mac", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}
-{"case": "r17", "said": "Fais le ménage dans les fichiers temporaires de mon Mac", "expected": [], "label": "hors de portée"}
+{"case": "r16", "said": "Corrige le test qui échoue dans mon dépôt nestor, sur mon Mac", "expected": [["delegate:claude-code", "delegate:codex"], ["none", "tool:about_nestor"]], "label": "code de Mathis"}
+{"case": "r17", "said": "Fais le ménage dans les fichiers temporaires de mon Mac", "expected": [["none", "tool:about_nestor"]], "label": "hors de portée"}
 {"case": "r18", "said": "Salut Richie, ça va ?", "expected": [], "label": "bavardage"}
 {"case": "r19", "said": "Combien font 17 fois 23 ?", "expected": [], "label": "connaissance"}
 {"case": "r20", "said": "C'est quoi la différence entre un virus et une bactérie ?", "expected": [], "label": "connaissance"}
 {"case": "r21", "said": "Traduis « je suis en retard » en anglais", "expected": [], "label": "connaissance"}
 {"case": "r22", "said": "Merci, c'est parfait !", "expected": [], "label": "bavardage"}
-{"case": "r23", "said": "Appelle ma mère", "expected": [], "label": "impossible"}
-{"case": "r24", "said": "Imprime le devis sur l'imprimante du bureau", "expected": [], "label": "impossible"}
+{"case": "r23", "said": "Appelle ma mère", "expected": [["none", "tool:about_nestor"]], "label": "impossible"}
+{"case": "r24", "said": "Imprime le devis sur l'imprimante du bureau", "expected": [["none", "tool:about_nestor"]], "label": "impossible"}
 {"case": "r25", "said": "Quelle heure est-il ?", "expected": [], "label": "connaissance"}
-{"case": "r26", "said": "Ouvre une PR qui met à jour le README du SDK TypeScript avec le nouvel exemple d'appairage", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}
+{"case": "r26", "said": "Ouvre une PR qui met à jour le README du SDK TypeScript avec le nouvel exemple d'appairage", "expected": [["delegate:claude-code", "delegate:codex"], ["none", "tool:about_nestor"]], "label": "code de Mathis"}
 {"case": "r27", "said": "Continue la mise à jour du site : ajoute la page contact", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["continue:site", "tool:read_task"]], "label": "suite d'une tâche"}
 {"case": "r28", "said": "C'est un Hisense", "tasks": [{"id": "dish", "title": "Lave-vaisselle connecté", "executor": "codex", "question": "Quelle est la marque du lave-vaisselle ?"}], "expected": [["continue:dish"]], "label": "réponse à une tâche"}
 {"case": "r29", "said": "Il en est où, le site ?", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["tool:list_tasks", "tool:read_task"]], "label": "suite d'une tâche"}
-{"case": "r30", "said": "Ouvre une PR qui corrige la typo du README du SDK Rust", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["delegate:claude-code", "delegate:codex"]], "label": "nouvelle tâche"}
+{"case": "r30", "said": "Ouvre une PR qui corrige la typo du README du SDK Rust", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["delegate:claude-code", "delegate:codex"], ["none", "tool:about_nestor"]], "label": "nouvelle tâche"}
+{"case": "r31", "said": "Prends en charge la refonte de mon CV : relis-le, réécris-le et fais-en un PDF propre", "expected": [["delegate:hermes", "delegate:claude-code", "delegate:codex"], ["tool:about_nestor", "none"]], "label": "tâche longue"}
+{"case": "r32", "said": "Est-ce que tu peux être prévenu par un webhook quand mon imprimante 3D a fini ?", "expected": [["tool:about_nestor"]], "label": "ce que Nestor sait faire"}
+{"case": "r33", "said": "Tu pourrais lire mon agenda Google ?", "expected": [["tool:about_nestor"]], "label": "ce que Nestor sait faire"}
+{"case": "r34", "said": "Où en est le lave-vaisselle ?", "expected": [["tool:GetLiveContext", "tool:homeassistant__GetLiveContext"], ["tool:about_nestor", "none"]], "label": "maison"}

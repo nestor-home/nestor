@@ -30,6 +30,7 @@ from nestor.modules.cognition import (
 )
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.system import DOUBLE
 
 CASES = [
     {"case": "c1", "question": "capital of France", "answer": "Paris"},
@@ -74,7 +75,7 @@ def _build(settings: OracleSettings, name: str, services: Services) -> Oracle:
     return oracle
 
 
-ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build, serves=LanguageModel)
+ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build, serves=LanguageModel, card=DOUBLE)
 
 
 class QuizKnobs(Knobs):
