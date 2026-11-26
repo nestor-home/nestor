@@ -313,7 +313,7 @@ async def test_one_call_reads_an_item_for_every_alert_and_a_no_keeps_waiting() -
     home = Home(triage=ScriptedModel(NO))
     async with home.running() as keeper:
         parcel_alert = await keeper.book.create(on_mail(owner=MATHIS.id))
-        answer = await keeper.book.create(on_mail("la réponse du notaire"))
+        answer = await keeper.book.create(on_mail("la réponse du notaire", owner=MATHIS.id))
         bell = await keeper.book.create(Alert(title="Fin", instruction="x", kinds=("dishwasher",)))
         home.inbox.deliver(parcel("Newsletter de la semaine", sender="news@boutique.fr"))
         await home.settle()
@@ -363,6 +363,15 @@ async def test_someone_elses_mail_does_not_ring_my_alert() -> None:
     async with home.running() as keeper:
         await keeper.book.create(on_mail(owner=MATHIS.id))
         home.inbox.deliver(parcel(owner=MATHILDE.id))
+        await home.settle()
+    assert home.triage_model.requests == []
+
+
+async def test_a_household_alert_never_reads_someones_own_mail() -> None:
+    home = Home()
+    async with home.running() as keeper:
+        await keeper.book.create(on_mail(owner=None))
+        home.inbox.deliver(parcel(owner=MATHIS.id))
         await home.settle()
     assert home.triage_model.requests == []
 
