@@ -65,7 +65,13 @@ class AlertTools(ToolProvider, ContextProvider):
                 run=self._create,
                 risk=Risk.WRITE,
             ),
-            Tool(spec=ToolSpec("list_alerts", "The alerts set, with why each last rang."), run=self._list),
+            Tool(
+                spec=ToolSpec(
+                    "list_alerts",
+                    "The alerts set, with why each last rang; not the state of the home or of a device.",
+                ),
+                run=self._list,
+            ),
             Tool(spec=ToolSpec("cancel_alert", "Cancel an alert.", cancel), run=self._cancel, risk=Risk.WRITE),
         )
 
