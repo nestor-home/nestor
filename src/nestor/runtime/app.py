@@ -409,7 +409,7 @@ class Nestor:
             return (await toolbox.call(call, context, confirmed=True)).output
 
         self.confirmations.attach(self.courier, confirmed)
-        self.returns = Returns(self.journal, self.household, self.courier)
+        self.returns = Returns(self.journal, self.household, self.courier, self.tasks)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
         self.scheduler = Scheduler(self.schedule_book, self.household, self.courier)
         self.watches = WatchKeeper(

@@ -102,12 +102,19 @@ TITLE: Mapping[str, object] = {
 }
 
 
+def title_of(text: object) -> str | None:
+    """A title as the household's lists keep it, whoever gives it: on one line, not empty, at most `TITLE_CHARS`;
+    `None` when `text` is not one."""
+    title = " ".join(text.split()) if isinstance(text, str) else ""
+    return title if 0 < len(title) <= TITLE_CHARS else None
+
+
 def titled(arguments: Mapping[str, object]) -> str:
     """The `title` a model gave what it creates; the call fails without one."""
-    title = arguments.get("title")
-    if not isinstance(title, str) or not title.strip() or len(title.strip()) > TITLE_CHARS:
+    title = title_of(arguments.get("title"))
+    if title is None:
         raise ToolFailed("title must be a short name, a few words")
-    return title.strip()
+    return title
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -115,8 +122,10 @@ class Tool:
     """`risk` is the tool's; `assess`, when given, decides it call by call from the arguments (turning a light off is
     a write, unlocking the door is sensitive). `owner` is the person whose own data it reads or acts on (their
     mailbox): it serves them only. `vouched`: it serves only someone the channel authenticated (their account), as a
-    voice or a name only personalises (looking through a camera). `connection`, the connected account it acts on, by
-    its id."""
+    voice or a name only personalises (looking through a camera). `account_vouches`: a sensitive call asked in a live
+    conversation on the person's own account needs nothing more; only one asked from a shared device, or in a turn
+    nobody takes part in, is confirmed in writing (handing work to an executor with real power). `connection`, the
+    connected account it acts on, by its id."""
 
     spec: ToolSpec
     run: Callable[[Mapping[str, object], ToolContext], Awaitable[ToolOutput | Made]]
@@ -124,6 +133,7 @@ class Tool:
     assess: Callable[[Mapping[str, object]], Risk] | None = None
     owner: PersonId | None = None
     vouched: bool = False
+    account_vouches: bool = False
     connection: str | None = None
     timeout_s: float = 60.0  # at most: past the turn's wait, it goes on in the background
 
@@ -136,4 +146,5 @@ class Tool:
 
     @property
     def may_need_confirming(self) -> bool:
-        return self.risk is Risk.SENSITIVE or self.assess is not None
+        """Whether the model may be asked to call it again with `confirmed`: never when their account vouches."""
+        return (self.risk is Risk.SENSITIVE or self.assess is not None) and not self.account_vouches

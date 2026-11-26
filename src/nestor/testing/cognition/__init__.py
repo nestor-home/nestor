@@ -4,6 +4,7 @@ from nestor.testing.cognition.delegation import (
     ExecutorContract,
     FakeRemote,
     RemoteExecutorContract,
+    RemoteRun,
     ScriptedExecutor,
     ScriptedRemoteExecutor,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "ImageModelContract",
     "LanguageModelContract",
     "RemoteExecutorContract",
+    "RemoteRun",
     "ScriptedExecutor",
     "ScriptedImages",
     "ScriptedModel",

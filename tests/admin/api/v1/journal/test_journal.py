@@ -231,7 +231,8 @@ async def test_items_carry_the_ids_that_link_them_into_threads(tmp_path: Path) -
 
 async def test_the_important_events_are_told_in_the_readers_language(tmp_path: Path) -> None:
     from nestor.core import Capability
-    from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
+    from nestor.modules.cognition import TurnStatus
+    from nestor.modules.cognition.delegation import TaskCreated, TurnEnded, TurnStarted
     from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
     from nestor.modules.connectors import ConnectionChanged, Status
     from nestor.modules.conversation import AnswerCut, FallbackReason, FallbackSpoken
@@ -307,15 +308,19 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             PresenceChanged(source="presence", person=mathis, home=False),
             PresenceChanged(source="presence", person=mathis, home=True),
             PresenceChanged(source="presence", person=PersonId("ghost"), home=None),
-            TaskStarted(
+            TaskCreated(
                 source="tasks",
                 task_id="t1",
                 title="Analyse du dépôt",
-                objective="Analyse",
                 executor="hermes",
                 origin=MATHIS_CHAT,
+                turn_id="u1",
+                instruction="Analyse le dépôt",
             ),
-            TaskEnded(source="tasks", task_id="t1", status=TaskStatus.FAILED, error="quota", duration_s=12),
+            TurnStarted(source="tasks", task_id="t1", turn_id="u2", instruction="Analyse"),
+            TurnEnded(
+                source="tasks", task_id="t1", turn_id="u2", status=TurnStatus.FAILED, error="quota", duration_s=12
+            ),
             WatchCreated(source="watch-book", watch_id="w3", title="Colis", what="le colis", kinds=(), once=True),
             ScheduleCreated(
                 source="schedule-book", schedule_id="s1", title="Plantes", instruction="Arrose", times=("08:00",)
@@ -360,8 +365,9 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             ("journal-presence-changed", {"person": "Mathis", "where": "away"}),
             ("journal-presence-changed", {"person": "Mathis", "where": "home"}),
             ("journal-presence-changed", {"person": "ghost", "where": "unknown"}),
-            ("journal-task-started", {"task": "t1", "executor": "hermes", "title": "Analyse du dépôt"}),
-            ("journal-task-ended", {"task": "t1", "status": "failed", "seconds": 12.0}),
+            ("journal-task-created", {"task": "t1", "executor": "hermes", "title": "Analyse du dépôt"}),
+            ("journal-task-turn-started", {"task": "t1"}),
+            ("journal-task-turn-ended", {"task": "t1", "status": "failed", "seconds": 12.0}),
             ("journal-watch-created", {"title": "Colis"}),
             ("journal-schedule-created", {"recurring": "yes", "title": "Plantes"}),
             ("journal-connection-changed", {"connection": "c1", "status": "needs_reauth"}),
@@ -384,14 +390,15 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
         for sentence in (  # what Fluent formats: plurals, decimals, percentages, a long text cut short
             "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
-            "Tâche t1 confiée à hermes : Analyse du dépôt\nAnalyse",  # a thing by its name, what it asks beside
+            "Tâche t1 ouverte avec hermes : Analyse du dépôt\nAnalyse le dépôt",  # its first instruction with it
+            "Tâche t1 : nouvelle consigne\nAnalyse",  # what it was asked, beside the line
             "Veille créée : Colis\nle colis",
             "Rappel régulier programmé : Plantes\nArrose",
             "Outil create_watch terminé en 0,2 s",
             "2 personnes vues par reachy-salon",
             "1 personne vue par reachy-salon",
             "Confiance : 87\N{NO-BREAK SPACE}%",
-            "bla …",
+            "bla bla…",
         ):
             assert sentence in said, sentence
         interrupted = next(i for i in found if i["detail"] == "Je surveille.")

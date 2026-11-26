@@ -3,8 +3,7 @@
 from collections.abc import Mapping
 from enum import StrEnum
 
-from nestor.adapters.executors.common import step
-from nestor.adapters.executors.jsonrpc import Message
+from nestor.adapters.executors.jsonrpc import Message, RpcError
 
 COMMAND = ("codex", "app-server")
 
@@ -18,6 +17,12 @@ DECLINED: Mapping[str, Message] = {  # every request Codex may send for a person
 }
 
 ENDED = ("completed", "failed", "interrupted")
+UNKNOWN_THREAD = "no rollout found for thread id"  # how `thread/resume` refuses a thread it has no record of (0.160)
+
+
+def unknown_thread(error: RpcError) -> bool:
+    """Whether Codex refused to resume a thread because it no longer has it (its records deleted, another home)."""
+    return error.message.startswith(UNKNOWN_THREAD)
 
 
 class Sandbox(StrEnum):
@@ -33,17 +38,25 @@ def final_answer(turn: Message) -> str:
     return str(final[-1].get("text") or "") if final else ""
 
 
-def item_step(item: Message) -> str | None:
-    match item.get("type"):
-        case "commandExecution":
-            return step(f"command: {item.get('command')}")
-        case "fileChange":
-            return step("editing: " + ", ".join(str(c.get("path")) for c in item.get("changes") or ()))
-        case "mcpToolCall":
-            return step(f"{item.get('server')}: {item.get('tool')}")
-        case "webSearch":
-            return step(f"web search: {item.get('query')}")
-        case "imageGeneration":
+def item_step(method: str, item: Message) -> str | None:
+    """What an item of the turn says the agent does, as one step of its progress: its own commentary and plan once
+    written (`item/completed`), the files it edits, the tools it calls, its searches as it starts them
+    (`item/started`). A command it runs is said without its command line: the household reads the steps, and a
+    command may carry a secret."""
+    match method, item.get("type"):
+        case "item/completed", "agentMessage" if item.get("phase") == "commentary" and item.get("text"):
+            return str(item["text"])
+        case "item/completed", "plan" if item.get("text"):
+            return str(item["text"])
+        case "item/started", "commandExecution":
+            return "running a command"
+        case "item/started", "fileChange":
+            return "editing: " + ", ".join(str(c.get("path")) for c in item.get("changes") or ())
+        case "item/started", "mcpToolCall":
+            return f"{item.get('server')}: {item.get('tool')}"
+        case "item/started", "webSearch":
+            return f"web search: {item.get('query')}"
+        case "item/started", "imageGeneration":
             return "drawing an image"
         case _:
             return None

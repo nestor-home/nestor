@@ -62,19 +62,6 @@ describe("ongoing", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("opens a running task with its steps, and leads to its whole story", async () => {
-    const user = userEvent.setup();
-    renderApp("/activity");
-    const running = await part(/^Being done/);
-    await user.click(await within(running).findByRole("button", { name: /Glasses insurance claim/ }));
-    const sheet = await screen.findByRole("dialog", { name: "Glasses insurance claim" });
-    expect(within(sheet).getByRole("link", { name: /The whole story/ })).toHaveAttribute(
-      "href",
-      expect.stringMatching(/^\/tasks\//),
-    );
-    expect(within(sheet).getByRole("button", { name: "Stop…" })).toBeInTheDocument();
-  });
-
   it("keeps one lane when asked: only what is watched, with how often each fired", async () => {
     const user = userEvent.setup();
     renderApp("/activity");

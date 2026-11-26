@@ -252,7 +252,7 @@ async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_t
     hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
     hermes.name = "hermes"
     check = ToolCall(
-        "c", "delegate_task", {"title": "Prix des télés", "objective": "Vérifie le prix des télés", "notify": "message"}
+        "c", "start_task", {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "notify": "message"}
     )
     model = ScriptedModel(
         check,
@@ -289,7 +289,7 @@ async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_t
             if isinstance(event, Delivered | DeliveryWithheld) and event.about.source is Source.TASK:
                 return
 
-    async with book, tasks, Returns(journal, household, courier):
+    async with book, tasks, Returns(journal, household, courier, tasks):
         tool = next(t for t in schedules.tools() if t.spec.name == "schedule")
         context = ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
         await tool.run(

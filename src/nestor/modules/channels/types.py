@@ -3,7 +3,7 @@
 import codecs
 import mimetypes
 import posixpath
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -92,6 +92,15 @@ def plain_name(name: str | None, media_type: str) -> str:
     plain = posixpath.basename((name or "").replace("\\", "/")).strip(" .")
     base = base_type(media_type)
     return plain or f"{AttachmentKind.of(base)}{mimetypes.guess_extension(base) or ''}"
+
+
+def unique_name(name: str, taken: Collection[str]) -> str:
+    """`name`, or `name (2)`, `name (3)`… when it is taken."""
+    stem, extension = posixpath.splitext(name)
+    found, n = name, 2
+    while found in taken:
+        found, n = f"{stem} ({n}){extension}", n + 1
+    return found
 
 
 class AttachmentKind(StrEnum):

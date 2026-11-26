@@ -8,13 +8,12 @@ from collections.abc import Callable
 from mcp.server.mcpserver import MCPServer
 
 from nestor.mcp_server.access import TaskAccess
-from nestor.mcp_server.tools import brief, files, home, memory, questions
+from nestor.mcp_server.tools import brief, files, home, memory
 
 TOOLS: tuple[Callable[[MCPServer, TaskAccess], None], ...] = (
     brief.register,
     files.register,
     memory.register,
-    questions.register,
     home.register,
 )
 

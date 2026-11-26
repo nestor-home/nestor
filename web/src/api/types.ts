@@ -99,8 +99,12 @@ export type CameraOff = S["Off"];
 
 // -- tasks, watches, memories ---------------------------------------------------------------------
 
-export type TaskStatus = S["TaskStatus"];
+export type TaskState = S["TaskState"];
+export type TurnStatus = S["TurnStatus"];
 export type Task = S["TaskOut"];
+export type TaskThread = S["TaskThreadOut"];
+export type TaskTurn = S["TurnOut"];
+export type TaskSteer = S["SteeredOut"];
 export type TaskFile = S["TaskFileOut"];
 export type Tasks = S["TasksOut"];
 export type Watch = S["WatchOut"];

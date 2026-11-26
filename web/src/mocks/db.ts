@@ -16,7 +16,7 @@ import type {
   Schedule,
   Service,
   SystemInfo,
-  Task,
+  TaskThread,
   Tool,
   Updates,
   Voice,
@@ -58,7 +58,7 @@ export interface Db {
   pairing: MockPending[];
   additions: MockAddition[];
   satellites: Satellite[];
-  tasks: Task[];
+  tasks: TaskThread[];
   watches: Watch[];
   inbound: string[]; // what the inbound sources of the file bring (feeds, pages, webhooks), beside the accounts'
   schedules: Schedule[];

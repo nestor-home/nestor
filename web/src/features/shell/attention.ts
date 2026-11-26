@@ -3,6 +3,7 @@ import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   CircleAlert,
+  CircleHelp,
   Hourglass,
   House,
   KeyRound,
@@ -43,7 +44,7 @@ export interface Attention {
 
 /**
  * What needs a person, gathered from the resources the account may see: a connection to
- * reauthorise, a device waiting to pair, a message that did not arrive, a failed task, a part of
+ * reauthorise, a device waiting to pair, a message that did not arrive, a task that failed or waits for an answer, a part of
  * the system that is down. Each comes with what to do about it.
  */
 function useGathered(): { items: Attention[]; ready: boolean } {
@@ -137,17 +138,31 @@ function useGathered(): { items: Attention[]; ready: boolean } {
       at: f.at,
     });
   }
-  const yesterday = new Date(Date.now() - 24 * 3600_000).toISOString();
-  for (const task of tasks.data?.recent ?? []) {
-    if (task.status !== "failed" || (task.ended_at ?? "") < yesterday) continue;
+  // a task whose last turn failed, and one that cannot go on without its person
+  for (const task of tasks.data?.tasks ?? []) {
+    if (task.state === "ready" && task.last_status === "failed") {
+      items.push({
+        key: `task-${task.id}`,
+        icon: CircleAlert,
+        tone: "error",
+        title: tr("attention-task-failed", { title: task.title }),
+        detail: "",
+        action: tr("action-see"),
+        link: { to: "/tasks/$taskId", params: { taskId: task.id } },
+        at: task.last_activity,
+      });
+      continue;
+    }
+    if (task.state !== "waiting") continue;
     items.push({
       key: `task-${task.id}`,
-      icon: CircleAlert,
-      tone: "error",
-      title: tr("attention-task-failed", { objective: task.title }),
-      detail: task.error ?? "",
-      action: tr("action-see"),
+      icon: CircleHelp,
+      tone: "attention",
+      title: tr("attention-task-waiting", { title: task.title }),
+      detail: task.question ?? "",
+      action: tr("attention-answer"),
       link: { to: "/tasks/$taskId", params: { taskId: task.id } },
+      at: task.last_activity,
     });
   }
   for (const c of system.data?.components ?? []) {

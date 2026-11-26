@@ -14,6 +14,7 @@ from nestor.modules.channels.types import (
     base_type,
     identified,
     plain_name,
+    unique_name,
 )
 
 __all__ = [
@@ -43,4 +44,5 @@ __all__ = [
     "base_type",
     "identified",
     "plain_name",
+    "unique_name",
 ]

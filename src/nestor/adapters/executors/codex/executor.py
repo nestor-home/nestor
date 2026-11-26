@@ -9,21 +9,40 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from nestor import __version__
-from nestor.adapters.executors.codex.protocol import COMMAND, DECLINED, ENDED, Sandbox, final_answer, item_step
+from nestor.adapters.executors.codex.protocol import (
+    COMMAND,
+    DECLINED,
+    ENDED,
+    Sandbox,
+    final_answer,
+    item_step,
+    unknown_thread,
+)
 from nestor.adapters.executors.common import (
-    FILES_INSTRUCTIONS,
+    CODING_REPORT,
     INSTRUCTIONS,
     MAX_FILE_BYTES,
     REPORT_SCHEMA,
     Report,
     Unreadable,
     described,
-    task_folder,
 )
 from nestor.adapters.executors.jsonrpc import Closed, Message, RpcError, StdioRpc
-from nestor.core import ContractError, Health, ProviderError
+from nestor.core import Capabilities, ContractError, Health, ProviderError
 from nestor.core.i18n import Message as Said
-from nestor.modules.cognition.delegation import Assignment, NestorAccess, NestorTools, Outcome, Progress, RemoteExecutor
+from nestor.modules.cognition.delegation import (
+    CONTINUE,
+    RESUME,
+    STEER,
+    Assignment,
+    Handle,
+    NestorAccess,
+    NestorTools,
+    Outcome,
+    Progress,
+    RemoteExecutor,
+    SessionLost,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +50,8 @@ RECONNECT_S = (1.0, 5.0, 30.0)  # waits before following again a turn whose sess
 
 
 class CodexExecutor(RemoteExecutor):
-    """Delegates objectives to Codex; its turns are followed again after a restart.
+    """Delegates tasks to Codex, a thread per task and a turn per instruction; its turns are followed again after a
+    restart, and an instruction given while one works is steered into it.
 
     `description` states what this Codex can really do (its sandbox, its tools, its MCP servers): the assistant
     promises exactly that. Requests time out after `timeout_s`; a turn itself has no time limit.
@@ -40,6 +60,7 @@ class CodexExecutor(RemoteExecutor):
     name = "codex"
     brand = "codex"
     nestor_tools = NestorTools.PASSED
+    capabilities = Capabilities.of(RESUME, CONTINUE, STEER)
 
     def __init__(
         self,
@@ -64,6 +85,7 @@ class CodexExecutor(RemoteExecutor):
         self._max_file_bytes, self._reconnect_s = max_file_bytes, tuple(reconnect_s)
         self._rpc: StdioRpc | None = None
         self._joined: set[str] = set()  # the threads this session follows
+        self._loaded: set[str] = set()  # the threads this session started or resumed: a turn starts there directly
         self._opening = asyncio.Lock()
         self._started = self._unreachable = False
 
@@ -85,31 +107,41 @@ class CodexExecutor(RemoteExecutor):
         if rpc is not None:
             await rpc.close()
 
-    async def submit(self, assignment: Assignment) -> str:
-        """In a folder of its own under the working directory, where the files sent with the task are placed."""
-        name = task_folder()
-        folder = posixpath.join(self._cwd, name)
+    async def submit(self, assignment: Assignment) -> Handle:
+        """A turn in the task's thread, in the task's own folder under the working directory, where the files sent
+        with the instruction are placed: the thread starts with the task's first turn, and later turns go on in it
+        (resumed first when this session has not loaded it: after a restart, or on another session)."""
+        folder = posixpath.join(self._cwd, assignment.folder)
         try:
             rpc = await self._session()
-            await self._call(rpc, "fs/createDirectory", {"path": folder})
+            await self._call(rpc, "fs/createDirectory", {"path": folder, "recursive": True})  # there already: fine
             placed = []
             async for file, data in assignment.placed():  # plain names, never twice
                 encoded = (await asyncio.to_thread(base64.b64encode, data)).decode()  # up to 27 MB: off the loop
                 await self._call(rpc, "fs/writeFile", {"path": posixpath.join(folder, file), "dataBase64": encoded})
                 placed.append(file)
             settings = self._thread_settings(assignment.access, folder)
-            objective = assignment.brief(folder, placed)
-            thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
+            if (thread := assignment.session) is None:
+                thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
+            elif thread not in self._loaded:
+                await self._call(rpc, "thread/resume", {"threadId": thread, "excludeTurns": True} | settings)
+            self._loaded.add(thread)
             self._join(rpc, thread)
             turn = await self._call(
                 rpc,
                 "turn/start",
-                {"threadId": thread, "input": [{"type": "text", "text": objective}], "outputSchema": REPORT_SCHEMA},
+                {
+                    "threadId": thread,
+                    "input": [{"type": "text", "text": assignment.brief(folder, placed)}],
+                    "outputSchema": REPORT_SCHEMA,
+                },
             )
-            return f"{thread}:{turn['turn']['id']}:{name}"
+            return Handle(f"{thread}:{turn['turn']['id']}:{assignment.folder}", thread)
         except (KeyError, TypeError) as error:
             raise ProviderError(self.name, f"unexpected reply from Codex: {error!r}", transient=False) from None
         except RpcError as error:
+            if unknown_thread(error):
+                raise SessionLost(self.name, f"Codex no longer has this thread: {error}", transient=False) from None
             raise ProviderError(self.name, f"submission refused: {error}", transient=False) from None
         except (Closed, TimeoutError) as error:
             raise ProviderError(self.name, f"submission failed: {described(error)}", transient=True) from None
@@ -128,6 +160,8 @@ class CodexExecutor(RemoteExecutor):
                 logger.warning("%s: lost contact with Codex, following again in %ss (%s)", self.name, wait_s, error)
                 await asyncio.sleep(wait_s)
             except RpcError as error:
+                if unknown_thread(error):  # gone with the turn: the next turn starts a new thread
+                    return Outcome.lost(f"Codex no longer has this thread: {error}")
                 return Outcome.failed(f"Codex refused: {error}")
             except (KeyError, TypeError, ValueError) as error:  # not the protocol: a missing field, bad base64
                 return Outcome.failed(f"unexpected reply from Codex: {error!r}")
@@ -149,6 +183,19 @@ class CodexExecutor(RemoteExecutor):
         except (TimeoutError, ProviderError, RpcError, Closed, KeyError, TypeError):
             return False
 
+    async def steer(self, handle: str, instruction: str) -> bool:
+        """`turn/steer`, on the turn the handle names only: Codex refuses it once that turn ended."""
+        if (parsed := _parsed(handle)) is None:
+            return False
+        thread, turn, _ = parsed
+        steering = {"threadId": thread, "expectedTurnId": turn, "input": [{"type": "text", "text": instruction}]}
+        try:
+            rpc = await self._session()
+            await self._call(rpc, "turn/steer", steering)  # refused unless that turn is the one working
+            return True
+        except (ProviderError, RpcError, Closed, TimeoutError):
+            return False
+
     async def _follow(self, thread: str, turn: str, folder: str, progress: Progress) -> Outcome:
         """Follows the turn in the current session (opened or reopened); `Closed` if it ends meanwhile. `folder`:
         the task's own, the only one its files come back from."""
@@ -157,6 +204,7 @@ class CodexExecutor(RemoteExecutor):
         try:
             if thread not in self._joined:  # after a restart, or a lost session: rejoin it, its notifications too
                 resumed = await self._call(rpc, "thread/resume", {"threadId": thread, "excludeTurns": True})
+                self._loaded.add(thread)
                 self._join(rpc, thread)
                 found = await self._turn(rpc, thread, turn)
                 if found is not None and (outcome := await self._outcome(rpc, found, folder)) is not None:
@@ -164,12 +212,12 @@ class CodexExecutor(RemoteExecutor):
                 if resumed["thread"]["status"]["type"] != "active":
                     return Outcome.failed("the Codex turn stopped before it ended (its server restarted?)")
             while (event := await events.get()) is not None:
-                params = event.get("params") or {}
-                if params.get("turnId") == turn and event.get("method") == "item/started":
-                    if text := item_step(params.get("item") or {}):
+                method, params = event.get("method"), event.get("params") or {}
+                if params.get("turnId") == turn and method in ("item/started", "item/completed"):
+                    if text := item_step(method, params.get("item") or {}):
                         progress(text)
                 elif (
-                    event.get("method") == "turn/completed"
+                    method == "turn/completed"
                     and params["turn"]["id"] == turn
                     and (outcome := await self._outcome(rpc, params["turn"], folder)) is not None
                 ):
@@ -180,15 +228,17 @@ class CodexExecutor(RemoteExecutor):
             self._joined.discard(thread)
 
     async def _outcome(self, rpc: StdioRpc, turn: Message, folder: str) -> Outcome | None:
-        """The outcome of a turn as Codex sums it up (its final answer is in the summary), `None` while it runs."""
+        """The outcome of a turn as Codex sums it up (its final answer is in the summary), `None` while it
+        runs."""
         match turn["status"]:
             case "completed":
-                return await Report.of(final_answer(turn)).outcome(folder, lambda path: self._read(rpc, folder, path))
+                report = Report.of(final_answer(turn))
+                return await report.outcome(folder, lambda path: self._read(rpc, folder, path))
             case "failed":
                 error = (turn.get("error") or {}).get("message")
                 return Outcome.failed(str(error) if error else "Codex reported the turn as failed")
             case "interrupted":
-                return Outcome.cancelled()
+                return Outcome.stopped()
             case _:
                 return None
 
@@ -238,7 +288,7 @@ class CodexExecutor(RemoteExecutor):
                     self._unreachable = True
                     raise ProviderError(self.name, f"Codex unreachable: {described(error)}", transient=True) from None
                 raise
-            self._rpc, self._joined, self._unreachable = rpc, set(), False
+            self._rpc, self._joined, self._loaded, self._unreachable = rpc, set(), set(), False
             return rpc
 
     async def _call(self, rpc: StdioRpc, method: str, params: Message) -> Message:
@@ -255,7 +305,7 @@ class CodexExecutor(RemoteExecutor):
             "cwd": folder,
             "sandbox": self._sandbox.value,
             "approvalPolicy": "never",
-            "developerInstructions": self._instructions + FILES_INSTRUCTIONS,
+            "developerInstructions": self._instructions + CODING_REPORT,
         }
         if self._model:
             settings["model"] = self._model

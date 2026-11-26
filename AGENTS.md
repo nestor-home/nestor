@@ -195,9 +195,8 @@ for executors, `adapters/executors/common.py`, `process.py` and `jsonrpc.py`).
      domain by its `of`, so a conversion lives with the shape it produces.
   2. `routes.py` holds the handlers and their dependencies, thin: check, call the domain, `XOut.of`. No
      module-level helper.
-  3. What a resource reads or decides gets a module named for it (`journal/feed.py`,
-     `tasks/afterwards.py`); domain knowledge goes down into `modules/` or the runtime
-     (`Nestor.heard_rooms`), sessions into `admin/auth` (`SessionCookie.open`).
+  3. What a resource reads or decides gets a module named for it (`journal/feed.py`); domain knowledge goes
+     down into `modules/` or the runtime (`Nestor.heard_rooms`), sessions into `admin/auth` (`SessionCookie.open`).
   4. A resource imports nothing of another but its `schemas.py`, to send a shape that resource owns (the
      household sends `ConnectionOut`). `shared.py` holds only what every resource builds on (`Input`,
      `PersonRef`, `People`, `MessageOut`), `access.py` who may reach what (one rule per thing, on

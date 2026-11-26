@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import Component, utc_now
 from nestor.modules.activity.types import Activity, AgentActivity
-from nestor.modules.cognition.delegation import TaskEnded, TaskStarted
+from nestor.modules.cognition.delegation import TaskCreated, TurnEnded, TurnStarted
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.conversation import LiveReplies, ReplyPhase
 from nestor.modules.initiative import QuietHours
@@ -22,7 +22,7 @@ class ActivityMonitor(Component):
     - listening: a satellite said it hears someone (until it says it no longer does, or disconnects);
     - speaking / thinking: an answer is being produced, its words already coming out or not yet (the
       playback of the last words on a speaker is not known: speaking ends when the text is complete);
-    - working: delegated tasks are running; sleeping: within the quiet hours; idle otherwise.
+    - working: delegated tasks are working; sleeping: within the quiet hours; idle otherwise.
 
     `changes()` gives an event set at the next change, the turn of the quiet hours included.
     """
@@ -50,7 +50,7 @@ class ActivityMonitor(Component):
 
     async def start(self) -> None:
         self._subscription = self.journal.subscribe(
-            SpeechActivityObserved, SatelliteDisconnected, TaskStarted, TaskEnded
+            SpeechActivityObserved, SatelliteDisconnected, TaskCreated, TurnStarted, TurnEnded
         )
         self._unlisten = self.replies.listen(self._refresh)
         self._worker = asyncio.create_task(self._follow(self._subscription), name="activity")
@@ -78,7 +78,7 @@ class ActivityMonitor(Component):
     def _refresh(self) -> AgentActivity:
         now = self.clock()
         phases = self.replies.phases()
-        tasks = len(self.tasks.running())
+        tasks = len(self.tasks.working())
         quiet = self.quiet_hours is not None and self.quiet_hours.contains(now.astimezone(self.timezone).time())
         if self._heard:
             state = Activity.LISTENING

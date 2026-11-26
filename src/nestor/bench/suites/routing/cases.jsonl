@@ -8,7 +8,7 @@
 {"case": "r07", "said": "Tous les lundis à 8 h, envoie-moi la météo de la semaine", "expected": [["tool:schedule"]], "label": "réveil récurrent"}
 {"case": "r08", "said": "Dis à Mathilde que je rentre tard ce soir", "expected": [["tool:message_person"]], "label": "message"}
 {"case": "r09", "said": "Demande à Mathilde si elle veut des pizzas ce soir", "expected": [["tool:message_person"]], "label": "question"}
-{"case": "r10", "said": "Où en est la recherche que je t'ai demandée ?", "expected": [["tool:task_status", "none"]], "label": "suivi"}
+{"case": "r10", "said": "Où en est la recherche que je t'ai demandée ?", "expected": [["tool:list_tasks", "tool:read_task", "none"]], "label": "suivi"}
 {"case": "r11", "said": "Trouve-moi les trois meilleurs aspirateurs robots à moins de 400 €, avec ce qu'en disent les tests", "expected": [["tool:web_search", "delegate:hermes"]], "label": "recherche web"}
 {"case": "r12", "said": "Compare les forfaits mobiles 5G à moins de 15 € par mois chez les opérateurs français", "expected": [["tool:web_search", "delegate:hermes"]], "label": "recherche web"}
 {"case": "r13", "said": "Quels sont les horaires de la déchetterie de Villeurbanne ce samedi ?", "expected": [["tool:find_place", "tool:web_search"], ["delegate:hermes", "tool:read_page"]], "label": "recherche web"}
@@ -25,3 +25,7 @@
 {"case": "r24", "said": "Imprime le devis sur l'imprimante du bureau", "expected": [], "label": "impossible"}
 {"case": "r25", "said": "Quelle heure est-il ?", "expected": [], "label": "connaissance"}
 {"case": "r26", "said": "Ouvre une PR qui met à jour le README du SDK TypeScript avec le nouvel exemple d'appairage", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}
+{"case": "r27", "said": "Continue la mise à jour du site : ajoute la page contact", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["continue:site", "tool:read_task"]], "label": "suite d'une tâche"}
+{"case": "r28", "said": "C'est un Hisense", "tasks": [{"id": "dish", "title": "Lave-vaisselle connecté", "executor": "codex", "question": "Quelle est la marque du lave-vaisselle ?"}], "expected": [["continue:dish"]], "label": "réponse à une tâche"}
+{"case": "r29", "said": "Il en est où, le site ?", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["tool:list_tasks", "tool:read_task"]], "label": "suite d'une tâche"}
+{"case": "r30", "said": "Ouvre une PR qui corrige la typo du README du SDK Rust", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["delegate:claude-code", "delegate:codex"]], "label": "nouvelle tâche"}

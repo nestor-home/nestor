@@ -39,25 +39,35 @@ journal-tool-returned-failed = Outil { $tool } en échec après { NUMBER($second
 journal-tool-result-stored = Résultat long mis de côté ({ NUMBER($size) } caractères)
 journal-tool-result-delivered = Résultat de l'outil { $tool } transmis
 
-journal-task-started = Tâche { $task } confiée à { $executor } : { $title }
-journal-task-attached = Tâche { $task } prise en charge par l'exécutant
-journal-task-progressed = Tâche { $task } : nouvelle étape
-journal-task-cancel-requested = Annulation demandée pour la tâche { $task }
-journal-task-ended = Tâche { $task } { $status ->
-    [completed] terminée
+journal-task-created = Tâche { $task } ouverte avec { $executor } : { $title }
+journal-task-renamed = Tâche { $task } renommée : { $title }
+journal-task-archived = Tâche { $task } archivée
+journal-task-turn-started = Tâche { $task } : nouvelle consigne
+journal-task-turn-attached = Tâche { $task } prise en charge par l'exécutant
+journal-task-turn-step = Tâche { $task } : nouvelle étape
+journal-task-turn-retried = Tâche { $task } relancée dans une nouvelle session : son exécutant avait perdu la précédente
+journal-task-steered = Tâche { $task } { $taken ->
+    [yes] réorientée en cours de travail
+   *[no] arrêtée pour une nouvelle consigne
+}
+journal-task-turn-stop-requested = Arrêt demandé pour la tâche { $task }
+journal-task-turn-ended = Tâche { $task } { $status ->
+    [completed] revenue
+    [asked] pose une question
     [failed] en échec
-    [cancelled] annulée
+    [stopped] arrêtée
    *[other] { $status }
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
-journal-task-delivered = Résultat de la tâche { $task } transmis
-journal-task-file-added = Tâche { $task } : un fichier rendu
+journal-task-turn-delivered = Retour de la tâche { $task } transmis
+journal-task-turn-file-added = Tâche { $task } : un fichier rendu
+journal-task-noted = Tâche { $task } : une note gardée
+journal-task-reminded = La tâche { $task } attend toujours une réponse : rappel envoyé
 journal-executor-called = { $ok ->
     [yes] { $executor } a utilisé { $tool }
    *[no] { $executor } s'est vu refuser { $tool }
 }
 journal-executor-key-issued = Nouvelle clé pour { $executor }
 journal-executor-key-revoked = Clé de { $executor } révoquée
-journal-question-answered = { $by } a répondu à la question d'une tâche
 
 journal-subject = { $subject ->
     [task] tâche { $id } { $status ->

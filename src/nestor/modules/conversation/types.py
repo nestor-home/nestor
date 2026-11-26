@@ -39,19 +39,25 @@ class Source(StrEnum):
 @dataclass(frozen=True, slots=True)
 class About:
     """What a notification comes from: `task 3f2a completed`. `status` says how it stands, when that matters to
-    whoever reads it: a task `completed`, a call `failed`, a message `undelivered`, a confirmation `done`."""
+    whoever reads it: a task `completed`, a call `failed`, a message `undelivered`, a confirmation `done`. `part`
+    names which part of it, when it has several: a task's turn."""
 
     source: Source
     id: str
     status: str = ""
+    part: str = ""
 
     def __str__(self) -> str:
         return " ".join(part for part in (self.source.value, self.id, self.status) if part)
 
     @property
     def key(self) -> str:
-        """What every notification about the same thing shares, whatever its status: `task:3f2a`."""
+        """What every notification about the same thing shares, whatever its status or part: `task:3f2a`."""
         return f"{self.source.value}:{self.id}"
+
+    def same(self, other: "About") -> bool:
+        """Whether `other` is about the same thing and the same part of it, whatever its status."""
+        return (self.key, self.part) == (other.key, other.part)
 
 
 SILENT = "[SILENT]"  # opens the answer to a notification with nothing to tell; what follows it is the reason
@@ -120,6 +126,7 @@ class MentionKind(StrEnum):
     ROOM = "room"  # a room of the home
     EXECUTOR = "executor"  # an executor, to hand work to
     CONNECTION = "connection"  # a connected account (a mailbox, a calendar), to use
+    TASK = "task"  # a task of whoever writes, to direct
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

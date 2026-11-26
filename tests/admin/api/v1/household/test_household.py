@@ -6,8 +6,7 @@ from pathlib import Path
 from nestor.core import PersonId
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
-from nestor.modules.cognition import TaskStatus
-from nestor.modules.conversation import About, Source
+from nestor.modules.cognition import TaskState
 from nestor.modules.initiative import Watch
 from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
@@ -20,33 +19,31 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
-        hers = await admin.nestor.tasks.delegate(
-            "Trouver un plombier", title="Plombier", origin=TELEGRAM, requested_by=MATHILDE
+        hers = await admin.nestor.tasks.start_task(
+            "Trouver un plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE
         )
-        his = await admin.nestor.tasks.delegate(
-            "Analyse le dépôt", title="Analyse le dépôt", origin=TELEGRAM, requested_by=MATHIS
+        his = await admin.nestor.tasks.start_task(
+            "Analyse le dépôt", title="Analyse le dépôt", origin=TELEGRAM, owner=MATHIS
         )
         await asyncio.sleep(0.01)
         api = await admin.api("mathilde")
-        listed = (await api.get("/api/v1/tasks")).json()
-        assert [(t["title"], t["objective"]) for t in listed["running"]] == [("Plombier", "Trouver un plombier")]
-        assert listed["running"][0]["status"] == "running" and listed["running"][0]["requested_by"]["id"] == "mathilde"
-        assert (await api.post(f"/api/v1/tasks/{his.id}/cancel")).status_code == 404
-        stopped = (await api.post(f"/api/v1/tasks/{hers.id}/cancel")).json()
-        assert stopped["confirmed"] and stopped["task"]["status"] == "cancelled"
-        assert hers.status is TaskStatus.CANCELLED and his.status is TaskStatus.RUNNING
-        assert [t["id"] for t in (await api.get("/api/v1/tasks")).json()["recent"]] == [hers.id]
-        assert (await api.post(f"/api/v1/tasks/{hers.id}/cancel")).status_code == 404, "already ended"
-        everything = (await (await admin.api()).get("/api/v1/tasks")).json()
-        assert [t["id"] for t in everything["running"]] == [his.id]
+        [listed] = (await api.get("/api/v1/tasks")).json()["tasks"]
+        assert (listed["title"], listed["state"], listed["owner"]["id"]) == ("Plombier", "working", "mathilde")
+        assert (await api.post(f"/api/v1/tasks/{his.id}/stop")).status_code == 404
+        stopped = (await api.post(f"/api/v1/tasks/{hers.id}/stop")).json()
+        assert stopped["confirmed"] and stopped["task"]["state"] == "ready"
+        assert hers.state is TaskState.READY and his.state is TaskState.WORKING
+        everything = (await (await admin.api()).get("/api/v1/tasks")).json()["tasks"]
+        assert {t["id"] for t in everything} == {hers.id, his.id}
+        await admin.nestor.tasks.stop(his.id)
 
 
 async def test_a_stop_the_executor_does_not_confirm_is_reported(tmp_path: Path) -> None:
     async with Harness(tmp_path, confirms_stop=False) as admin:
-        task = await admin.nestor.tasks.delegate("Long travail", title="Long travail", origin=TELEGRAM)
+        task = await admin.nestor.tasks.start_task("Long travail", title="Long travail", origin=TELEGRAM)
         await asyncio.sleep(0.01)
-        stopped = (await (await admin.api()).post(f"/api/v1/tasks/{task.id}/cancel")).json()
-        assert stopped["confirmed"] is False and stopped["task"]["error"]
+        stopped = (await (await admin.api()).post(f"/api/v1/tasks/{task.id}/stop")).json()
+        assert stopped["confirmed"] is False and stopped["task"]["thread"][0]["error"]
 
 
 async def test_a_member_sees_and_cancels_their_own_watches_only(tmp_path: Path) -> None:
@@ -131,23 +128,15 @@ async def test_without_a_presence_source_nobody_is_located(tmp_path: Path) -> No
 
 
 async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_path: Path) -> None:
-    from nestor.modules.cognition.delegation.events import TaskDelivered
     from nestor.modules.cognition.tools import ToolCalled
-    from nestor.modules.initiative import Delivered, WatchTriggered
+    from nestor.modules.initiative import WatchTriggered
     from nestor.modules.satellites import Device, Manifest
 
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
-        quick = await nestor.tasks.delegate("Vite fait", title="Vite fait", origin=TELEGRAM, requested_by=MATHIS)
-        other = await nestor.tasks.delegate("Autre", title="Autre", origin=TELEGRAM, requested_by=MATHIS)
-        await nestor.tasks.cancel(quick.id)
-        await nestor.tasks.cancel(other.id)
-        await nestor.journal.publish(TaskDelivered(source="tasks", task_id=quick.id, address=TELEGRAM))
-        await nestor.journal.publish(
-            Delivered(
-                source="courier", address=Address("telegram", "9"), about=About(Source.TASK, other.id, "cancelled")
-            )
-        )
+        quick = await nestor.tasks.start_task("Vite fait", title="Vite fait", origin=TELEGRAM, owner=MATHIS)
+        await nestor.tasks.stop(quick.id)
+        await nestor.tasks.delivered(quick, quick.turn, TELEGRAM)
         watch = await nestor.watch_book.create(
             Watch(title="Le colis", what="le colis", owner=MATHIS, created_in=TELEGRAM)
         )
@@ -181,10 +170,10 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
             pass  # it connected, then left
 
         api = await admin.api()
-        tasks = {t["id"]: t for t in (await api.get("/api/v1/tasks")).json()["recent"]}
-        assert tasks[quick.id]["origin"] == {"session": "telegram:42", "channel": "telegram"}
-        assert tasks[quick.id]["delivered"]["channel"] == "telegram" and tasks[quick.id]["delivered"]["room"] is None
-        assert tasks[other.id]["delivered"]["channel"] == "telegram"
+        task = (await api.get(f"/api/v1/tasks/{quick.id}")).json()
+        assert task["origin"] == {"session": "telegram:42", "channel": "telegram"}
+        [delivered] = [t["delivered"] for t in task["thread"]]
+        assert delivered["channel"] == "telegram" and delivered["room"] is None
         (listed,) = (await api.get("/api/v1/watches")).json()["watches"]
         assert listed["triggered"] == 2 and listed["last_triggered_at"] and listed["origin"]["session"] == "telegram:42"
         (remembered,) = (await api.get("/api/v1/memories", q="thé")).json()

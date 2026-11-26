@@ -22,7 +22,7 @@ from nestor.modules.cognition.delegation import (
     ExecutorCalled,
     NestorTools,
     Outcome,
-    TaskEnded,
+    TurnEnded,
 )
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import Attached
@@ -65,19 +65,16 @@ class World:
     remote: FakeRemote
 
     def given(self, task_id: str) -> Assignment:
-        return next(
-            r.assignment for r in self.remote.runs.values() if r.assignment.objective == self.objective(task_id)
-        )
-
-    def objective(self, task_id: str) -> str:
-        return self.nestor.tasks.tasks[task_id].objective
+        """What the working turn of the task was given."""
+        ref = self.nestor.tasks.tasks[task_id].turn.ref
+        return self.remote.runs[str(ref)].assignment
 
     def reached(self, link: str) -> str:
         """A link as an executor follows it: here, on this machine, rather than at the public URL."""
         return self.served.url(link.removeprefix("https://nestor.example"))
 
     def finish(self, task_id: str) -> None:
-        ref = self.nestor.tasks.tasks[task_id].ref
+        ref = self.nestor.tasks.tasks[task_id].turn.ref
         assert ref is not None
         self.remote.finish(ref, Outcome.completed("ok"))
 
@@ -119,16 +116,16 @@ async def delegated(world: World, objective: str, executor: str = "codex") -> tu
     quote = await nestor.blobs.put(PDF, "application/pdf")
     sent = (Attached(kind=AttachmentKind.FILE, blob=quote, name="devis.pdf"),)
     await turn.said("Corrige le devis joint", Medium.WRITTEN, Speaker.account(MATHIS), sent)
-    task = await nestor.tasks.delegate(
+    task = await nestor.tasks.start_task(
         objective,
         title="Devis corrigé",
         origin=MAIN,
-        requested_by=MATHIS,
+        owner=MATHIS,
         executor=executor,
         exchange=turn.exchange,
         given=(FileRef(quote, "devis.pdf"),),
     )
-    await eventually(lambda: task.ref is not None)  # submitted: the executor holds its assignment
+    await eventually(lambda: task.turn.ref is not None)  # submitted: the executor holds its assignment
     return task.id, world.given(task.id)
 
 
@@ -152,13 +149,12 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
     task = given.task
     async with client(world, given.access.key) as nestor:
         assert {t.name for t in nestor.tools()} == {
-            "task_brief", "read_file", "recall", "remember", "report_progress",
-            "ask_requester", "check_answer", "attach_file",
+            "task_brief", "read_file", "recall", "note", "report_progress", "attach_file",
         }, "no home: no home_state"  # fmt: skip
         assert [f.name for f in given.files] == ["devis.pdf"] and "read_file gives a link" in given.brief()
         brief = await call(nestor, "task_brief", task=task)
-        assert (brief["title"], brief["objective"]) == ("Devis corrigé", "Corrige le devis")
-        assert (brief["requested_by"], brief["channel"]) == ("Mathis", "memory")
+        assert (brief["title"], brief["instruction"]) == ("Devis corrigé", "Corrige le devis")
+        assert (brief["for"], brief["channel"], brief["earlier_turns"]) == ("Mathis", "memory", [])
         assert any("Corrige le devis joint" in line for line in brief["conversation"])
         [file] = brief["files"]
         assert (file["name"], file["media_type"]) == ("devis.pdf", "application/pdf")
@@ -167,23 +163,18 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
             assert (await http.get(world.reached(read["url"]))).content == PDF, "no key: the link is enough"
 
         await world.nestor.memories.remember("Léa préfère les devis en PDF signés", about=PersonId("lea"), source=MAIN)
-        await call(nestor, "remember", task=task, fact="Mathis préfère les devis en PDF")
-        recalled = await call(nestor, "recall", task=task, query="devis PDF")
+        await world.nestor.memories.remember("Mathis préfère les devis en PDF", about=MATHIS, source=MAIN)
+        await call(nestor, "note", task=task, text="Le devis est en TVA à 20 %.")
+        recalled = await call(nestor, "recall", task=task, query="devis PDF TVA")
         texts = [m["text"] for m in recalled["memories"]]
         assert any("Mathis préfère les devis en PDF" in t for t in texts)
-        assert not any("Léa" in t for t in texts), "only what is the requester's"
+        assert not any("Léa" in t for t in texts), "only what is the owner's"
+        assert not any("TVA" in t for t in texts), "a note stays with the task, never in anyone's memory"
+        assert (await call(nestor, "task_brief", task=task))["notes"] == ["Le devis est en TVA à 20 %."]
 
-        await call(nestor, "report_progress", task=task, step="je relis les montants")
-        assert "je relis les montants" in world.nestor.tasks.tasks[task_id].steps
-
-        asked = await call(nestor, "ask_requester", task=task, question="La TVA est-elle à 20 % ?")
-        assert (await call(nestor, "check_answer", task=task, question=asked["question"]))["status"] == "waiting"
-        question = world.nestor.message_book.get(asked["question"])
-        assert question is not None and (question.to, question.task) == (MATHIS, task_id)
-        assert question.text == 'codex, working on "Devis corrigé": La TVA est-elle à 20 % ?', "the task by its name"
-        await world.nestor.message_book.answer(asked["question"], "Oui, 20 %", by=MATHIS)
-        answered = await call(nestor, "check_answer", task=task, question=asked["question"])
-        assert answered == {"status": "answered", "answer": "Oui, 20 %"}
+        await call(nestor, "report_progress", task=task, step="je relis\n  les montants " + "0" * 300)
+        said = world.nestor.tasks.tasks[task_id].turn.steps[-1]
+        assert said.startswith("je relis les montants 00") and len(said) < 200, "one short line, as the executor's own"
 
         corrected = b"%PDF-1.7 corrige" + bytes(5_000_000)  # bigger than an MCP request's usual cap
         upload = await call(nestor, "attach_file", task=task, name="devis-corrige.pdf", media_type="application/pdf")
@@ -194,7 +185,7 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
 
     world.finish(task_id)
     outcome = await world.nestor.tasks.wait(task_id)
-    [ended] = [e for e in await world.nestor.journal.history(TaskEnded) if e.task_id == task_id]
+    [ended] = [e for e in await world.nestor.journal.history(TurnEnded) if e.task_id == task_id]
     assert outcome.status.value == "completed" and len(ended.files) == 1
     assert ended.files[0].name == "devis-corrige.pdf", "by the name the executor gave it"
     assert await world.nestor.blobs.get(ended.files[0].blob.digest) == corrected
@@ -202,6 +193,16 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
     assert {c.tool for c in calls} >= {"task_brief", "attach_file"} and all(
         c.ok and c.executor == "codex" for c in calls
     )
+
+    await world.nestor.tasks.direct(task_id, "Ajoute la remise de 5 %", by=MATHIS)
+    await eventually(lambda: world.nestor.tasks.tasks[task_id].turn.ref is not None)
+    next_turn = world.given(task_id)
+    assert next_turn.task and next_turn.task != task and next_turn.access is not None
+    async with client(world, next_turn.access.key) as nestor:
+        brief = await call(nestor, "task_brief", task=next_turn.task)
+    assert brief["instruction"] == "Ajoute la remise de 5 %"
+    assert [t["asked"] for t in brief["earlier_turns"]] == ["Corrige le devis"], "the turns before, in the brief"
+    world.finish(task_id)
 
 
 async def test_another_executor_s_task_an_ended_task_or_a_guess_all_read_the_same(world: World) -> None:
@@ -228,7 +229,7 @@ async def test_another_executor_s_task_an_ended_task_or_a_guess_all_read_the_sam
         with pytest.raises(ToolFailed) as ended:
             await call(nestor, "task_brief", task=given.task)
         refusals.append(str(ended.value))
-    assert len(set(refusals)) == 1 and "not a running task of yours" in refusals[0]
+    assert len(set(refusals)) == 1 and "not a working turn of yours" in refusals[0]
     refused_calls = [c for c in await world.nestor.journal.history(ExecutorCalled) if not c.ok]
     assert len(refused_calls) == 3 and all(c.task_id is None for c in refused_calls)
 
@@ -279,3 +280,41 @@ async def test_it_answers_at_the_admin_s_public_address_not_only_on_this_machine
     async with httpx.AsyncClient() as http:
         answer = await http.post(world.served.url(), json=initialize, headers=headers)
     assert answer.status_code == 200, answer.text
+
+
+async def test_a_turn_given_in_another_conversation_is_briefed_from_that_one(world: World) -> None:
+    task_id, _ = await delegated(world, "Corrige le devis")
+    world.finish(task_id)
+    await world.nestor.tasks.wait(task_id)
+    elsewhere = Address("memory", "kitchen")
+    turn = await world.nestor.agent.conversations.turn(elsewhere, Medium.WRITTEN)
+    await turn.said("Ajoute la remise de 5 % au devis", Medium.WRITTEN, Speaker.account(MATHIS))
+    await world.nestor.tasks.direct(
+        task_id, "Ajoute la remise de 5 %", by=MATHIS, origin=elsewhere, exchange=turn.exchange
+    )
+    await eventually(lambda: world.nestor.tasks.tasks[task_id].turn.ref is not None)
+    given = world.given(task_id)
+    assert given.access is not None and given.task is not None
+    async with client(world, given.access.key) as nestor:
+        brief = await call(nestor, "task_brief", task=given.task)
+    assert any("Ajoute la remise de 5 % au devis" in line for line in brief["conversation"])
+    assert not any("Corrige le devis joint" in line for line in brief["conversation"]), "not the task's first one"
+    world.finish(task_id)
+
+
+async def test_a_link_ends_with_its_turn_even_while_the_task_goes_on(world: World) -> None:
+    task_id, given = await delegated(world, "Corrige le devis")
+    assert given.access is not None and given.task is not None
+    async with client(world, given.access.key) as nestor:
+        [file] = (await call(nestor, "task_brief", task=given.task))["files"]
+        download = (await call(nestor, "read_file", task=given.task, file=file["file"]))["url"]
+        upload = await call(nestor, "attach_file", task=given.task, name="tard.pdf", media_type="application/pdf")
+    world.finish(task_id)
+    await world.nestor.tasks.wait(task_id)
+    await world.nestor.tasks.direct(task_id, "Ajoute la remise de 5 %", by=MATHIS)
+    await eventually(lambda: world.nestor.tasks.tasks[task_id].turn.ref is not None)
+    async with httpx.AsyncClient() as http:
+        assert (await http.put(world.reached(upload["upload_url"]), content=b"%PDF-1.7 tard")).status_code == 404
+        assert (await http.get(world.reached(download))).status_code == 404
+    assert world.nestor.tasks.tasks[task_id].turn.files == [], "a late file never lands on the next turn"
+    world.finish(task_id)

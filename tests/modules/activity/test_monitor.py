@@ -118,14 +118,16 @@ async def test_a_delegated_task_keeps_it_working_until_it_ends() -> None:
         since = world.monitor.current().since
         assert (
             await world.changed(
-                lambda: world.tasks.delegate("Réserver le restaurant", title="Réserver le restaurant", origin=TELEGRAM)
+                lambda: world.tasks.start_task(
+                    "Réserver le restaurant", title="Réserver le restaurant", origin=TELEGRAM
+                )
             )
             is Activity.WORKING
         )
         working = world.monitor.current()
         assert (working.state, working.tasks) == (Activity.WORKING, 1) and working.since >= since
-        (running,) = world.tasks.running()
-        assert await world.changed(lambda: world.tasks.cancel(running.id)) is Activity.IDLE
+        (working_task,) = world.tasks.working()
+        assert await world.changed(lambda: world.tasks.stop(working_task.id)) is Activity.IDLE
 
 
 async def test_quiet_hours_put_it_to_sleep_and_their_turn_wakes_whoever_waits() -> None:

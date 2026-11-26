@@ -1,5 +1,5 @@
 """A fake `codex app-server`, as observed on codex-cli 0.160.0: JSON-RPC without the version field, one object per
-line, threads and turns, item and turn notifications, approval requests, files read back in base64.
+line, threads and turns, item and turn notifications, approval requests, files read back in base64, turns steered.
 
 It plays the Codex daemon a relay reaches (`codex app-server proxy`): its threads outlive the sessions, so a new
 executor plays a Nestor restart. With `daemon=False` it plays a local `codex app-server` instead, whose running turn
@@ -19,7 +19,7 @@ from nestor.adapters.executors.codex import CodexExecutor
 RELAY = Path(__file__).with_name("relay.py")
 CWD = "/srv/codex/work"
 TASK = f"{CWD}/task"  # in `files`, `links` and the report's files: the task's own folder, whatever Nestor names it
-REPORT = {"report": "C'est fait.", "files": []}
+REPORT = {"report": "C'est fait.", "files": [], "question": ""}
 ITEMS = (  # what a turn does, as `item/started` says it
     {"type": "userMessage", "id": "u1", "content": []},
     {"type": "reasoning", "id": "r1"},
@@ -28,6 +28,11 @@ ITEMS = (  # what a turn does, as `item/started` says it
     {"type": "mcpToolCall", "id": "t1", "server": "nestor", "tool": "read_result", "status": "inProgress"},
     {"type": "webSearch", "id": "w1", "query": "pytest asyncio"},
     {"type": "imageGeneration", "id": "i1", "status": "inProgress", "result": ""},
+)
+DONE = (  # what a turn did, as `item/completed` says it
+    {"type": "agentMessage", "id": "m0", "text": "Je lance les tests.", "phase": "commentary"},
+    {"type": "plan", "id": "p1", "text": "Lire le test, le corriger."},
+    {"type": "commandExecution", "id": "exec-1", "command": "/bin/bash -lc 'ls'", "status": "completed"},
 )
 
 
@@ -38,6 +43,7 @@ class FakeTurn:
     status: str = "inProgress"
     items: list[dict[str, Any]] = field(default_factory=list)
     error: str | None = None
+    steered: list[str] = field(default_factory=list)
 
     def wire(self) -> dict[str, Any]:
         error = {"message": self.error} if self.error else None
@@ -120,6 +126,10 @@ class FakeCodex:
         thread, _, _ = ref.partition(":")
         self._complete(self.threads[thread], self.turn(ref), report or self.report)
 
+    def forget(self, thread: str) -> None:
+        """Its records of the thread are deleted."""
+        del self.threads[thread]
+
     def drop_sessions(self) -> None:
         """The relay's connections break: every session ends at once."""
         for writer in list(self._sessions):
@@ -181,6 +191,8 @@ class FakeCodex:
                 self._subscribers.setdefault(thread.id, set()).add(writer)
                 return {"thread": self._thread(thread)}
             case "thread/resume":
+                if params["threadId"] not in self.threads:  # as Codex 0.160 answers it
+                    raise _Refused(-32600, f"no rollout found for thread id {params['threadId']}")
                 thread = self._thread_of(params)
                 self._subscribers.setdefault(thread.id, set()).add(writer)
                 return {"thread": self._thread(thread)}
@@ -192,6 +204,13 @@ class FakeCodex:
                 self._tasks.add(running)
                 running.add_done_callback(self._tasks.discard)
                 return {"turn": {"id": turn.id, "items": [], "itemsView": "notLoaded", "status": "inProgress"}}
+            case "turn/steer":
+                thread = self._thread_of(params)
+                turn = next((t for t in thread.turns if t.status == "inProgress"), None)
+                if turn is None or turn.id != params["expectedTurnId"]:
+                    raise _Refused(-32600, "no active turn to steer")
+                turn.steered.append(params["input"][0]["text"])
+                return {"turnId": turn.id}
             case "turn/interrupt":
                 thread = self._thread_of(params)
                 turn = next((t for t in thread.turns if t.id == params["turnId"] and t.status == "inProgress"), None)
@@ -241,6 +260,8 @@ class FakeCodex:
         self._notify(thread, "turn/started", {"threadId": thread.id, "turn": turn.wire()})
         for item in ITEMS:
             self._notify(thread, "item/started", {"threadId": thread.id, "turnId": turn.id, "item": item})
+        for item in DONE:
+            self._notify(thread, "item/completed", {"threadId": thread.id, "turnId": turn.id, "item": item})
         if self.asks:
             self._count += 1
             asked = self._asked[self._count] = asyncio.get_running_loop().create_future()

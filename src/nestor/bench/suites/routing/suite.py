@@ -6,12 +6,15 @@ Its dataset (`cases.jsonl`) starts with a header, then requests with the routes 
     {"dataset": "routing", "version": 1}
     {"case": "r01", "said": "Il va pleuvoir demain à Lyon ?", "expected": [["tool:weather"], ["delegate:hermes"]]}
     {"case": "r20", "said": "Salut, ça va ?", "expected": []}
+    {"case": "r27", "said": "C'est un Hisense", "tasks": [{"id": "dish", "title": "Lave-vaisselle", "executor":
+     "codex", "question": "Quelle marque ?"}], "expected": [["continue:dish"]]}
 
-A route is `tool:<name>`, `delegate:<executor>` or `none` (no tool: it answers, or says it cannot). `expected` is a list
-of tiers; the right routes are those of the first tier the variant can take (its tool is offered, its executor
-plugged), `none` when it can take none. So a weather question is right with the weather tool where there is one, with
-an executor that searches the web otherwise, and answered without a task where neither exists. Executors are named as
-the variant names them (by default, their plugin: `hermes`, `codex`, `claude-code`).
+A route is `tool:<name>`, `delegate:<executor>`, `continue:<task>` or `none` (no tool: it answers, or says it cannot).
+`tasks` are the person's tasks already there, ready or (with a `question`) waiting on them, each with its executor.
+`expected` is a list of tiers; the right routes are those of the first tier the variant can take (its tool is offered,
+its executor plugged), `none` when it can take none. So a weather question is right with the weather tool where there
+is one, with an executor that searches the web otherwise, and answered without a task where neither exists. Executors
+are named as the variant names them (by default, their plugin: `hermes`, `codex`, `claude-code`).
 
 Each request is one written turn of the household's first person, answered by the agent the runtime builds (persona,
 prompt layers, delegation, wake-ups, messages, and the variant's `executors` and `tools`) with the variant's written
@@ -29,9 +32,11 @@ from typing import Any
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite, Trial
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
-from nestor.core import ContractError
+from nestor.core import ContractError, PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Address, InboundMessage, Sender
+from nestor.modules.cognition import TurnStatus
+from nestor.modules.cognition.delegation import TaskCreated, TurnEnded
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
@@ -51,8 +56,9 @@ from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 NAME = "routing"
 NONE = "none"
-ROUTES = ("tool:", "delegate:")
-DELEGATE = "delegate_task"
+ROUTES = ("tool:", "delegate:", "continue:")
+DELEGATE = "start_task"
+CONTINUE = "continue_task"
 CHAT = Address("bench", "chat")
 
 
@@ -83,16 +89,22 @@ class Routing(Suite[None, Knobs]):
         return Dataset(version=records[0]["version"], cases=tuple(cases), shared=None)
 
     async def run(self, case: Case, shared: None, trial: Trial[Knobs]) -> Mapping[str, Any]:
-        agent = _agent(trial)
-        offered = {*(f"tool:{s.name}" for s in agent.toolbox.specs()), *(f"delegate:{e.name}" for e in trial.executors)}
+        agent, tasks = _agent(trial)
+        person = agent.household.people[0]
+        seeded = [await _seed(agent.journal, task, person.id) for task in case.data.get("tasks", [])]
+        offered = {
+            *(f"tool:{s.name}" for s in agent.toolbox.specs()),
+            *(f"delegate:{e.name}" for e in trial.executors),
+            *(f"continue:{task_id}" for task_id in seeded),
+        }
         tiers = _tiers(case.data["expected"]) or ()
         right = next((routes for tier in tiers if (routes := [r for r in tier if r in offered])), [NONE])
         events = agent.journal.subscribe(ToolCalled, FallbackSpoken)
-        person = agent.household.people[0]
-        reply = agent.respond(
-            InboundMessage(address=CHAT, sender=Sender("bench", person=person.id), text=str(case.data["said"]))
-        )
-        said = "".join([chunk async for chunk in reply if isinstance(chunk, str)]).strip()
+        async with tasks:  # the tasks seeded, as the journal tells them
+            reply = agent.respond(
+                InboundMessage(address=CHAT, sender=Sender("bench", person=person.id), text=str(case.data["said"]))
+            )
+            said = "".join([chunk async for chunk in reply if isinstance(chunk, str)]).strip()
         events.close()
         calls = [event async for event in events]
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
@@ -181,11 +193,16 @@ def _tiers(value: object) -> tuple[tuple[str, ...], ...] | None:
 
 
 def _kind(route: str) -> str:
-    return route.split(":", 1)[0]
+    """What a route does: a tool, a task handed over (a new one or one going on), or nothing."""
+    kind = route.split(":", 1)[0]
+    return "delegate" if kind == "continue" else kind
 
 
 def _route(called: ToolCalled, trial: Trial[Knobs]) -> str:
-    """`delegate:<executor>` for a task handed over (to the only executor when it names none), else `tool:<name>`."""
+    """`delegate:<executor>` for a task handed over (to the only executor when it names none), `continue:<task>` for
+    one going on, else `tool:<name>`."""
+    if called.name == CONTINUE:
+        return f"continue:{called.arguments.get('task', '')}"
     if called.name != DELEGATE:
         return f"tool:{called.name}"
     executor = called.arguments.get("executor") or (trial.executors[0].name if trial.executors else "")
@@ -196,21 +213,54 @@ async def _dry(arguments: Mapping[str, object], context: ToolContext) -> ToolOut
     return {"ok": True}
 
 
-def _agent(trial: Trial[Knobs]) -> Agent:
+async def _seed(journal: Journal, task: Mapping[str, Any], owner: PersonId) -> str:
+    """One of the person's tasks already there, as the journal tells it: ready, or waiting on their answer to its
+    `question`."""
+    task_id, title = str(task["id"]), str(task["title"])
+    question = task.get("question")
+    status = TurnStatus.ASKED if question else TurnStatus.COMPLETED
+    for event in (
+        TaskCreated(
+            source=NAME,
+            task_id=task_id,
+            title=title,
+            executor=str(task["executor"]),
+            owner=owner,
+            origin=CHAT,
+            turn_id=f"{task_id}-1",
+            instruction=title,
+            by=owner,
+        ),
+        TurnEnded(
+            source=NAME,
+            task_id=task_id,
+            turn_id=f"{task_id}-1",
+            status=status,
+            result=str(task.get("result", "Fait.")),
+            question=str(question) if question else None,
+            duration_s=1.0,
+        ),
+    ):
+        await journal.publish(event)
+    return task_id
+
+
+def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
     """The agent as the runtime builds it, with the variant's persona, written model, executors and tools, for one
-    round, its tools never run."""
+    round, its tools never run; and its task manager, to start once the case's tasks are seeded."""
     config, localizer = trial.config, trial.localizer
     if localizer is None:
         raise ContractError("the routing suite runs the agent: it needs the engine's localizer")
     journal = Journal(MemoryEventLog())
     household = Household(p.to_person() for p in config.household)
-    delegation = Delegation(TaskManager(journal, trial.executors))
+    tasks = TaskManager(journal, trial.executors)
+    delegation = Delegation(tasks)
     messages = MessageTools(MessageBook(journal), household)
     schedules = ScheduleTools(ScheduleBook(journal, timezone=config.persona.timezone))
     providers: Sequence[ToolProvider] = (delegation, messages, schedules, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
     persona = config.persona
-    return Agent(
+    agent = Agent(
         models=ModelChoice.single(trial.model("written")),
         persona=Persona(**{**persona.model_dump(), "locale": Locale(persona.locale)}),
         localizer=localizer,
@@ -221,3 +271,4 @@ def _agent(trial: Trial[Knobs]) -> Agent:
         attachments=Attachments(MemoryBlobStore()),
         settings=AgentSettings(max_tool_rounds=1),
     )
+    return agent, tasks

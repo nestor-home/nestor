@@ -11,7 +11,6 @@ from nestor.admin.connecting import Connecting
 from nestor.admin.state import AdminState
 from nestor.core import PersonId
 from nestor.modules.accounts import Principal, Scope
-from nestor.modules.cognition import TaskStatus
 from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.connectors import Connection, Connections
 from nestor.modules.initiative import Schedule, Watch
@@ -117,13 +116,14 @@ async def editable_memory(admin: AdminState, caller: Caller, memory_id: str) -> 
 
 
 def reaches_task(caller: Caller, task: Task) -> bool:
-    return caller.principal.reaches(task.requested_by, every=Scope.TASKS_MANAGE, own=Scope.TASKS_MANAGE_OWN)
+    """Its owner reaches a task, and whoever manages every task: no other member sees it."""
+    return caller.principal.reaches(task.owner, every=Scope.TASKS_MANAGE, own=Scope.TASKS_MANAGE_OWN)
 
 
-def reachable_task(admin: AdminState, caller: Caller, task_id: str, *, running: bool = False) -> Task:
-    """A task the caller reaches (still running, when `running`), else 404."""
+def reachable_task(admin: AdminState, caller: Caller, task_id: str) -> Task:
+    """A task the caller reaches, else 404."""
     task = admin.nestor.tasks.tasks.get(task_id)
-    if task is None or not reaches_task(caller, task) or (running and task.status is not TaskStatus.RUNNING):
+    if task is None or not reaches_task(caller, task):
         raise not_found("task_unknown")
     return task
 

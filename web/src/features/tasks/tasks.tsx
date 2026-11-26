@@ -1,24 +1,25 @@
 /**
- * A task's whole run on its page: what was asked and where it stands, its outcome and the files it made,
- * who asked and how the answer reached them, its steps as they came, then its trace in the journal.
+ * A task, opened: in a side sheet from where it is listed (its thread, and the composer at the sheet's foot), and on
+ * its own page with its whole story (the thread, what it is about, then its trace in the journal).
  */
 import { useQuery } from "@tanstack/react-query";
-import { Paperclip, TriangleAlert, Volume2, Workflow } from "lucide-react";
-import { isMissing, type Task, taskQuery } from "@/api";
-import { API_BASE } from "@/api/client";
-import { Ago } from "@/components/ago";
+import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Workflow } from "lucide-react";
+import { isMissing, type Task, type TaskThread, taskQuery } from "@/api";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { Avatar, IconTile } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import { OriginLink } from "@/components/origin-link";
+import { SheetPanel } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, Panel, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Files } from "@/features/journal/attachments";
+import { buttonVariants } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { KindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { duration } from "@/lib/time";
-import { CancelTask, Steps, TaskStatusMark } from "./parts";
+import { TaskComposer, WriteToTask } from "./composer";
+import { TaskActions, TaskLine, TaskStateMark } from "./parts";
+import { Notes, Thread } from "./thread";
 
 export function TaskDetail({ id }: { id: string }) {
   const t = useT();
@@ -42,29 +43,26 @@ export function TaskDetail({ id }: { id: string }) {
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
         title={task.title}
-        meta={
-          <>
-            <TaskStatusMark status={task.status} />
-            <KindName kind={task.executor} />
-            <span>
-              <Ago iso={task.started_at} />
-            </span>
-          </>
+        meta={<TaskLine task={task} state />}
+        actions={
+          <span className="flex flex-wrap gap-2">
+            <WriteToTask task={task} />
+            <TaskActions task={task} />
+          </span>
         }
-        actions={<CancelTask task={task} />}
-      >
-        {task.objective}
-      </PageHeader>
+      />
       <div className="grid gap-10">
         <WithAside>
-          <Outcome task={task} />
-          <About task={task} />
-        </WithAside>
-        {task.steps.length ? (
-          <Section title={t("task-steps")} count={task.steps.length}>
-            <Steps task={task} className="surface px-5 pt-5 pb-1.5" />
+          <Section title={t("task-thread")} count={task.turns}>
+            <Panel>
+              <Thread task={task} />
+            </Panel>
           </Section>
-        ) : null}
+          <div className="grid content-start gap-6">
+            <About task={task} />
+            <Notes notes={task.notes} />
+          </div>
+        </WithAside>
         <Section title={t("task-story")}>
           <SubjectStory filters={{ task: task.id }} empty={t("task-story-empty")} />
         </Section>
@@ -73,115 +71,77 @@ export function TaskDetail({ id }: { id: string }) {
   );
 }
 
-/** Where the task stands, as the first thing read: what it is doing, what it gave back, or why it gave nothing. */
-function Outcome({ task }: { task: Task }) {
-  const t = useT();
-  const files = task.files.length ? (
-    <div className={task.result || task.error ? "mt-5 border-t border-rule pt-4" : undefined}>
-      <p className="mb-2.5 flex items-center gap-1.5 text-body font-medium text-ink-muted">
-        <Paperclip className="size-3.5" aria-hidden="true" />
-        {t("task-files", { count: task.files.length })}
-      </p>
-      <Files files={task.files} url={(index) => `${API_BASE}/tasks/${task.id}/files/${index}`} />
-    </div>
-  ) : null;
-
-  if (task.status === "running") {
-    return (
-      <Section title={t("task-now")}>
-        <Panel>
-          <div className="flex items-start gap-4">
-            <IconTile icon={Workflow} tone="task" />
-            <p className="min-w-0 flex-1 self-center title-sub text-ink">{task.steps.at(-1) ?? t("task-starting")}</p>
-          </div>
-          <span className="thread mt-4 block" aria-hidden="true" />
-          <p className="mt-3 text-body text-ink-muted">{t("task-delivery-pending")}</p>
-          {files}
-        </Panel>
-      </Section>
-    );
-  }
-  if (task.error) {
-    return (
-      <Section title={t("task-error")}>
-        <Panel>
-          <div className="flex items-start gap-4">
-            <IconTile icon={TriangleAlert} tone="brick" />
-            <p className="min-w-0 flex-1 self-center whitespace-pre-line text-brick">{task.error}</p>
-          </div>
-          {files}
-        </Panel>
-      </Section>
-    );
-  }
-  if (task.result || files) {
-    return (
-      <Section title={t("task-result")}>
-        <Panel marked>
-          {task.result ? (
-            <p className="min-w-0 max-w-2xl whitespace-pre-line font-serif text-heading leading-relaxed text-ink">
-              {task.result}
-            </p>
-          ) : null}
-          {files}
-        </Panel>
-      </Section>
-    );
-  }
-  return (
-    <Section title={t("task-result")}>
-      <Empty>{t(task.status === "cancelled" ? "task-stopped-early" : "task-no-result")}</Empty>
-    </Section>
-  );
-}
-
-/** The facts around the run: who asked and where, who did it, how long it took, how the answer arrived. */
+/** Who it is for and where it was asked, who does it, since when. */
 function About({ task }: { task: Task }) {
   const t = useT();
-  const took = task.ended_at ? (new Date(task.ended_at).getTime() - new Date(task.started_at).getTime()) / 1000 : null;
   return (
-    <Panel as="aside" aria-label={t("task-about")} className="self-start">
+    <Panel as="aside" aria-label={t("task-about")}>
       <Facts narrow className="text-body">
-        {task.requested_by ? (
+        <Fact term={t("task-about-state")}>
+          <TaskStateMark state={task.state} />
+        </Fact>
+        {task.owner ? (
           <Fact term={t("task-asked-by")} className="flex items-center gap-2">
-            <Avatar name={task.requested_by.name} size="sm" />
-            {task.requested_by.name}
+            <Avatar name={task.owner.name} size="sm" />
+            {task.owner.name}
           </Fact>
         ) : null}
-        {task.origin ? (
-          <Fact term={t("task-asked-in")}>
-            {task.origin.session ? (
-              <OriginLink origin={task.origin} />
-            ) : (
-              <span className="text-ink-muted">{t("task-conversation-older")}</span>
-            )}
-          </Fact>
-        ) : null}
+        <Fact term={t("task-asked-in")}>
+          <OriginLink origin={task.origin} />
+        </Fact>
         <Fact term={t("task-done-by")}>
           <KindName kind={task.executor} />
         </Fact>
-        <Fact term={t("task-started")}>{moment(task.started_at)}</Fact>
-        {took ? <Fact term={t("task-took")}>{duration(took)}</Fact> : null}
-        {task.status === "running" ? null : (
-          <Fact term={t("task-delivery")}>
-            {task.delivered ? (
-              <span className="flex items-start gap-2">
-                <Volume2 className="mt-0.5 size-4 shrink-0 text-ember" aria-hidden="true" />
-                <span>
-                  {t("task-delivered", {
-                    spoken: task.delivered.channel === "voice" ? "yes" : "no",
-                    channel: task.delivered.channel,
-                    room: task.delivered.room ?? "none",
-                  })}{" "}
-                  <Ago iso={task.delivered.at} />
-                </span>
-              </span>
-            ) : (
-              <span className="text-ink-muted">{t("task-delivery-none")}</span>
-            )}
-          </Fact>
-        )}
+        <Fact term={t("task-started")}>{moment(task.created_at)}</Fact>
       </Facts>
     </Panel>
   );
+}
+
+/**
+ * A task in a side sheet: its thread to read, the composer at its foot to answer or reorient it, and the way to its
+ * page and to what one can do with it. `listed` shows what the list knows while the thread loads.
+ */
+export function TaskSheet({ listed, onArchived }: { listed: Task; onArchived: () => void }) {
+  const t = useT();
+  const found = useQuery(taskQuery(listed.id));
+  const task: Task = found.data ?? listed;
+  return (
+    <SheetPanel
+      icon={Workflow}
+      tone="task"
+      kind={t("act-kind-task")}
+      title={task.title}
+      description={
+        <TaskLine task={task} state>
+          {task.owner ? <span>{t("task-for", { name: task.owner.name })}</span> : null}
+        </TaskLine>
+      }
+      actions={
+        <div className="grid w-full gap-3">
+          <TaskComposer task={task} />
+          <div className="flex flex-wrap gap-2">
+            <Link to="/tasks/$taskId" params={{ taskId: task.id }} className={buttonVariants({ variant: "outline" })}>
+              {t("act-open-page")} <ArrowUpRight />
+            </Link>
+            <TaskActions task={task} onArchived={onArchived} />
+          </div>
+        </div>
+      }
+    >
+      <SheetThread found={found.data} pending={found.isPending} error={found.error} />
+    </SheetPanel>
+  );
+}
+
+function SheetThread({ found, pending, error }: { found?: TaskThread; pending: boolean; error: unknown }) {
+  if (found)
+    return (
+      <>
+        <Thread task={found} follow />
+        <Notes notes={found.notes} />
+      </>
+    );
+  if (pending) return <Loading lines={4} />;
+  return <Failure error={error} />;
 }

@@ -14,12 +14,17 @@ async def text_answer(model: LanguageModel, request: ModelRequest) -> str:
 
 
 async def json_answer(model: LanguageModel, request: ModelRequest) -> dict[str, Any] | None:
-    """The JSON object the model answers with, found between its first `{` and its last `}` (small models wrap
-    it in prose or a code fence); `None` when there is none. A provider failure raises `ProviderError`."""
-    text = await text_answer(model, request)
+    """The JSON object the model answers with (`json_object`); `None` when there is none. A provider failure raises
+    `ProviderError`."""
+    return json_object(await text_answer(model, request))
+
+
+def json_object(text: str) -> dict[str, Any] | None:
+    """The JSON object a model wrote, found between its first `{` and its last `}` (small models and agents wrap it
+    in prose or a code fence); `None` when there is none."""
     start, end = text.find("{"), text.rfind("}")
     try:
-        answer = json.loads(text[start : end + 1]) if start >= 0 else None
+        found = json.loads(text[start : end + 1]) if 0 <= start < end else None
     except json.JSONDecodeError:
         return None
-    return answer if isinstance(answer, dict) else None
+    return found if isinstance(found, dict) else None

@@ -67,14 +67,6 @@ class Messenger(Component):
 
     def _instruction(self, message: MessageRequested, person: Person, sender: Person | None) -> str:
         question = self.book.get(message.answers) if message.answers else None
-        if message.task is not None:  # an executor, working on a task someone handed over
-            lines = [f"A task you handed over asks {person.name}: {message.text}"]
-            if message.expects_reply:
-                lines.append(
-                    f"It is a question: ask it. When they answer, pass their answer back to the task with pass_answer "
-                    f"(question {message.message_id})."
-                )
-            return "\n".join(lines)
         if question is not None:
             asked = self.household.person(question.to).name
             lines = [f"{asked} answered the question you passed on for {person.name} ({question.text}): {message.text}"]

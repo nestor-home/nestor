@@ -1056,7 +1056,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Tasks */
+        /**
+         * List Tasks
+         * @description The tasks the caller reaches that are not archived: waiting on someone first, then working, then the latest
+         *     active; with `archived`, the archived ones only, the latest first.
+         */
         get: operations["listTasks"];
         put?: never;
         post?: never;
@@ -1075,7 +1079,7 @@ export interface paths {
         };
         /**
          * Get Task
-         * @description One task, running or among those the manager still keeps; 404 when unknown or out of reach.
+         * @description One task with its thread; 404 when unknown or out of reach.
          */
         get: operations["getTask"];
         put?: never;
@@ -1083,30 +1087,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Rename Task */
+        patch: operations["renameTask"];
         trace?: never;
     };
-    "/api/v1/tasks/{task_id}/files/{index}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Task File
-         * @description A file the task handed back; 404 when the task is out of reach or has no such file.
-         */
-        get: operations["getTaskFile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tasks/{task_id}/cancel": {
+    "/api/v1/tasks/{task_id}/instructions": {
         parameters: {
             query?: never;
             header?: never;
@@ -1116,10 +1101,72 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel Task
-         * @description Ask the executor to stop; 404 when the task is unknown, out of reach or already ended.
+         * Direct Task
+         * @description Give a task an instruction in the name of the account's person: taken into the turn that works when its
+         *     executor can, else it opens the next turn, in the same thread (the answer to its question). 409 when the turn that
+         *     works could not be stopped for it, or when the task's executor is no longer plugged in: nothing was given.
          */
-        post: operations["cancelTask"];
+        post: operations["directTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Task
+         * @description Stop the turn that works; the task stays. 404 when the task is unknown or out of reach.
+         */
+        post: operations["stopTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive Task
+         * @description Put a task away, its working turn stopped first; an instruction opens it again.
+         */
+        post: operations["archiveTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}/turns/{turn_id}/files/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task File
+         * @description A file of a turn (`TurnOut.files`); 404 when the task is out of reach or has no such file.
+         */
+        get: operations["getTaskFile"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2087,12 +2134,6 @@ export interface components {
             /** Next Before */
             next_before: number | null;
         };
-        /** CancelOut */
-        CancelOut: {
-            task: components["schemas"]["TaskOut"];
-            /** Confirmed */
-            confirmed: boolean;
-        };
         /** CapabilityOut */
         CapabilityOut: {
             /** Name */
@@ -2500,6 +2541,12 @@ export interface components {
          * @enum {string}
          */
         Dimension: "consumer" | "kind" | "provider" | "served" | "purpose" | "person" | "channel" | "medium" | "basis" | "outcome" | "origin" | "conversation";
+        /** DirectedOut */
+        DirectedOut: {
+            task: components["schemas"]["TaskThreadOut"];
+            /** Steered */
+            steered: boolean;
+        };
         /** DocumentIn */
         DocumentIn: {
             /** Document */
@@ -2513,7 +2560,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unavailable" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_not_stopped" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -2695,6 +2742,14 @@ export interface components {
          * @enum {string}
          */
         InstallKind: "container" | "editable" | "uv-tool" | "pip";
+        /**
+         * InstructionIn
+         * @description An instruction for a task: steers the turn that works, else opens the next (an answer to its question).
+         */
+        InstructionIn: {
+            /** Text */
+            text: string;
+        };
         /**
          * Interval
          * @enum {string}
@@ -3096,7 +3151,7 @@ export interface components {
          * @description What a message can name with `@`.
          * @enum {string}
          */
-        MentionKind: "person" | "room" | "executor" | "connection";
+        MentionKind: "person" | "room" | "executor" | "connection" | "task";
         /**
          * MentionOut
          * @description What a message can name with `@handle`: someone of the household, a room, an executor, a connected account.
@@ -3163,8 +3218,7 @@ export interface components {
         };
         /**
          * NestorTools
-         * @description How an executor reaches Nestor's MCP server while it works: its brief, its memory of the requester, questions
-         *     to them, its progress and its files.
+         * @description How an executor reaches Nestor's MCP server while it works: its brief, its notes, its progress and its files.
          * @enum {string}
          */
         NestorTools: "none" | "passed" | "configured";
@@ -3767,6 +3821,26 @@ export interface components {
          */
         Status: "connected" | "needs_reauth" | "error";
         /**
+         * SteeredOut
+         * @description An instruction the turn took while it worked.
+         */
+        SteeredOut: {
+            /** Instruction */
+            instruction: string;
+            by: components["schemas"]["PersonRef"] | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /** StopOut */
+        StopOut: {
+            task: components["schemas"]["TaskThreadOut"];
+            /** Confirmed */
+            confirmed: boolean;
+        };
+        /**
          * Suggest
          * @description What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field).
          * @enum {string}
@@ -3793,8 +3867,21 @@ export interface components {
             components: components["schemas"]["ComponentOut"][];
         };
         /**
+         * TaskChangedOut
+         * @description A task as a change left it (renamed, archived).
+         */
+        TaskChangedOut: {
+            task: components["schemas"]["TaskThreadOut"];
+        };
+        /** TaskEditIn */
+        TaskEditIn: {
+            /** Title */
+            title: string;
+        };
+        /**
          * TaskFileOut
-         * @description A file the task handed back; its bytes at `/tasks/{id}/files/{index}`.
+         * @description A file of a turn: sent with its instruction (`given`) or handed back; its bytes at
+         *     `/tasks/{id}/turns/{turn}/files/{index}`.
          */
         TaskFileOut: {
             /** Index */
@@ -3806,48 +3893,90 @@ export interface components {
             media_type: string;
             /** Size */
             size: number;
+            /** Given */
+            given: boolean;
         };
-        /** TaskOut */
+        /**
+         * TaskOut
+         * @description A task in a list: how it stands, not its thread.
+         */
         TaskOut: {
             /** Id */
             id: string;
             /** Title */
             title: string;
-            /** Objective */
-            objective: string;
             /** Executor */
             executor: string;
-            status: components["schemas"]["TaskStatus"];
-            requested_by: components["schemas"]["PersonRef"] | null;
+            state: components["schemas"]["TaskState"];
+            owner: components["schemas"]["PersonRef"] | null;
             origin: components["schemas"]["OriginOut"];
-            delivered: components["schemas"]["DeliveredOut"] | null;
             /**
-             * Started At
+             * Created At
              * Format: date-time
              */
-            started_at: string;
-            /** Ended At */
-            ended_at: string | null;
-            /** Steps */
-            steps: string[];
-            /** Result */
-            result: string | null;
-            /** Error */
-            error: string | null;
-            /** Files */
-            files: components["schemas"]["TaskFileOut"][];
+            created_at: string;
+            /**
+             * Last Activity
+             * Format: date-time
+             */
+            last_activity: string;
+            /** Turns */
+            turns: number;
+            last_status: components["schemas"]["TurnStatus"];
+            /** Question */
+            question: string | null;
+            /** Now */
+            now: string | null;
+            /** Steers */
+            steers: boolean;
         };
         /**
-         * TaskStatus
+         * TaskState
          * @enum {string}
          */
-        TaskStatus: "running" | "completed" | "failed" | "cancelled";
+        TaskState: "working" | "waiting" | "ready" | "archived";
+        /**
+         * TaskThreadOut
+         * @description A task with its thread, the first turn first, and what its executor kept for it.
+         */
+        TaskThreadOut: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Executor */
+            executor: string;
+            state: components["schemas"]["TaskState"];
+            owner: components["schemas"]["PersonRef"] | null;
+            origin: components["schemas"]["OriginOut"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity
+             * Format: date-time
+             */
+            last_activity: string;
+            /** Turns */
+            turns: number;
+            last_status: components["schemas"]["TurnStatus"];
+            /** Question */
+            question: string | null;
+            /** Now */
+            now: string | null;
+            /** Steers */
+            steers: boolean;
+            /** Thread */
+            thread: components["schemas"]["TurnOut"][];
+            /** Notes */
+            notes: string[];
+        };
         /** TasksOut */
         TasksOut: {
-            /** Running */
-            running: components["schemas"]["TaskOut"][];
-            /** Recent */
-            recent: components["schemas"]["TaskOut"][];
+            /** Tasks */
+            tasks: components["schemas"]["TaskOut"][];
         };
         /** TiedPersonOut */
         TiedPersonOut: {
@@ -3897,6 +4026,40 @@ export interface components {
             /** Conversed Nusd */
             conversed_nusd: number;
         };
+        /** TurnOut */
+        TurnOut: {
+            /** Id */
+            id: string;
+            /** Instruction */
+            instruction: string;
+            by: components["schemas"]["PersonRef"] | null;
+            status: components["schemas"]["TurnStatus"];
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Ended At */
+            ended_at: string | null;
+            /** Steps */
+            steps: string[];
+            /** Steered */
+            steered: components["schemas"]["SteeredOut"][];
+            /** Result */
+            result: string | null;
+            /** Question */
+            question: string | null;
+            /** Error */
+            error: string | null;
+            /** Files */
+            files: components["schemas"]["TaskFileOut"][];
+            delivered: components["schemas"]["DeliveredOut"] | null;
+        };
+        /**
+         * TurnStatus
+         * @enum {string}
+         */
+        TurnStatus: "running" | "completed" | "asked" | "failed" | "stopped";
         /**
          * Unit
          * @description What a call consumes and a price is set by. A new one is added here and nowhere else.
@@ -9703,7 +9866,9 @@ export interface operations {
     };
     listTasks: {
         parameters: {
-            query?: never;
+            query?: {
+                archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9810,7 +9975,391 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TaskOut"];
+                    "application/json": components["schemas"]["TaskThreadOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    renameTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskEditIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskChangedOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    directTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstructionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectedOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    stopTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StopOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    archiveTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskChangedOut"];
                 };
             };
             /** @description Bad Request */
@@ -9893,113 +10442,20 @@ export interface operations {
             header?: never;
             path: {
                 task_id: string;
+                turn_id: string;
                 index: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The file, as the task made it */
+            /** @description The file, as it was sent or made */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/octet-stream": unknown;
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Unprocessable Content */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorOut"];
-                };
-            };
-        };
-    };
-    cancelTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CancelOut"];
                 };
             };
             /** @description Bad Request */
@@ -14206,7 +14662,7 @@ export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<compon
 export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "nothing", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
-export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unavailable", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_not_stopped", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
@@ -14215,7 +14671,7 @@ export const intervalValues: ReadonlyArray<FlattenedDeepRequired<components>["sc
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
 export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "usage", "other"];
 export const mediumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Medium"]> = ["spoken", "written"];
-export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection"];
+export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection", "task"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
 export const nestorToolsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NestorTools"]> = ["none", "passed", "configured"];
 export const offValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Off"]> = ["switched_off", "quiet_hours", "someone_home"];
@@ -14233,8 +14689,9 @@ export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schem
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];
 export const suggestValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Suggest"]> = ["people", "residents"];
-export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["running", "completed", "failed", "cancelled"];
+export const taskStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskState"]> = ["working", "waiting", "ready", "archived"];
 export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
 export const toolStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ToolState"]> = ["running", "done", "failed", "background"];
+export const turnStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TurnStatus"]> = ["running", "completed", "asked", "failed", "stopped"];
 export const unitValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Unit"]> = ["input_tokens", "cached_input_tokens", "cache_write_tokens", "output_tokens", "images", "audio_seconds", "characters", "requests"];
 export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];

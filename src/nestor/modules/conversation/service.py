@@ -27,8 +27,6 @@ from nestor.modules.channels import (
 )
 from nestor.modules.cognition.model import (
     Document,
-    Finished,
-    FinishReason,
     Image,
     LanguageModel,
     Message,
@@ -541,9 +539,7 @@ class AgentReply(Reply):
                     text.append(chunk)
                     self._say(chunk)
                 elif isinstance(output, ToolCallRequested):
-                    calls.append(output.call)
-                elif isinstance(output, Finished) and output.reason is not FinishReason.TOOL_CALLS:
-                    calls.clear()  # a model that stops without asking for tools is done
+                    calls.append(output.call)  # the calls asked for are the signal, whatever reason it finishes with
         finally:
             if filler:
                 filler.cancel()

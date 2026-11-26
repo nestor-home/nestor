@@ -8,6 +8,9 @@ import type { JournalEvent, JournalItem } from "@/api";
 import {
   BEDROOM,
   CLAIM,
+  CLAIM_FILES,
+  CLAIM_NOTE,
+  CLAIM_QUESTION,
   CLAIM_STEPS,
   CLAIM_TITLE,
   DEPENDENCIES,
@@ -15,7 +18,13 @@ import {
   DEPENDENCIES_RESULT,
   DEPENDENCIES_TITLE,
   ENERGY,
+  ENERGY_BILLS,
   ENERGY_FILES,
+  ENERGY_FOLLOW_UP,
+  ENERGY_NOTES,
+  ENERGY_OFF_PEAK,
+  ENERGY_OFF_PEAK_FILES,
+  ENERGY_OFF_PEAK_STEP,
   ENERGY_RESULT,
   ENERGY_STEPS,
   ENERGY_TITLE,
@@ -28,6 +37,7 @@ import {
   SCHOOL_TRIP,
   SCHOOL_TRIP_WATCH,
   SHOPPING,
+  SHOPPING_STEER,
   SHOPPING_STEP,
   SHOPPING_TITLE,
 } from "./fixtures";
@@ -52,9 +62,16 @@ const voiceNote = (transcript: string): JournalItem["attachments"][number] => ({
   transcript,
 });
 
-/** What a task handed back, as its `task.ended` line carries it. */
+/** The files of a turn, as its journal line carries them (indexed within the line). */
 const made = (files: typeof ENERGY_FILES): JournalItem["attachments"] =>
-  files.map((f) => ({ ...f, name: null, transcript: null }));
+  files.map((f, index) => ({
+    index,
+    kind: f.kind,
+    media_type: f.media_type,
+    size: f.size,
+    name: f.name,
+    transcript: null,
+  }));
 
 export function day(now = Date.now()): JournalEvent[] {
   let seq = 0;
@@ -195,7 +212,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60 * 26 - 9,
-    type: "task.ended",
+    type: "task.turn.ended",
     title: "Task a04f12 failed (9 min)",
     detail: GYM_ERROR,
     tone: "warning",
@@ -321,14 +338,15 @@ export function day(now = Date.now()): JournalEvent[] {
     outcome: { ok: true, duration_s: 0.8 },
     links: { ...s2, turn: "u-2", call: "k-2", connection: "c-gmail-mathis" },
   });
-  const started = ev({
+  const created = ev({
     ago: 351.6,
-    type: "task.started",
-    title: `Task 3f2a1c handed to hermes: ${ENERGY_TITLE}`,
+    type: "task.created",
+    title: `Task 3f2a1c opened with hermes: ${ENERGY_TITLE}`,
     detail: ENERGY,
     people: [ref("mathis")],
     channels: ["telegram"],
     brand: "hermes",
+    attachments: made(ENERGY_BILLS),
     links: { ...s2, turn: "u-2", task: "t-3f2a1c" },
     cause: u2,
   });
@@ -345,24 +363,33 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 340,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 3f2a1c: new step",
     detail: ENERGY_STEPS[0],
     brand: "hermes",
     links: { task: "t-3f2a1c" },
-    cause: started,
+    cause: created,
   });
   ev({
     ago: 318,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 3f2a1c: new step",
     detail: ENERGY_STEPS[1],
     brand: "hermes",
     links: { task: "t-3f2a1c" },
   });
+  for (const [i, note] of ENERGY_NOTES.entries())
+    ev({
+      ago: 300 - i,
+      type: "task.noted",
+      title: "Task 3f2a1c: a note kept",
+      detail: note,
+      brand: "hermes",
+      links: { task: "t-3f2a1c" },
+    });
   ev({
     ago: 290,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 3f2a1c: new step",
     detail: ENERGY_STEPS[2],
     brand: "hermes",
@@ -370,8 +397,8 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   const ended = ev({
     ago: 251,
-    type: "task.ended",
-    title: "Task 3f2a1c completed (1 h 41)",
+    type: "task.turn.ended",
+    title: "Task 3f2a1c came back (1 h 41)",
     detail: ENERGY_RESULT,
     brand: "hermes",
     outcome: { ok: true, duration_s: 6060 },
@@ -390,7 +417,12 @@ export function day(now = Date.now()): JournalEvent[] {
     tone: "decision",
     links: { task: "t-3f2a1c", delivery: "d-1" },
     cause: ended,
-    record: { policy: "presence", spoken: "voice:office", written: null },
+    record: {
+      about: { source: "task", id: "t-3f2a1c", status: "completed", part: "u-3f2a-1" },
+      policy: "presence",
+      spoken: "voice:office",
+      written: null,
+    },
   });
   ev({
     ago: 250.4,
@@ -404,6 +436,53 @@ export function day(now = Date.now()): JournalEvent[] {
     channels: [VOICE],
     room: OFFICE,
     links: { task: "t-3f2a1c", delivery: "d-1", satellite: "reachy-office" },
+  });
+  ev({
+    ago: 250.39,
+    type: "task.turn.delivered",
+    title: "What task 3f2a1c came back with was passed on",
+    people: [ref("mathis")],
+    channels: [VOICE],
+    room: OFFICE,
+    links: { task: "t-3f2a1c" },
+  });
+  // later in the morning, Mathis asks the same task for more: a second turn in its thread
+  const followUp = ev({
+    ago: 212,
+    type: "task.turn.started",
+    title: "Task 3f2a1c: new instruction",
+    detail: ENERGY_FOLLOW_UP,
+    people: [ref("mathis")],
+    brand: "hermes",
+    links: { task: "t-3f2a1c" },
+  });
+  ev({
+    ago: 205,
+    type: "task.turn.step",
+    title: "Task 3f2a1c: new step",
+    detail: ENERGY_OFF_PEAK_STEP,
+    brand: "hermes",
+    links: { task: "t-3f2a1c" },
+    cause: followUp,
+  });
+  const offPeak = ev({
+    ago: 196,
+    type: "task.turn.ended",
+    title: "Task 3f2a1c came back (16 min)",
+    detail: ENERGY_OFF_PEAK,
+    brand: "hermes",
+    outcome: { ok: true, duration_s: 960 },
+    attachments: made(ENERGY_OFF_PEAK_FILES),
+    links: { task: "t-3f2a1c" },
+  });
+  ev({
+    ago: 195.8,
+    type: "task.turn.delivered",
+    title: "What task 3f2a1c came back with was passed on",
+    people: [ref("mathis")],
+    channels: ["telegram"],
+    links: { task: "t-3f2a1c" },
+    cause: offPeak,
   });
 
   // the school: a watch triggered, announced by voice, then followed up in writing
@@ -765,10 +844,10 @@ export function day(now = Date.now()): JournalEvent[] {
     channels: ["telegram"],
     links: { ...s6, turn: "u-7" },
   });
-  ev({
+  const claim = ev({
     ago: 30.9,
-    type: "task.started",
-    title: `Task 4410aa handed to hermes: ${CLAIM_TITLE}`,
+    type: "task.created",
+    title: `Task 4410aa opened with hermes: ${CLAIM_TITLE}`,
     detail: CLAIM,
     people: [ref("mathis")],
     channels: ["telegram"],
@@ -789,19 +868,48 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 18,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 4410aa: new step",
     detail: CLAIM_STEPS[0],
     brand: "hermes",
     links: { task: "t-4410aa" },
+    cause: claim,
   });
   ev({
-    ago: 9,
-    type: "task.progress",
+    ago: 12,
+    type: "task.turn.step",
     title: "Task 4410aa: new step",
     detail: CLAIM_STEPS[1],
     brand: "hermes",
     links: { task: "t-4410aa" },
+  });
+  ev({
+    ago: 10,
+    type: "task.noted",
+    title: "Task 4410aa: a note kept",
+    detail: CLAIM_NOTE,
+    brand: "hermes",
+    links: { task: "t-4410aa" },
+  });
+  const asked = ev({
+    ago: 9,
+    type: "task.turn.ended",
+    title: "Task 4410aa asks a question (21 min)",
+    detail: CLAIM_QUESTION,
+    tone: "warning",
+    brand: "hermes",
+    outcome: { ok: true, duration_s: 1314 },
+    attachments: made(CLAIM_FILES),
+    links: { task: "t-4410aa" },
+  });
+  ev({
+    ago: 8.8,
+    type: "task.turn.delivered",
+    title: "What task 4410aa came back with was passed on",
+    people: [ref("mathis")],
+    channels: ["telegram"],
+    links: { task: "t-4410aa" },
+    cause: asked,
   });
 
   const s7 = { session: "s-courses" };
@@ -817,10 +925,10 @@ export function day(now = Date.now()): JournalEvent[] {
     channels: ["web"],
     links: { ...s7, turn: "u-8" },
   });
-  ev({
+  const shopping = ev({
     ago: 11.9,
-    type: "task.started",
-    title: `Task 88b07e handed to codex: ${SHOPPING_TITLE}`,
+    type: "task.created",
+    title: `Task 88b07e opened with codex: ${SHOPPING_TITLE}`,
     detail: SHOPPING,
     people: [ref("lea")],
     channels: ["web"],
@@ -838,9 +946,19 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 6,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 88b07e: new step",
     detail: SHOPPING_STEP,
+    brand: "codex",
+    links: { task: "t-88b07e" },
+    cause: shopping,
+  });
+  ev({
+    ago: 5.5,
+    type: "task.steered",
+    title: "Task 88b07e reoriented while it worked",
+    detail: SHOPPING_STEER,
+    people: [ref("lea")],
     brand: "codex",
     links: { task: "t-88b07e" },
   });
@@ -877,10 +995,10 @@ export function day(now = Date.now()): JournalEvent[] {
     channels: ["slack"],
     links: { ...slack, turn: "u-s1" },
   });
-  ev({
+  const dependencies = ev({
     ago: 539.6,
-    type: "task.started",
-    title: `Task c1a9de handed to claude-code: ${DEPENDENCIES_TITLE}`,
+    type: "task.created",
+    title: `Task c1a9de opened with claude-code: ${DEPENDENCIES_TITLE}`,
     detail: DEPENDENCIES,
     people: [ref("mathis")],
     channels: ["slack"],
@@ -901,16 +1019,17 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 525,
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task c1a9de: new step",
     detail: fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions."),
     brand: "claude-code",
     links: { task: "t-c1a9de" },
+    cause: dependencies,
   });
   const updated = ev({
     ago: 521,
-    type: "task.ended",
-    title: "Task c1a9de completed (18 min)",
+    type: "task.turn.ended",
+    title: "Task c1a9de came back (18 min)",
     detail: DEPENDENCIES_RESULT,
     brand: "claude-code",
     outcome: { ok: true, duration_s: 1110 },
@@ -1264,7 +1383,7 @@ export function day(now = Date.now()): JournalEvent[] {
 /** What the live stream brings, in turn, while `pnpm dev` runs. */
 export const LIVE: ItemDraft[] = [
   {
-    type: "task.progress",
+    type: "task.turn.step",
     title: "Task 88b07e: new step",
     detail: fr("List grouped by aisle: 34 items.", "Liste regroupée par rayon : 34 articles."),
     links: { task: "t-88b07e" },

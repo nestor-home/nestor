@@ -26,9 +26,9 @@ describe("stories", () => {
         outcome: { ok: true, duration_s: 0.8 },
         links: { ...s, turn: "t1", call: "k" },
       }),
-      ev({ id: "ts", type: "task.started", kind: "task", links: { ...s, turn: "t1", task: "T" } }),
+      ev({ id: "ts", type: "task.created", kind: "task", links: { ...s, turn: "t1", task: "T" } }),
       ev({ id: "a", type: "conversation.turn.assistant", kind: "conversation", links: { ...s, turn: "t1" } }),
-      ev({ id: "te", type: "task.ended", kind: "task", links: { task: "T" } }),
+      ev({ id: "te", type: "task.turn.ended", kind: "task", links: { task: "T" } }),
     ];
     const stories = buildStories(items);
     expect(stories.map((st) => st.key)).toEqual(["task:T", "session:s-1"]);

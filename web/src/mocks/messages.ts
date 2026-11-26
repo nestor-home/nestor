@@ -58,6 +58,14 @@ function seconds(text: string): number {
   return n(/(\d+)\s*h/) * 3600 + n(/(\d+)\s*min/) * 60 + n(/h\s*(\d+)$/) * 60 + n(/([\d.]+)\s*s$/);
 }
 
+/** How a turn ended, from the words of its line. */
+const TURN_ENDS: Record<string, string> = {
+  "came back": "completed",
+  "asks a question": "asked",
+  failed: "failed",
+  stopped: "stopped",
+};
+
 /** Mock events are written as their English line; this reads them back as the server's messages. */
 const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   [
@@ -89,14 +97,32 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   ],
   [/^Tool (\S+) failed$/, (m) => msg("journal-tool-failed", { tool: m[1] ?? "" })],
   [
-    /^Task (\S+) handed to (\S+): (.+)$/,
-    (m) => msg("journal-task-started", { task: m[1] ?? "", executor: m[2] ?? "", title: m[3] ?? "" }),
+    /^Task (\S+) opened with (\S+): (.+)$/,
+    (m) => msg("journal-task-created", { task: m[1] ?? "", executor: m[2] ?? "", title: m[3] ?? "" }),
   ],
-  [/^Task (\S+): new step$/, (m) => msg("journal-task-progressed", { task: m[1] ?? "" })],
+  [/^Task (\S+) renamed: (.+)$/, (m) => msg("journal-task-renamed", { task: m[1] ?? "", title: m[2] ?? "" })],
+  [/^Task (\S+) archived$/, (m) => msg("journal-task-archived", { task: m[1] ?? "" })],
+  [/^Task (\S+): new instruction$/, (m) => msg("journal-task-turn-started", { task: m[1] ?? "" })],
+  [/^Task (\S+) picked up by the executor$/, (m) => msg("journal-task-turn-attached", { task: m[1] ?? "" })],
+  [/^Task (\S+): new step$/, (m) => msg("journal-task-turn-step", { task: m[1] ?? "" })],
   [
-    /^Task (\S+) (completed|failed) \((.+)\)$/,
-    (m) => msg("journal-task-ended", { task: m[1] ?? "", status: m[2] ?? "", seconds: seconds(m[3] ?? "") }),
+    /^Task (\S+) (reoriented while it worked|stopped for a new instruction)$/,
+    (m) => msg("journal-task-steered", { task: m[1] ?? "", taken: m[2]?.startsWith("reoriented") ? "yes" : "no" }),
   ],
+  [/^Stop requested for task (\S+)$/, (m) => msg("journal-task-turn-stop-requested", { task: m[1] ?? "" })],
+  [
+    /^Task (\S+) (came back|asks a question|failed|stopped) \((.+)\)$/,
+    (m) =>
+      msg("journal-task-turn-ended", {
+        task: m[1] ?? "",
+        status: TURN_ENDS[m[2] ?? ""] ?? "",
+        seconds: seconds(m[3] ?? ""),
+      }),
+  ],
+  [/^What task (\S+) came back with was passed on$/, (m) => msg("journal-task-turn-delivered", { task: m[1] ?? "" })],
+  [/^Task (\S+): a file handed back$/, (m) => msg("journal-task-turn-file-added", { task: m[1] ?? "" })],
+  [/^Task (\S+): a note kept$/, (m) => msg("journal-task-noted", { task: m[1] ?? "" })],
+  [/^Task (\S+) still waits for an answer: reminder sent$/, (m) => msg("journal-task-reminded", { task: m[1] ?? "" })],
   [/^Watch created: (.+)$/, (m) => msg("journal-watch-created", { title: m[1] ?? "" })],
   [
     /^“(.+)” checked against (\d+) watch(?:es)?: (none match|(\d+) matched)$/,

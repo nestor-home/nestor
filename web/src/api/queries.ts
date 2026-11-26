@@ -28,6 +28,7 @@ export const keys = {
   addition: (id: Id) => ["satellites", "additions", id] as const,
   mediaDevices: ["media", "devices"] as const,
   tasks: ["tasks"] as const,
+  archivedTasks: ["tasks", "archived"] as const,
   task: (id: Id) => ["tasks", id] as const,
   watches: ["watches"] as const,
   watch: (id: Id) => ["watches", id] as const,
@@ -139,12 +140,14 @@ export const mediaDevicesQuery = queryOptions({
 /** Kept fresh by the live journal (its connections and what it reports about its software). */
 export const satelliteQuery = (id: string) =>
   queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });
-export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: api.tasks, refetchInterval: 5_000 });
+export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: () => api.tasks(), refetchInterval: 5_000 });
+/** The tasks put away: asked for only when someone opens them. */
+export const archivedTasksQuery = queryOptions({ queryKey: keys.archivedTasks, queryFn: () => api.tasks(true) });
 export const taskQuery = (id: Id) =>
   queryOptions({
     queryKey: keys.task(id),
     queryFn: () => api.task(id),
-    refetchInterval: (q) => (q.state.data && q.state.data.ended_at === null ? 5_000 : false),
+    refetchInterval: (q) => (q.state.data?.state === "working" ? 5_000 : false),
   });
 export const watchesQuery = queryOptions({ queryKey: keys.watches, queryFn: api.watches });
 export const watchQuery = (id: Id) => queryOptions({ queryKey: keys.watch(id), queryFn: () => api.watch(id) });

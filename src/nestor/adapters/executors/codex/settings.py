@@ -6,15 +6,11 @@ from pydantic import Field, PositiveFloat, PositiveInt
 
 from nestor.adapters.executors.codex.executor import CodexExecutor
 from nestor.adapters.executors.codex.protocol import COMMAND, Sandbox
-from nestor.adapters.executors.common import (
-    INSTRUCTIONS,
-    MAX_FILE_BYTES,
-)
+from nestor.adapters.executors.common import INSTRUCTIONS, MAX_FILE_BYTES, ExecutorSettings
 from nestor.runtime import Services
-from nestor.runtime.plugins import AdapterSettings
 
 
-class CodexSettings(AdapterSettings):
+class CodexSettings(ExecutorSettings):
     # how to reach `codex app-server`: here, or a relay such as ["ssh", "codex@host", "codex", "app-server", "proxy"]
     command: list[str] = Field(default_factory=lambda: list(COMMAND), min_length=1)
     working_directory: str  # where tasks run, on the machine Codex runs on; files are handed back from there only
@@ -41,5 +37,4 @@ def build(settings: CodexSettings, name: str, services: Services) -> CodexExecut
         stop_timeout_s=settings.stop_timeout_s,
         max_file_bytes=settings.max_file_bytes,
     )
-    executor.name = name  # two Codex setups are two executors
-    return executor
+    return settings.apply(executor, name)

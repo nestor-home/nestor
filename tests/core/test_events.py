@@ -21,7 +21,8 @@ import nestor.modules.initiative
 import nestor.modules.memory  # noqa: F401  (importing a module registers its events)
 from nestor.core import ContractError, Event, Record, SessionId
 from nestor.core.events import JSON
-from nestor.modules.cognition import TaskEnded, TaskStatus
+from nestor.modules.cognition import TurnStatus
+from nestor.modules.cognition.delegation import TurnEnded
 
 ENVELOPE = {"source", "session", "id", "at"}
 
@@ -70,7 +71,9 @@ def test_every_event_type_survives_the_log(cls: type[Event]) -> None:
 
 
 def task_ended_record(**overrides: Any) -> dict[str, Any]:
-    event = TaskEnded(source="test", task_id="t1", status=TaskStatus.COMPLETED, result="ok", duration_s=2.0)
+    event = TurnEnded(
+        source="test", task_id="t1", turn_id="u1", status=TurnStatus.COMPLETED, result="ok", duration_s=2.0
+    )
     return {**json.loads(json.dumps(event.to_record())), **overrides}
 
 
@@ -79,9 +82,9 @@ def task_ended_record(**overrides: Any) -> dict[str, Any]:
     [
         ({"type": "task.unknown"}, "unknown event type"),
         ({"version": 99}, "migrate the log"),
-        ({"payload": {"task_id": "t1", "colour": "red"}}, "invalid payload"),
-        ({"payload": {"task_id": "t1", "status": "exploded", "duration_s": 1}}, "exploded"),
-        ({"payload": {"task_id": ["t1"], "status": "completed", "duration_s": 1}}, "cannot decode"),
+        ({"payload": {"task_id": "t1", "turn_id": "u1", "colour": "red"}}, "invalid payload"),
+        ({"payload": {"task_id": "t1", "turn_id": "u1", "status": "exploded", "duration_s": 1}}, "exploded"),
+        ({"payload": {"task_id": ["t1"], "turn_id": "u1", "status": "completed", "duration_s": 1}}, "cannot decode"),
         ({"payload": "garbled"}, "invalid payload"),
     ],
     ids=["unknown-type", "newer-version", "unknown-field", "invalid-enum", "corrupted-value", "garbled-payload"],
@@ -92,9 +95,9 @@ def test_an_invalid_record_is_refused_with_its_reason(overrides: dict[str, Any],
 
 
 def test_an_event_type_can_only_be_defined_once() -> None:
-    with pytest.raises(ContractError, match="already defined by TaskEnded"):
+    with pytest.raises(ContractError, match="already defined by TurnEnded"):
 
-        class Duplicate(Event, event_type="task.ended"):
+        class Duplicate(Event, event_type="task.turn.ended"):
             task_id: str
 
 

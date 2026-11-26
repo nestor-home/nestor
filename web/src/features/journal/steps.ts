@@ -3,9 +3,12 @@ import {
   BellRing,
   Check,
   CircleAlert,
+  CircleHelp,
   CircleSlash,
+  CornerDownRight,
   Inbox,
   Megaphone,
+  MessageSquare,
   Play,
   Plus,
   Send,
@@ -33,16 +36,25 @@ export function stepLook(item: JournalItem): StepLook {
   const followUp = item.message.args.follow_up === "yes";
   if (is(item, "taskStarted"))
     return { label: tr("step-task-started"), icon: Play, tone: "text-kind-task", dot: "bg-kind-task" };
+  if (is(item, "taskInstructed"))
+    return { label: tr("step-task-instructed"), icon: MessageSquare, tone: "text-kind-task", dot: "bg-kind-task" };
+  if (is(item, "taskSteered"))
+    return { label: tr("step-task-steered"), icon: CornerDownRight, tone: "text-kind-task", dot: "bg-kind-task" };
   if (is(item, "taskProgressed"))
     return { label: tr("step-task-progressed"), icon: StepForward, tone: "text-ink-muted", dot: "bg-ink-faint" };
-  if (is(item, "taskEnded"))
-    return item.message.args.status === "failed"
-      ? { label: tr("step-task-failed"), icon: X, tone: "text-brick", dot: "bg-brick" }
-      : item.message.args.status === "cancelled"
-        ? { label: tr("step-task-cancelled"), icon: X, tone: "text-ink-muted", dot: "bg-ink-faint" }
-        : { label: tr("step-task-completed"), icon: Check, tone: "text-sage", dot: "bg-sage" };
+  if (is(item, "taskEnded")) {
+    const status = item.message.args.status;
+    if (status === "failed") return { label: tr("step-task-failed"), icon: X, tone: "text-brick", dot: "bg-brick" };
+    if (status === "stopped")
+      return { label: tr("step-task-stopped"), icon: X, tone: "text-ink-muted", dot: "bg-ink-faint" };
+    if (status === "asked")
+      return { label: tr("step-task-asked"), icon: CircleHelp, tone: "text-amber", dot: "bg-amber" };
+    return { label: tr("step-task-completed"), icon: Check, tone: "text-sage", dot: "bg-sage" };
+  }
   if (is(item, "taskDelivered"))
     return { label: tr("step-task-delivered"), icon: Send, tone: "text-ember", dot: "bg-ember" };
+  if (is(item, "taskReminded"))
+    return { label: tr("step-task-reminded"), icon: BellRing, tone: "text-amber", dot: "bg-amber" };
   if (is(item, "watchCreated"))
     return { label: tr("step-watch-created"), icon: Plus, tone: "text-kind-watch", dot: "bg-kind-watch" };
   if (is(item, "watchTriggered"))

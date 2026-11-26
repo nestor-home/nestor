@@ -1,7 +1,9 @@
-"""A fake `claude -p --output-format stream-json`, as observed on Claude Code 2.1.311: an init message, the assistant's
-tool calls, then one `result` message carrying the structured output. `--behave` picks what the task does,
-`--record` keeps the arguments, the objective read on standard input, the folder it ran in and what it found there,
-the MCP servers it was given (`--mcp-config`), with that file's permissions."""
+"""A fake `claude -p --input-format stream-json --output-format stream-json`, as observed on Claude Code 2.1.323: it
+reads user messages on standard input, one JSON line each; writes an init message, the assistant's tool calls, then a
+`result` message carrying the structured output; and exits only once its input is closed. `--behave` picks what the
+turn does, `--record` keeps the arguments, the instruction it was given, the folder it ran in and what it found there,
+the MCP servers it was given (`--mcp-config`), with that file's permissions. Its sessions are kept beside the task's
+folder, as Claude Code keeps them per project: one resumed that it has no record of fails as Claude Code fails it."""
 
 import argparse
 import json
@@ -15,15 +17,34 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--behave", default="complete")
 parser.add_argument("--record")
 parser.add_argument("--session-id")
+parser.add_argument("--resume")
 parser.add_argument("--mcp-config")
 known, rest = parser.parse_known_args()
-objective = sys.stdin.read()
+session = known.resume or known.session_id
+sessions = Path.cwd().parent / ".sessions"
+if known.resume and not (sessions / known.resume).exists():
+    unknown = f"No conversation found with session ID: {known.resume}"
+    print(unknown, file=sys.stderr, flush=True)
+    failed = {"type": "result", "subtype": "error_during_execution", "is_error": True, "num_turns": 0}
+    print(json.dumps({**failed, "session_id": known.resume, "errors": [unknown]}), flush=True)
+    sys.exit(1)
+sessions.mkdir(exist_ok=True)
+(sessions / str(session)).touch()
+
+
+def heard() -> str | None:
+    """The next user message, `None` once the input is closed."""
+    line = sys.stdin.readline()
+    return json.loads(line)["message"]["content"] if line else None
+
+
+instruction = heard()
 if known.record:
     Path(known.record).write_text(
         json.dumps(
             {
                 "arguments": sys.argv[1:],
-                "objective": objective,
+                "instruction": instruction,
                 "cwd": os.getcwd(),
                 "found": {name: Path(name).read_bytes().decode() for name in sorted(os.listdir())},
                 "api_key": os.environ.get("ANTHROPIC_API_KEY"),
@@ -35,41 +56,49 @@ if known.record:
 
 
 def say(message: dict[str, object]) -> None:
-    print(json.dumps({**message, "session_id": known.session_id}), flush=True)
+    print(json.dumps({**message, "session_id": session}), flush=True)
 
 
 def tool(name: str, **given: object) -> None:
     say({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": given}]}})
 
 
+def report(text: str, files: list[str] | None = None, question: str = "") -> None:
+    output = {"report": text, "files": files or [], "question": question}
+    say(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "result": json.dumps(output),
+            "structured_output": output,
+        }
+    )
+
+
 say({"type": "system", "subtype": "init", "cwd": os.getcwd(), "permissionMode": "dontAsk"})
 print("not json\n[]", flush=True)
 match known.behave:
     case "complete":
-        report = Path.cwd() / "rapport.md"
-        tool("Write", file_path=str(report), content="# Rapport")
-        report.write_text("# Rapport")
-        tool("Bash", command="ls -la", description="List files")
+        written = Path.cwd() / "rapport.md"
+        tool("Write", file_path=str(written), content="# Rapport")
+        written.write_text("# Rapport")
+        tool("Bash", command="curl -H 'Authorization: Bearer sk-secret' https://api.example", description="Call it")
         tool("TodoWrite")
-        tool("StructuredOutput", report="Rapport écrit.", files=[str(report)])
-        output = {"report": "Rapport écrit.", "files": [str(report)]}
-        say(
-            {
-                "type": "result",
-                "subtype": "success",
-                "is_error": False,
-                "result": json.dumps(output),
-                "structured_output": output,
-            }
-        )
+        tool("StructuredOutput", report="Rapport écrit.", files=[str(written)], question="")
+        report("Rapport écrit.", [str(written)])
+    case "ask":
+        report("J'ai trouvé deux devis.", question="Lequel garder ?")
+    case "steered":  # works until an instruction comes, then reports it
+        tool("Read", file_path=str(Path.cwd() / "devis.pdf"))
+        report(f"Fait, avec : {heard()}")
     case "files":  # what it lists: a file, a link out of its folder, a big file, a folder, nothing
         (Path.cwd() / "ok.txt").write_text("ok")
         (Path.cwd() / "link.txt").symlink_to(Path.cwd().parent / "secret.txt")
         (Path.cwd() / "big.bin").write_bytes(b"x" * 2_000)
         (Path.cwd() / "sub").mkdir()
         listed = [str(Path.cwd() / name) for name in ("ok.txt", "link.txt", "big.bin", "sub", "missing.txt")]
-        output = {"report": "Fichiers faits.", "files": listed}
-        say({"type": "result", "subtype": "success", "is_error": False, "structured_output": output})
+        report("Fichiers faits.", listed)
     case "odd":  # a structured output that is not the report asked for
         say({"type": "result", "subtype": "success", "is_error": False, "structured_output": {"summary": "Fini."}})
     case "huge":  # a tool result longer than any line limit, then the end
@@ -85,5 +114,7 @@ match known.behave:
     case "stubborn":
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         time.sleep(60)
-    case _:  # slow
+    case _:  # slow: takes instructions, never ends on its own
         time.sleep(60)
+while heard() is not None:  # like Claude Code, it waits for more until its input is closed
+    pass

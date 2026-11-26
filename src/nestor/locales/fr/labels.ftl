@@ -43,11 +43,19 @@ invitation-status = { $status ->
     [revoked] retirée
    *[other] { $status }
 }
-task-status = { $status ->
+task-state = { $state ->
+    [working] en cours
+    [waiting] attend une réponse
+    [ready] prête
+    [archived] archivée
+   *[other] { $state }
+}
+turn-status = { $status ->
     [running] en cours
-    [completed] terminée
+    [completed] revenue
+    [asked] pose une question
     [failed] en échec
-    [cancelled] annulée
+    [stopped] arrêtée
    *[other] { $status }
 }
 connection-status = { $status ->
