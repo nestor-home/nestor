@@ -9,8 +9,15 @@ With a key, the key goes as `Authorization: Bearer`; that path has not been trie
 """
 
 from nestor.adapters.tools.firecrawl.settings import FirecrawlSettings, build
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
-plugin = Plugin(Family.TOOLS, "firecrawl", FirecrawlSettings, build)
+plugin = Plugin(
+    Family.TOOLS,
+    "firecrawl",
+    FirecrawlSettings,
+    build,
+    card=Card(summary="Web search through Firecrawl, free without a key.", docs="tools#search"),
+)
 
 __all__ = ["plugin"]

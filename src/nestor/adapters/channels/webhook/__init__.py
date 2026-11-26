@@ -8,8 +8,19 @@ is signed: `X-Nestor-Signature: sha256=<HMAC-SHA256 of the body>`, as GitHub sig
 """
 
 from nestor.adapters.channels.webhook.settings import WebhookSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "webhook", WebhookSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "webhook",
+    WebhookSettings,
+    build,
+    card=Card(
+        summary="Posts each message Nestor sends by itself as JSON to an address (Home Assistant, n8n, a script).",
+        docs="channels#choose-channels",
+        needs=(Need.SERVER,),
+    ),
+)
 
 __all__ = ["plugin"]

@@ -13,6 +13,7 @@ from nestor.runtime.config import ConfigError
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
 from nestor.testing.cognition import ScriptedExecutor
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.system import DOUBLE
 
 from .kit import ORACLE, Quiz, registry, write_variant
 
@@ -102,7 +103,14 @@ def test_a_model_kind_that_builds_something_else_is_refused(tmp_path: Path) -> N
     class Lamp(Component):
         name = "lamp"
 
-    odd = Plugin(Family.MODEL, "lamp", AdapterSettings, lambda settings, name, services: Lamp(), serves=LanguageModel)
+    odd = Plugin(
+        Family.MODEL,
+        "lamp",
+        AdapterSettings,
+        lambda settings, name, services: Lamp(),
+        serves=LanguageModel,
+        card=DOUBLE,
+    )
     with pytest.raises(ContractError, match="plugin 'lamp-language' built a Lamp, not a LanguageModel"):
         load(write_variant(tmp_path, "v", "models: {m: {type: language, provider: lamp}}\n"), Registry([odd]))
 
@@ -137,8 +145,8 @@ def test_a_suite_that_offers_the_agent_its_tools_gets_the_variant_s_executors_an
     plugins = Registry(
         [
             *Quiz.plugins,
-            Plugin(Family.EXECUTOR, "scripted", Described, scripted),
-            Plugin(Family.TOOLS, "lamp", AdapterSettings, lamp),
+            Plugin(Family.EXECUTOR, "scripted", Described, scripted, card=DOUBLE),
+            Plugin(Family.TOOLS, "lamp", AdapterSettings, lamp, card=DOUBLE),
         ]
     )
     text = "models: {m: {type: language, provider: oracle}}\n"
@@ -147,5 +155,11 @@ def test_a_suite_that_offers_the_agent_its_tools_gets_the_variant_s_executors_an
     equipped = load_variant(path, Equipped(), plugins, EchoLocalizer(), environ={})
     assert [(e.name, e.description) for e in equipped.executors] == [("scripted", "web"), ("code", "repos")]
     assert [t.name for t in equipped.tools] == ["desk"]
+    assert equipped.made_of is not None
+    assert {(p.id, p.names) for p in equipped.made_of.parts if p.names} == {
+        ("oracle-language", ("m",)),
+        ("scripted", ("scripted", "code")),
+        ("lamp", ("desk",)),
+    }, "the map of the variant, as the runtime makes it"
     unequipped = load_variant(path, Quiz(), plugins, EchoLocalizer(), environ={})
     assert (unequipped.executors, unequipped.tools) == ((), ()), "only when asked"

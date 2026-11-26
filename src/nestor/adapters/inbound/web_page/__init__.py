@@ -10,8 +10,19 @@ after it starts; versions between two checks are not seen. The first check only 
 
 from nestor.adapters.inbound.web_page.settings import WebPageSettings, build
 from nestor.adapters.inbound.web_page.source import PageSource
+from nestor.modules.system.selfmap import Card
 from nestor.runtime import Family, Plugin
 
 __all__ = ["PageSource", "WebPageSettings", "build", "plugin"]
 
-plugin = Plugin(Family.INBOUND, "web-page", WebPageSettings, build)
+plugin = Plugin(
+    Family.INBOUND,
+    "web-page",
+    WebPageSettings,
+    build,
+    card=Card(
+        summary="Watches follow web pages: Nestor tells when a page changes the way someone asked (a price drops, a "
+        "page opens).",
+        docs="tools#feeds-pages-and-webhooks",
+    ),
+)

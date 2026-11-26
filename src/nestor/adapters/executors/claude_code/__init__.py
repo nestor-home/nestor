@@ -24,8 +24,19 @@ what one turn may spend. The official Agent SDK for Python is not used: it bundl
 from nestor.adapters.executors.claude_code.cli import PermissionMode
 from nestor.adapters.executors.claude_code.executor import ClaudeCodeExecutor
 from nestor.adapters.executors.claude_code.settings import ClaudeCodeSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["ClaudeCodeExecutor", "ClaudeCodeSettings", "PermissionMode", "build", "plugin"]
 
-plugin = Plugin(Family.EXECUTOR, "claude-code", ClaudeCodeSettings, build)
+plugin = Plugin(
+    Family.EXECUTOR,
+    "claude-code",
+    ClaudeCodeSettings,
+    build,
+    card=Card(
+        summary="Hands long tasks to Claude Code: reads, writes, tests and commits code in a folder of this machine.",
+        docs="executors#claude-code",
+        needs=(Need.PROGRAM, Need.ACCOUNT),
+    ),
+)

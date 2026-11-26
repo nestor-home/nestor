@@ -17,6 +17,7 @@ from nestor.adapters.models.sherpa_onnx.settings import (
 )
 from nestor.modules.channels import TranscriptionModel
 from nestor.modules.identity import SpeakerModel
+from nestor.modules.system.selfmap import Card
 from nestor.runtime.plugins import Family, Plugin
 
 speaker = Plugin(
@@ -26,6 +27,11 @@ speaker = Plugin(
     build_speaker,
     requires="nestor-home[voice-id]",
     serves=SpeakerModel,
+    card=Card(
+        summary="Recognises who is speaking from their voice, on the server's CPU, for people who enrolled their "
+        "voice.",
+        docs="agent/speakers#voice-recognition",
+    ),
 )
 transcription = Plugin(
     Family.MODEL,
@@ -34,6 +40,10 @@ transcription = Plugin(
     build_transcription,
     requires="nestor-home[voice,voice-id]",
     serves=TranscriptionModel,
+    card=Card(
+        summary="Hears speech on the server's CPU, with no service and nothing sent out (Parakeet, Whisper).",
+        docs="voice#choose-providers",
+    ),
 )
 
 __all__ = ["speaker", "transcription"]

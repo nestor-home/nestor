@@ -18,6 +18,7 @@ from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
 from nestor.testing.channels import OGG, ScriptedSpeech
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.system import DOUBLE
 
 
 class Ears(TranscriptionModel):
@@ -32,8 +33,12 @@ class Ears(TranscriptionModel):
         return text.strip()
 
 
-EARS_PLUGIN = Plugin(Family.MODEL, "ears", AdapterSettings, lambda s, n, x: Ears(), serves=TranscriptionModel)
-VOICE_PLUGIN = Plugin(Family.MODEL, "voice", AdapterSettings, lambda s, n, x: ScriptedSpeech(), serves=SpeechModel)
+EARS_PLUGIN = Plugin(
+    Family.MODEL, "ears", AdapterSettings, lambda s, n, x: Ears(), serves=TranscriptionModel, card=DOUBLE
+)
+VOICE_PLUGIN = Plugin(
+    Family.MODEL, "voice", AdapterSettings, lambda s, n, x: ScriptedSpeech(), serves=SpeechModel, card=DOUBLE
+)
 PLUGINS = Registry([EARS_PLUGIN, VOICE_PLUGIN])
 EARS = "  ears: {type: transcription, provider: ears}\n"
 VOICE = "  voice: {type: speech, provider: voice}\n"
@@ -112,7 +117,9 @@ async def test_a_number_heard_back_in_figures_counts_as_said(tmp_path: Path) -> 
     header = {"dataset": "speech", "version": 1}
     said = {"id": "s1", "text": "Il fait douze degrés.", "also": ["Il fait 12 degrés."]}
     cases.write_text(f"{json.dumps(header)}\n{json.dumps(said)}\n")
-    figures = Plugin(Family.MODEL, "figures", AdapterSettings, lambda s, n, x: InFigures(), serves=TranscriptionModel)
+    figures = Plugin(
+        Family.MODEL, "figures", AdapterSettings, lambda s, n, x: InFigures(), serves=TranscriptionModel, card=DOUBLE
+    )
     registry = Registry([figures, VOICE_PLUGIN])
     path = tmp_path / "variant.yaml"
     path.write_text("models:\n  ears: {type: transcription, provider: figures}\n" + VOICE)

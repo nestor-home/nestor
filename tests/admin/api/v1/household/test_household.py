@@ -20,10 +20,10 @@ async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> N
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         hers = await admin.nestor.tasks.start_task(
-            "Trouver un plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE
+            "Trouver un plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE, executor="scripted-remote"
         )
         his = await admin.nestor.tasks.start_task(
-            "Analyse le dépôt", title="Analyse le dépôt", origin=TELEGRAM, owner=MATHIS
+            "Analyse le dépôt", title="Analyse le dépôt", origin=TELEGRAM, owner=MATHIS, executor="scripted-remote"
         )
         await asyncio.sleep(0.01)
         api = await admin.api("mathilde")
@@ -40,7 +40,9 @@ async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> N
 
 async def test_a_stop_the_executor_does_not_confirm_is_reported(tmp_path: Path) -> None:
     async with Harness(tmp_path, confirms_stop=False) as admin:
-        task = await admin.nestor.tasks.start_task("Long travail", title="Long travail", origin=TELEGRAM)
+        task = await admin.nestor.tasks.start_task(
+            "Long travail", title="Long travail", origin=TELEGRAM, executor="scripted-remote"
+        )
         await asyncio.sleep(0.01)
         stopped = (await (await admin.api()).post(f"/api/v1/tasks/{task.id}/stop")).json()
         assert stopped["confirmed"] is False and stopped["task"]["thread"][0]["error"]
@@ -134,7 +136,9 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
 
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
-        quick = await nestor.tasks.start_task("Vite fait", title="Vite fait", origin=TELEGRAM, owner=MATHIS)
+        quick = await nestor.tasks.start_task(
+            "Vite fait", title="Vite fait", origin=TELEGRAM, owner=MATHIS, executor="scripted-remote"
+        )
         await nestor.tasks.stop(quick.id)
         await nestor.tasks.delivered(quick, quick.turn, TELEGRAM)
         watch = await nestor.watch_book.create(

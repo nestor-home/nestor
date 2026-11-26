@@ -9,8 +9,19 @@ each under its name. The app needs Socket Mode, an app-level token (`connections
 """
 
 from nestor.adapters.channels.slack.settings import SlackSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "slack", SlackSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "slack",
+    SlackSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on Slack, in direct messages or by mentioning its app.",
+        docs="channels#choose-channels",
+        needs=(Need.KEY,),
+    ),
+)
 
 __all__ = ["plugin"]

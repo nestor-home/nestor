@@ -16,6 +16,7 @@ from nestor.adapters.models.elevenlabs.settings import (
     build_transcription,
 )
 from nestor.modules.channels import SpeechModel, TranscriptionModel
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
 transcription = Plugin(
@@ -25,6 +26,11 @@ transcription = Plugin(
     build_transcription,
     requires="nestor-home[voice]",
     serves=TranscriptionModel,
+    card=Card(
+        summary="Hears speech with ElevenLabs, live on satellites and in voice messages.",
+        docs="voice#choose-providers",
+        needs=(Need.KEY,),
+    ),
 )
 speech = Plugin(
     Family.MODEL,
@@ -33,6 +39,11 @@ speech = Plugin(
     build_speech,
     requires="nestor-home[voice]",
     serves=SpeechModel,
+    card=Card(
+        summary="Speaks with ElevenLabs voices, live on satellites and in voice messages.",
+        docs="voice#choose-providers",
+        needs=(Need.KEY,),
+    ),
 )
 
 __all__ = ["speech", "transcription"]

@@ -51,6 +51,7 @@ from nestor.modules.conversation import (
 from nestor.modules.household import Household
 from nestor.modules.initiative import MessageBook, MessageTools, ScheduleBook, ScheduleTools
 from nestor.modules.journal import Journal
+from nestor.modules.system.selfmap import AboutNestor
 from nestor.runtime.app import offered_tools
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -92,10 +93,12 @@ class Routing(Suite[None, Knobs]):
         agent, tasks = _agent(trial)
         person = agent.household.people[0]
         seeded = [await _seed(agent.journal, task, person.id) for task in case.data.get("tasks", [])]
+        tools = {s.name for s in agent.toolbox.specs()}
         offered = {
-            *(f"tool:{s.name}" for s in agent.toolbox.specs()),
+            NONE,
+            *(f"tool:{name}" for name in tools),
             *(f"delegate:{e.name}" for e in trial.executors),
-            *(f"continue:{task_id}" for task_id in seeded),
+            *(f"continue:{task_id}" for task_id in seeded if CONTINUE in tools),  # no executor, no task goes on
         }
         tiers = _tiers(case.data["expected"]) or ()
         right = next((routes for tier in tiers if (routes := [r for r in tier if r in offered])), [NONE])
@@ -108,7 +111,7 @@ class Routing(Suite[None, Knobs]):
         events.close()
         calls = [event async for event in events]
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
-        routes = [_route(e, trial) for e in calls if isinstance(e, ToolCalled)]
+        routes = [_route(e) for e in calls if isinstance(e, ToolCalled)]
         return {"route": routes[0] if routes else NONE, "calls": routes, "right": right, "said": said, "failed": failed}
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
@@ -198,15 +201,13 @@ def _kind(route: str) -> str:
     return "delegate" if kind == "continue" else kind
 
 
-def _route(called: ToolCalled, trial: Trial[Knobs]) -> str:
-    """`delegate:<executor>` for a task handed over (to the only executor when it names none), `continue:<task>` for
-    one going on, else `tool:<name>`."""
+def _route(called: ToolCalled) -> str:
+    """`delegate:<executor>` for a task handed over, `continue:<task>` for one going on, else `tool:<name>`."""
     if called.name == CONTINUE:
         return f"continue:{called.arguments.get('task', '')}"
     if called.name != DELEGATE:
         return f"tool:{called.name}"
-    executor = called.arguments.get("executor") or (trial.executors[0].name if trial.executors else "")
-    return f"delegate:{executor}"
+    return f"delegate:{called.arguments.get('executor', '')}"
 
 
 async def _dry(arguments: Mapping[str, object], context: ToolContext) -> ToolOutput:
@@ -257,7 +258,8 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
     delegation = Delegation(tasks)
     messages = MessageTools(MessageBook(journal), household)
     schedules = ScheduleTools(ScheduleBook(journal, timezone=config.persona.timezone))
-    providers: Sequence[ToolProvider] = (delegation, messages, schedules, *offered_tools(trial.tools))
+    about = [AboutNestor(trial.made_of)] if trial.made_of is not None else []  # never reads the docs: no tool runs
+    providers: Sequence[ToolProvider] = (delegation, messages, schedules, *about, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
     persona = config.persona
     agent = Agent(
@@ -267,7 +269,7 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
         journal=journal,
         household=household,
         toolbox=Toolbox(journal, tools=tools),
-        context=[delegation, messages, schedules],
+        context=[delegation, messages, schedules, *about],
         attachments=Attachments(MemoryBlobStore()),
         settings=AgentSettings(max_tool_rounds=1),
     )

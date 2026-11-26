@@ -88,7 +88,11 @@ def journal() -> Journal:
 
 
 async def started(tasks: TaskManager, instruction: str = "Analyse le dépôt", **given: Any) -> Any:
-    return await tasks.start_task(instruction, title=given.pop("title", instruction), origin=VOICE, **given)
+    """A task started on `executor`, by default the manager's only one."""
+    executor = given.pop("executor", next(iter(tasks.executors), "codex"))
+    return await tasks.start_task(
+        instruction, title=given.pop("title", instruction), origin=VOICE, executor=executor, **given
+    )
 
 
 async def test_a_task_runs_in_the_background_and_is_logged_turn_by_turn(journal: Journal) -> None:
@@ -391,7 +395,7 @@ async def test_delegating_needs_a_started_manager_and_a_known_executor(journal: 
     with pytest.raises(ContractError, match="must be started"):
         await started(TaskManager(journal, [ScriptedExecutor()]), "x")
     async with TaskManager(journal, []) as none:
-        with pytest.raises(ContractError, match="no executor is plugged in"):
+        with pytest.raises(ContractError, match="none is plugged in"):
             await started(none, "x")
     async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
         with pytest.raises(ContractError, match="no executor named 'codex'"):
@@ -408,7 +412,13 @@ async def test_the_agent_starts_directs_and_stops_its_tasks_through_its_tools(jo
         tools = tools_of(tasks)
         opened = data(
             await tools["start_task"].run(
-                {"title": " Resto de samedi ", "instruction": "Cherche un resto", "notify": "message"}, mine
+                {
+                    "executor": "scripted-remote",
+                    "title": " Resto de samedi ",
+                    "instruction": "Cherche un resto",
+                    "notify": "message",
+                },
+                mine,
             )
         )
         task_id = str(opened["task_id"])
@@ -436,7 +446,13 @@ async def test_nobody_reaches_another_person_s_task(journal: Journal) -> None:
     nobody = ToolContext(address=VOICE)
     async with TaskManager(journal, [ScriptedExecutor(duration_s=30)]) as tasks:
         tools = tools_of(tasks)
-        task_id = str(data(await tools["start_task"].run({"title": "Site", "instruction": "x"}, mine))["task_id"])
+        task_id = str(
+            data(
+                await tools["start_task"].run(
+                    {"executor": "scripted-executor", "title": "Site", "instruction": "x"}, mine
+                )
+            )["task_id"]
+        )
         for name, arguments in [
             ("continue_task", {"task": task_id, "instruction": "y"}),
             ("stop_task", {"task": task_id}),
@@ -450,6 +466,16 @@ async def test_nobody_reaches_another_person_s_task(journal: Journal) -> None:
         assert data(await tools["list_tasks"].run({}, hers)) == {"tasks": []}
         assert tasks.tasks[task_id].state is TaskState.WORKING, "untouched"
         await tasks.stop(task_id)
+
+
+async def test_the_model_names_the_executor_even_when_there_is_only_one(journal: Journal) -> None:
+    context = ToolContext(address=VOICE, speaker=Speaker.account(MATHIS))
+    async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
+        start = tools_of(tasks)["start_task"]
+        assert "executor" in start.spec.parameters["required"]
+        with pytest.raises(ToolFailed, match="no executor named ''"):
+            await start.run({"title": "PR", "instruction": "Ouvre une PR"}, context)
+    assert tasks.tasks == {}, "never handed to the only one by default"
 
 
 async def test_an_executor_with_real_power_is_sensitive_for_the_toolbox_to_confirm(journal: Journal) -> None:
@@ -491,16 +517,25 @@ async def test_the_files_of_the_message_answered_go_with_an_instruction_or_those
     context = ToolContext(address=chat, speaker=mathis, exchange=second.exchange)
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
         tool = tools_of(tasks)["start_task"]
-        answered = data(await tool.run({"title": "Devis", "instruction": "Compare"}, context))
+        answered = data(
+            await tool.run({"executor": "scripted-remote", "title": "Devis", "instruction": "Compare"}, context)
+        )
         named = data(
             await tool.run(
-                {"title": "Tous", "instruction": "Compare", "files": ["devis.pdf", "image.jpg", "devis (2).pdf"]},
+                {
+                    "executor": "scripted-remote",
+                    "title": "Tous",
+                    "instruction": "Compare",
+                    "files": ["devis.pdf", "image.jpg", "devis (2).pdf"],
+                },
                 context,
             )
         )
         await asyncio.sleep(0.01)
         with pytest.raises(ToolFailed, match=r"no file named nope\.pdf"):
-            await tool.run({"title": "X", "instruction": "x", "files": ["nope.pdf"]}, context)
+            await tool.run(
+                {"executor": "scripted-remote", "title": "X", "instruction": "x", "files": ["nope.pdf"]}, context
+            )
         for task_id in (answered["task_id"], named["task_id"]):
             await tasks.stop(str(task_id))
     assert [g.name for g in tasks.tasks[str(answered["task_id"])].given] == ["devis (2).pdf"], "this message's file"

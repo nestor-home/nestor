@@ -22,6 +22,7 @@ from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import ContractError, PersonId
 from nestor.modules.cognition.tools import SensitiveWhen
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
 from nestor.runtime.editing import Suggest
 
@@ -102,4 +103,15 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
     return HomeAssistant(name, presence, tools)
 
 
-plugin = Plugin(Family.HOME, "home-assistant", HomeAssistantSettings, build)
+plugin = Plugin(
+    Family.HOME,
+    "home-assistant",
+    HomeAssistantSettings,
+    build,
+    card=Card(
+        summary="Connects Home Assistant: who is home and in which room, and the devices it exposes and their state "
+        "(lights, heating, appliances such as the dishwasher, locks).",
+        docs="home#set-up",
+        needs=(Need.SERVER, Need.KEY),
+    ),
+)

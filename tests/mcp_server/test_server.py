@@ -32,6 +32,7 @@ from nestor.runtime import Nestor
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin
 from nestor.testing.cognition import FakeRemote, ScriptedRemoteExecutor
+from nestor.testing.system import DOUBLE
 
 from ..adapters.served import Served, eventually
 from ..runtime.fakes import Fakes, NoSettings
@@ -89,7 +90,7 @@ async def world(tmp_path: Path) -> AsyncIterator[World]:
         return executor
 
     registry = fakes.registry()
-    registry.register(Plugin(Family.EXECUTOR, "reaching", NoSettings, reaching))
+    registry.register(Plugin(Family.EXECUTOR, "reaching", NoSettings, reaching, card=DOUBLE))
     environ = {"NESTOR_SECRET_KEY": "k" * 43}
     nestor = Nestor(parse_config(CONFIG.format(data_dir=tmp_path), environ), registry, environ=environ)
     async with nestor:

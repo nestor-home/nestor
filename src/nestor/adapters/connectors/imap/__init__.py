@@ -14,8 +14,19 @@ Configuration (family `connector`, kind `imap`), every key optional:
 """
 
 from nestor.adapters.connectors.imap.settings import ImapSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import Family, Plugin
 
 __all__ = ["plugin"]
 
-plugin = Plugin(Family.CONNECTOR, "imap", ImapSettings, build)
+plugin = Plugin(
+    Family.CONNECTOR,
+    "imap",
+    ImapSettings,
+    build,
+    card=Card(
+        summary="People connect any mailbox by IMAP, to search and read mail; mail feeds the watches.",
+        docs="accounts#imap",
+        needs=(Need.ACCOUNT,),
+    ),
+)

@@ -3,6 +3,7 @@ reaches the household's network, a real server listening there."""
 
 import asyncio
 import socket
+import time
 from collections.abc import AsyncIterator
 
 import pytest
@@ -43,3 +44,17 @@ async def test_a_name_that_turns_local_once_checked_reaches_nothing(
         await web.get(f"http://rebind.example:{port}/")
     await web.aclose()
     assert received == [], "the household's server was never asked"
+
+
+async def test_a_name_that_never_resolves_fails_within_the_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    def stuck(host: str | bytes, *args: object, **kwargs: object) -> list:
+        time.sleep(1)  # a resolver that does not answer
+        raise socket.gaierror("no answer")
+
+    monkeypatch.setattr(socket, "getaddrinfo", stuck)
+    web = PublicWeb(accept=PAGES, timeout_s=0.1)
+    started = time.monotonic()
+    with pytest.raises(WebError, match="could not be found"):
+        await web.get("https://stuck.example/")
+    await web.aclose()
+    assert time.monotonic() - started < 0.5

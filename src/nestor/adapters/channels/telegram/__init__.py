@@ -7,8 +7,20 @@ a stop is delivered again at the next start.
 """
 
 from nestor.adapters.channels.telegram.settings import TelegramSettings, build
+from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime.plugins import Family, Plugin
 
-plugin = Plugin(Family.CHANNEL, "telegram", TelegramSettings, build)
+plugin = Plugin(
+    Family.CHANNEL,
+    "telegram",
+    TelegramSettings,
+    build,
+    card=Card(
+        summary="People write to Nestor on Telegram, through a bot, with photos, files and voice messages, and get "
+        "messages there.",
+        docs="channels#choose-channels",
+        needs=(Need.KEY,),
+    ),
+)
 
 __all__ = ["plugin"]

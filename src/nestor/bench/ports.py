@@ -25,6 +25,7 @@ from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.delegation import Executor
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.identity import SpeakerModel
+from nestor.modules.system.selfmap import SelfMap
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
 
@@ -56,6 +57,7 @@ class Trial[K: Knobs]:
     # the variant's `executors` and `tools`, built but never started, when the suite asks for them
     executors: tuple[Executor, ...] = ()
     tools: tuple[Component, ...] = ()
+    made_of: SelfMap | None = None  # what the variant plugs in and could, from them and the plugins installed
 
     def model(self, role: str) -> LanguageModel:
         try:
