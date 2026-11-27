@@ -58,7 +58,7 @@ class HomeOut(BaseModel):
     residents: list[ResidentOut]
     people: list[TiedPersonOut]  # every household person, tied or not
     unplaced_sensors: list[str]  # occupancy sensors it ignores: no room in the home system
-    tools: list[HomeToolOut]
+    tools: list[HomeToolOut] | None  # `None`: the home offers no actions (presence only)
 
     @classmethod
     def of(cls, plugged: Plugged, home: Home, nestor: Nestor, words: Phrasebook) -> "HomeOut":
@@ -93,5 +93,7 @@ class HomeOut(BaseModel):
                 for p in household.people
             ],
             unplaced_sensors=list(overview.unplaced_sensors),
-            tools=[HomeToolOut.of(t) for t in sorted(home.tools.tools(), key=lambda t: t.name)],
+            tools=None
+            if home.tools is None
+            else [HomeToolOut.of(t) for t in sorted(home.tools.tools(), key=lambda t: t.name)],
         )

@@ -2767,7 +2767,7 @@ export interface components {
             /** Unplaced Sensors */
             unplaced_sensors: string[];
             /** Tools */
-            tools: components["schemas"]["HomeToolOut"][];
+            tools: components["schemas"]["HomeToolOut"][] | null;
         };
         /** HomeToolOut */
         HomeToolOut: {

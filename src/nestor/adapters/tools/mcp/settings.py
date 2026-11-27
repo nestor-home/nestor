@@ -1,4 +1,5 @@
-"""Configuration of an MCP tool provider, as written under `tools:` in the Nestor configuration."""
+"""Configuration of an MCP tool provider, as written under `tools:` in the Nestor configuration, or as the server of a
+home's actions (`home.mcp`). Its words are the same wherever it is embedded (`messages`)."""
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, SecretStr
 
@@ -11,13 +12,17 @@ class SensitiveCalls(BaseModel):
     """Calls confirmed by the person first when one of these values appears in an argument: a server's tools may
     drive harmless and dangerous things alike."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, json_schema_extra={"messages": "tools-mcp-sensitivecalls"})
     tool: str | None = None  # its name on the server (`delete_issue`); none: every tool that acts
     arguments: dict[str, list[str]]  # `{device_class: [garage, gate], domain: [lock], name: [porte]}`
 
+    def rule(self) -> SensitiveWhen:
+        return SensitiveWhen(self.tool, {key: tuple(values) for key, values in self.arguments.items()})
+
 
 class McpSettings(AdapterSettings):
-    url: str  # Home Assistant: https://<host>:8123/api/mcp
+    model_config = ConfigDict(json_schema_extra={"messages": "tools-mcp"})
+    url: str
     transport: McpTransport = McpTransport.STREAMABLE_HTTP
     token: SecretStr | None = None  # sent as `Authorization: Bearer …`
     headers: dict[str, SecretStr] = Field(default_factory=dict)  # values may be credentials: kept secret
@@ -41,7 +46,7 @@ def build(settings: McpSettings, name: str, services: Services) -> McpToolProvid
         include=settings.include,
         exclude=settings.exclude,
         risks=settings.risks,
-        sensitive=[SensitiveWhen(r.tool, {k: tuple(v) for k, v in r.arguments.items()}) for r in settings.sensitive],
+        sensitive=[calls.rule() for calls in settings.sensitive],
         retry_after_s=settings.retry_after_s,
         negotiation=settings.negotiation,
     )

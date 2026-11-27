@@ -52,6 +52,28 @@ describe("the configuration", () => {
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
   });
 
+  it("picks the home's actions server, with the fields of another one, or none", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/home");
+    await user.click(await screen.findByRole("button", { name: /^Home Assistant/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Home Assistant" });
+    const actions = within(sheet).getByRole("group", { name: "Actions server" });
+    const server = within(actions).getByRole("combobox", { name: "Actions server" });
+    expect(server).toHaveTextContent("Home Assistant's");
+    expect(within(actions).queryByRole("textbox", { name: "URL" })).not.toBeInTheDocument();
+    await user.click(server);
+    await user.click(await screen.findByRole("option", { name: "Another server" }));
+    await user.type(within(actions).getByRole("textbox", { name: "URL" }), "https://mcp.example/mcp");
+    await user.click(server);
+    await user.click(await screen.findByRole("option", { name: "None" }));
+    expect(within(actions).queryByRole("textbox", { name: "URL" })).not.toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    await user.click(await screen.findByRole("button", { name: "1 change" }));
+    const changes = await screen.findByRole("dialog", { name: "Changes" });
+    expect(within(changes).getByText("home.mcp")).toBeInTheDocument();
+    expect(within(changes).getByText("false")).toBeInTheDocument();
+  });
+
   it("names the models, and renaming one keeps the roles that use it", async () => {
     const user = userEvent.setup();
     renderApp("/config/models");

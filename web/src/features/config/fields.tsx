@@ -23,6 +23,7 @@ import {
   type Control,
   controlOf,
   defaultText,
+  deref,
   fieldsOf,
   getAt,
   helpOf,
@@ -40,6 +41,8 @@ import {
   resolve,
   titleOf,
   typedSecret,
+  variantOf,
+  variantValue,
 } from "./schema";
 
 const idOf = (path: Path) => `cfg-${path.join("-").replace(/[^\w-]/g, "_")}`;
@@ -141,13 +144,17 @@ export function Property({
   const label = titleOf(node, name);
   const here = problemsByPath(problems).get(keyOf(path)) ?? [];
   const id = idOf(path);
-  if (control === "object") {
+  if (control === "object" || control === "variant") {
     const nested = problemsUnder(problems, path).filter((p) => keyOf(p.path) !== keyOf(path));
+    const form = control === "variant" ? pickedForm(node, root, value) : node;
     return (
       <fieldset className="grid min-w-0 gap-4 rounded-(--radius-surface) border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
         <legend className="px-1.5 text-body font-medium text-ink">{label}</legend>
         {helpOf(node) ? <p className="-mt-1 text-micro text-ink-muted">{helpOf(node)}</p> : null}
-        <ObjectFields schema={node} root={root} path={path} />
+        {control === "variant" ? <VariantChoice id={id} node={node} root={root} path={path} label={label} /> : null}
+        {form && (control === "object" || form.properties) ? (
+          <ObjectFields schema={form} root={root} path={path} />
+        ) : null}
         <Problems problems={here} label={label} />
         {nested.length && !isRecord(value) ? <Problems problems={nested} /> : null}
       </fieldset>
@@ -165,6 +172,53 @@ export function Property({
     >
       <ControlFor control={control} id={id} node={node} root={root} path={path} required={required} label={label} />
     </FieldFrame>
+  );
+}
+
+/** The form a setting that is one of several takes now, when it is one with fields. */
+function pickedForm(node: JsonSchema, root: JsonSchema, value: unknown): JsonSchema | undefined {
+  const option = node.anyOf?.[variantOf(node, root, value)];
+  return option ? deref(option, root) : undefined;
+}
+
+/** Which form a setting that is one of several takes (`home.mcp`: unset, another server, none), with its help; the
+ * fieldset around it names it. */
+function VariantChoice({
+  id,
+  node,
+  root,
+  path,
+  label,
+}: {
+  id: string;
+  node: JsonSchema;
+  root: JsonSchema;
+  path: Path;
+  label: string;
+}) {
+  const field = useField(path, false, true);
+  const variants = node["x-nestor"]?.variants ?? [];
+  const picked = variantOf(node, root, field.value);
+  const help = variants[picked]?.help ?? null;
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id} className="sr-only">
+        {label}
+      </Label>
+      <Choice
+        id={id}
+        value={picked < 0 ? "" : String(picked)}
+        options={variants.map((v, index) => ({ value: String(index), label: v.title }))}
+        className="sm:max-w-72"
+        describedBy={described(id, { "x-nestor": { help } }, field.invalid)["aria-describedby"]}
+        onChange={(next) => field.set(variantValue(node, root, Number(next), field.value))}
+      />
+      {help ? (
+        <p id={`${id}-help`} className="text-micro text-pretty text-ink-muted">
+          {help}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -144,11 +144,34 @@ def _secret_values(node: Any) -> bool:
     return _secret(node.get("additionalProperties")) or any(_secret_values(o) for o in node.get("anyOf") or ())
 
 
+def _variant_key(option: dict[str, Any]) -> str | None:
+    """How a form tells an option apart: `default` for unset, the value of a constant, a nested model's name."""
+    if option.get("type") == "null":
+        return "default"
+    if "const" in option:
+        return str(option["const"]).lower()
+    if ref := option.get("$ref"):
+        return str(ref).rsplit("/", 1)[-1].lower()
+    return None
+
+
+def _variants(prop: dict[str, Any], title_id: str) -> list[dict[str, Any]] | None:
+    """The forms a setting takes when it is one of several (`McpSettings | Literal[False] | None`), each with its
+    message ids (`<title id>-<key>`); `None` for a single form, or for options a form cannot tell apart."""
+    options = [o for o in prop.get("anyOf") or () if isinstance(o, dict)]
+    keys = [_variant_key(o) for o in options]
+    if len([k for k in keys if k != "default"]) < 2 or None in keys:
+        return None
+    return [{"key": key, "title_id": f"{title_id}-{key}", "help_id": f"{title_id}-{key}-help"} for key in keys]
+
+
 def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -> dict[str, Any]:
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
     `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
     whose every value is one), advanced, its group, the named slot whose names it takes (`reference`),
-    the type of model it takes (`model_type`), and the brands it names (`brands`: a host suffix or a value)."""
+    the type of model it takes (`model_type`), the brands it names (`brands`: a host suffix or a value),
+    and the forms it may take when it is one of several (`variants`, in the order of its `anyOf`). A nested model
+    that names its `messages` (a plugin's settings embedded elsewhere) keeps those ids wherever it appears."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -168,17 +191,19 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "brands": prop.pop("brands", None),
                         "suggest_keys": prop.pop("suggest_keys", None),
                         "suggest_values": prop.pop("suggest_values", None),
+                        "variants": _variants(prop, f"config-{group}-{name}"),
                     }
             for key, child in node.items():
                 if key == "$defs" and isinstance(child, dict):
-                    for definition, nested in child.items():
-                        walk(nested, f"{scope}-{definition.lower()}")
+                    for definition, nested in child.items():  # a shared model keeps its own words
+                        walk(nested, nested.pop("messages", None) or f"{scope}-{definition.lower()}")
                 elif key != "properties" and isinstance(child, dict | list):
                     walk(child, group)
         elif isinstance(node, list):
             for child in node:
                 walk(child, group)
 
+    schema.pop("messages", None)  # the plugin's own: its scope already
     walk(schema, scope)
     return schema
 

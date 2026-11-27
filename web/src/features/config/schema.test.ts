@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { ConfigProblem } from "@/api";
 import schemaFr from "@/mocks/server/config-schema.fr.json";
-import { controlOf, getAt, type JsonSchema, problemsUnder, resolve, setAt, typedSecret } from "./schema";
+import {
+  controlOf,
+  getAt,
+  type JsonSchema,
+  problemsUnder,
+  resolve,
+  setAt,
+  typedSecret,
+  variantOf,
+  variantValue,
+} from "./schema";
 
 const SCHEMA = schemaFr as unknown as {
   sections: Record<string, JsonSchema>;
@@ -9,6 +19,7 @@ const SCHEMA = schemaFr as unknown as {
 };
 const mcp = SCHEMA.slots.tools?.kinds.mcp as JsonSchema;
 const satellites = SCHEMA.slots.channels?.kinds.satellites as JsonSchema;
+const homeAssistant = SCHEMA.slots.home?.kinds["home-assistant"] as JsonSchema;
 const prop = (root: JsonSchema, name: string) => root.properties?.[name] as JsonSchema;
 
 describe("reading a plugin's schema (as a real instance sends it)", () => {
@@ -28,6 +39,23 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(voice, "fallback_clips"), satellites, "fallback_clips")).toBe("path");
     expect(controlOf(prop(voice, "style"), satellites, "style")).toBe("long-text");
     expect(controlOf({ type: "boolean" }, satellites, "enabled")).toBe("boolean");
+  });
+
+  it("reads a setting that is one of several forms from its value, and gives each form its value", () => {
+    const actions = prop(homeAssistant, "mcp");
+    expect(controlOf(actions, homeAssistant, "mcp")).toBe("variant");
+    const titles = actions["x-nestor"]?.variants?.map((v) => v.title) ?? [];
+    const form = (value: unknown) => titles[variantOf(actions, homeAssistant, value)];
+    expect([form(undefined), form(false), form({ url: "https://mcp.example/mcp" })]).toEqual([
+      "Celui de Home Assistant",
+      "Aucun",
+      "Un autre serveur",
+    ]);
+    const pick = (title: string, value: unknown) => variantValue(actions, homeAssistant, titles.indexOf(title), value);
+    expect(pick("Aucun", { url: "x" })).toBe(false);
+    expect(pick("Un autre serveur", false)).toEqual({});
+    expect(pick("Un autre serveur", { url: "x" })).toEqual({ url: "x" }); // what was typed is kept
+    expect(pick("Celui de Home Assistant", false)).toBeUndefined(); // unset: the default applies
   });
 
   it("unwraps a nullable value and keeps the property's own bounds and default", () => {

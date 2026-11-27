@@ -1370,7 +1370,7 @@ export function confirmations(): Confirmation[] {
 }
 
 /** What Home Assistant lets the agent do. */
-function homeTools(): Home["tools"] {
+function homeTools(): NonNullable<Home["tools"]> {
   return [
     {
       name: "homeassistant__GetLiveContext",

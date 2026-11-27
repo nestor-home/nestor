@@ -1,4 +1,4 @@
-"""MCP servers as tool providers: Home Assistant's `/api/mcp`, and any remote MCP server a household connects."""
+"""MCP servers as tool providers: any remote MCP server a household connects, and the server of a home's actions."""
 
 from nestor.adapters.tools.mcp.settings import McpSettings, build
 from nestor.modules.system.selfmap import Card, Need

@@ -30,7 +30,7 @@ class Home(Component, ABC):
     it offers the agent, and what it can show of itself.
 
     Contract:
-    - `presence` and `tools` are its own: it starts and closes them with itself;
+    - `presence` and `tools` are its own: it starts and closes them with itself; no `tools` when it offers no actions;
     - `overview()` is cheap (the live view) and never raises: disconnected, it says so and keeps its configuration;
     - a home system that does not answer at start leaves the home unavailable, never stops Nestor; refused
       credentials raise `ProviderError`, not transient.
@@ -42,7 +42,7 @@ class Home(Component, ABC):
 
     @property
     @abstractmethod
-    def tools(self) -> ToolProvider: ...
+    def tools(self) -> ToolProvider | None: ...
 
     @abstractmethod
     def overview(self) -> HomeOverview: ...

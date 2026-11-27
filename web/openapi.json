@@ -16792,10 +16792,17 @@
             "title": "Unplaced Sensors"
           },
           "tools": {
-            "items": {
-              "$ref": "#/components/schemas/HomeToolOut"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HomeToolOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Tools"
           }
         },

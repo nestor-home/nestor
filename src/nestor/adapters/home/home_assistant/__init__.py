@@ -1,5 +1,5 @@
-"""Home Assistant as the household's home: its presence over the WebSocket API, its actions through its MCP server
-(Assist's tools, at `<url>/api/mcp`), with one address and one token.
+"""Home Assistant as the household's home: its presence over the WebSocket API, its actions through an MCP server:
+by default its own (Assist's tools, at `<url>/api/mcp`, with the same token), another one, or none.
 
 Configuration (`home`, kind `home-assistant`):
 
@@ -9,19 +9,30 @@ Configuration (`home`, kind `home-assistant`):
     rooms: {alice: sensor.alice_phone_area}  # optional room trackers (Bermuda, ESPresense…)
     occupancy_sensors: [binary_sensor.kitchen_motion]  # optional: overrides discovery
     sensitive: {domains: [lock], device_classes: [garage, door], names: [porte]}  # confirmed by the person first
+    mcp: {url: https://mcp.example/mcp, token: ${HOME_MCP_TOKEN}}  # optional: another server, as under `tools:`;
+                                                                   # `false`: presence only, no actions
 """
 
-from typing import Self
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveFloat,
+    ValidatorFunctionWrapHandler,
+    field_validator,
+    model_validator,
+)
 
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.adapters.home.home_assistant.home import HomeAssistant
 from nestor.adapters.home.home_assistant.installation import PresenceMapping
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
-from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
+from nestor.adapters.tools.mcp.provider import McpToolProvider
+from nestor.adapters.tools.mcp.settings import McpSettings, SensitiveCalls
+from nestor.adapters.tools.mcp.settings import build as mcp_provider
 from nestor.core import ContractError, PersonId
-from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
 from nestor.runtime.editing import Suggest
@@ -38,9 +49,9 @@ class SensitiveTargets(BaseModel):
     device_classes: tuple[str, ...] = ("garage", "gate", "door")
     names: tuple[str, ...] = ("lock", "alarm", "garage", "gate", "door")
 
-    def rule(self) -> SensitiveWhen:
+    def calls(self) -> SensitiveCalls:
         targets = {"domain": self.domains, "device_class": self.device_classes, "name": self.names}
-        return SensitiveWhen(None, {key: values for key, values in targets.items() if values})
+        return SensitiveCalls(arguments={key: list(values) for key, values in targets.items() if values})
 
 
 class HomeAssistantSettings(AdapterSettings):
@@ -57,7 +68,9 @@ class HomeAssistantSettings(AdapterSettings):
     sync_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})
     reconnect_min_s: PositiveFloat = Field(default=1.0, json_schema_extra={"advanced": True})
     reconnect_max_s: PositiveFloat = Field(default=60.0, json_schema_extra={"advanced": True})
-    tool_timeout_s: PositiveFloat = Field(default=10.0, json_schema_extra={"advanced": True})
+    tool_timeout_s: PositiveFloat = Field(default=10.0, json_schema_extra={"advanced": True})  # its own server's
+    # the server of its actions: unset, Home Assistant's own; another one; `False`, none (presence only)
+    mcp: McpSettings | Literal[False] | None = None
 
     @field_validator("url")
     @classmethod
@@ -68,12 +81,20 @@ class HomeAssistantSettings(AdapterSettings):
             raise ValueError(str(error)) from None
         return url
 
+    @field_validator("mcp", mode="wrap")
+    @classmethod
+    def _one_form(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        """A mapping is a server: its problems are said at its fields, not once per form it could have been."""
+        return handler(McpSettings.model_validate(value)) if isinstance(value, dict) else handler(value)
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if strangers := sorted(set(self.rooms) - set(self.people)):
             raise ValueError(f"room trackers for people without a person entity: {', '.join(strangers)}")
         if self.reconnect_max_s < self.reconnect_min_s:
             raise ValueError("reconnect_max_s must not be below reconnect_min_s")
+        if "tool_timeout_s" in self.model_fields_set and self.mcp is not None:
+            raise ValueError("tool_timeout_s is for Home Assistant's own server: set mcp.timeout_s instead")
         return self
 
 
@@ -92,15 +113,23 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
         reconnect_max_s=settings.reconnect_max_s,
     )
     presence.name = f"{name}-presence"
-    tools = McpToolProvider(
-        f"{settings.url.rstrip('/')}/api/mcp",
-        name=name,
-        auth=BearerToken(token),
+    return HomeAssistant(name, presence, _actions(settings, name, services))
+
+
+def _actions(settings: HomeAssistantSettings, name: str, services: Services) -> McpToolProvider | None:
+    """The server of the home's actions, Home Assistant's own by default, the household's sensitive targets applying to
+    whichever it is."""
+    if settings.mcp is False:
+        return None
+    server = settings.mcp or McpSettings(
+        url=f"{settings.url.rstrip('/')}/api/mcp",
+        token=settings.token,
         timeout_s=settings.tool_timeout_s,
-        sensitive=[settings.sensitive.rule()],
         negotiation="legacy",  # Home Assistant's server answers the classic handshake only
     )
-    return HomeAssistant(name, presence, tools)
+    return mcp_provider(
+        server.model_copy(update={"sensitive": [*server.sensitive, settings.sensitive.calls()]}), name, services
+    )
 
 
 plugin = Plugin(
