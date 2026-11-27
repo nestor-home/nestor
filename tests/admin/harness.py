@@ -22,7 +22,7 @@ from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolProvider
 from nestor.modules.connectors import AuthKind, Preset, SecretField
-from nestor.modules.home import Resident, Room
+from nestor.modules.home import Device, Resident, Room
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
@@ -194,7 +194,18 @@ class Harness:
                 Tool(spec=ToolSpec("lights", "Turns lights on or off."), run=unlock, risk=Risk.WRITE),
                 Tool(spec=ToolSpec("unlock", "Unlocks a door."), run=unlock, risk=Risk.SENSITIVE),
             ],
-            rooms=[Room("salon", "Salon", occupied=True), Room("cuisine", "Cuisine")],
+            rooms=[
+                Room(
+                    "salon",
+                    "Salon",
+                    occupied=True,
+                    aliases=("Séjour",),
+                    floor="Rez-de-chaussée",
+                    devices=(Device(name="TV", kinds=("media_player",), aliases=("Télé",)),),
+                ),
+                Room("cuisine", "Cuisine"),
+            ],
+            devices=[Device(name="Liste de courses", kinds=("todo",))],
             residents=[Resident("person.mathis", "Mathis", home=True), Resident("person.mathilde", "Mathilde")],
             people={"mathis": "person.mathis"},
         )
