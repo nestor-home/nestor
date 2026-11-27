@@ -162,16 +162,19 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
 async def test_the_benchs_home_offers_assists_tools_and_with_its_map_says_what_is_in_each_room(
     config: NestorConfig,
 ) -> None:
-    tv = Case("r38", {"said": "Allume la télé", "expected": [["tool:intent__HassTurnOn"]]})
+    tv = Case("r38", {"said": "Allume la télé", "expected": [["tool:intent__HassTurnOn"]], "target": "TV LG C6"})
     turned = ScriptedModel(ToolCall("c1", "intent__HassTurnOn", {"name": "TV LG C6"}))
     mapped = await suite.run(tv, None, trial(config, turned, [], [], RoutingKnobs(home="map")))
     looked = ScriptedModel(ToolCall("c1", "homeassistant__GetLiveContext", {}))
     blind = await suite.run(tv, None, trial(config, looked, [], [], RoutingKnobs(home="tools")))
+    guessed = ScriptedModel(ToolCall("c1", "intent__HassTurnOn", {"name": "télé"}))
+    unknown = await suite.run(tv, None, trial(config, guessed, [], [], RoutingKnobs(home="tools")))
     without = await suite.run(tv, None, trial(config, ScriptedModel("Je n'ai pas de télé."), [], []))
 
     assert (mapped["route"], mapped["right"]) == ("tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"])
     assert "TV LG C6 (media_player, switch)" in turned.requests[0].messages[0].text, "the map, in its prompt"
     assert "TV LG C6" not in looked.requests[0].messages[0].text and blind["route"] not in blind["right"]
+    assert unknown["route"] == "tool:intent__HassTurnOn@télé" and unknown["route"] not in unknown["right"]
     assert without["right"] == ["none"], "no home: nothing to turn on"
 
 

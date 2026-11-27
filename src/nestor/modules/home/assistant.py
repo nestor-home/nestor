@@ -11,8 +11,8 @@ from nestor.modules.home.types import Device, Granularity, HomeOverview, Room
 from nestor.modules.household import Household
 
 MAP = (
-    "The home, as its system shows it to you. Names are its own: use them with its tools. States are not here: read "
-    "them with its tools when the question is about them, never to find what is meant."
+    "The home, as its system shows it to you. Names are its own: give them to its tools. What exists and where, answer "
+    "from here. States are not here: read them with its tools only when the question is about them."
 )
 CUT = "(more devices than fit here: the home's tools list them)"
 LIMIT = 8000  # characters: past it, the parts go, then the devices that do not fit

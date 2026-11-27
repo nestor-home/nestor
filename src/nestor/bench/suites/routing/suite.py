@@ -10,6 +10,8 @@ Its dataset (`cases.jsonl`) starts with a header, then requests with the routes 
      "codex", "question": "Quelle marque ?"}], "expected": [["continue:dish"]]}
 
 A route is `tool:<name>`, `delegate:<executor>`, `continue:<task>` or `none` (no tool: it answers, or says it cannot).
+`target`, when given, is what the first call must name (its `name` argument, ignoring case): the TV as the home names
+it, not a word of the request it may not know.
 `tasks` are the person's tasks already there, ready or (with a `question`) waiting on them, each with its executor.
 `expected` is a list of tiers; the right routes are those of the first tier the variant can take (its tool is offered,
 its executor plugged), `none` when it can take none. So a weather question is right with the weather tool where there
@@ -188,8 +190,13 @@ class Routing(Suite[None, RoutingKnobs]):
         events.close()
         calls = [event async for event in events]
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
-        routes = [_route(e) for e in calls if isinstance(e, ToolCalled)]
-        return {"route": routes[0] if routes else NONE, "calls": routes, "right": right, "said": said, "failed": failed}
+        called = [e for e in calls if isinstance(e, ToolCalled)]
+        routes = [_route(e) for e in called]
+        route = routes[0] if routes else NONE
+        target = case.data.get("target")
+        if target and called and str(called[0].arguments.get("name", "")).casefold() != str(target).casefold():
+            route = f"{route}@{called[0].arguments.get('name', '')}"  # the right tool, on what the home does not know
+        return {"route": route, "calls": routes, "right": right, "said": said, "failed": failed}
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
         cases = {c.id: c for c in dataset.cases}
@@ -274,7 +281,7 @@ def _tiers(value: object) -> tuple[tuple[str, ...], ...] | None:
 
 def _kind(route: str) -> str:
     """What a route does: a tool, a task handed over (a new one or one going on), or nothing."""
-    kind = route.split(":", 1)[0]
+    kind = route.split("@", 1)[0].split(":", 1)[0]
     return "delegate" if kind == "continue" else kind
 
 
