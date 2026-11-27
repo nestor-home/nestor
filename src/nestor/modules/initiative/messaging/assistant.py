@@ -84,11 +84,11 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         channel = str(arguments["channel"]) if arguments.get("channel") else None
         if channel and to.address_on(channel) is None:
             raise ToolFailed(f"{to.name} has no account on {channel}")
-        if _answer_reaches(to, context, channel, in_writing=arguments.get("in_writing") is True):
-            return {"status": f"not sent: this answer already reaches {to.name} here, write it in your answer"}
         answers = str(arguments["answers"]) if arguments.get("answers") else None
         if answers and not any(q.message_id == answers for q in self.book.open_questions()):
             raise ToolFailed(f"no open question {answers}")
+        if _answer_reaches(to, context, channel):
+            return {"status": f"not sent: this answer already reaches {to.name} here, write it in your answer"}
         message = await self.book.request(
             to.id,
             str(arguments["text"]),
@@ -122,8 +122,10 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         )
 
 
-def _answer_reaches(to: Person, context: ToolContext, channel: str | None, *, in_writing: bool) -> bool:
-    """Whether the answer being written already tells `to` what the message would: it is for them, in their
-    conversation on their account (one they write in, or one Nestor opened for them), and the message asks for no other
-    channel nor for writing."""
-    return context.live and context.person == to.id and not in_writing and channel in (None, context.address.channel)
+def _answer_reaches(to: Person, context: ToolContext, channel: str | None) -> bool:
+    """Whether the answer being written already goes where the message would: it is for `to`, written in their own
+    conversation (their account there, or where they are reached), whoever opened the turn, and the message asks for no
+    other channel. A group conversation is not theirs: what is private goes to them alone."""
+    here = context.address
+    theirs = here in (to.address_on(here.channel), to.reach)
+    return context.person == to.id and theirs and channel in (None, here.channel)

@@ -133,10 +133,11 @@ class Consolidator(Component):
             for conversation, seen in self._open.items()
             if seen.failures < ATTEMPTS and now - seen.last_at > timedelta(seconds=self._over_after_s(seen.address))
         ]
-        for conversation in [c for c in due if not self._open[c].spoken]:
+        silent = [c for c in due if not self._open[c].spoken]  # only Nestor told something: no episode
+        for conversation in silent:
             del self._open[conversation]
-            self._done.add(conversation)
-        due = [c for c in due if c in self._open]
+        self._done.update(silent)
+        due = [c for c in due if c not in silent]
         if not due:
             return 0
         known = (

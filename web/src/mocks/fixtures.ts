@@ -37,6 +37,7 @@ import type {
   Voice,
 } from "@/api";
 import { scopeValues, shelfValues } from "@/api/schema.gen";
+import { nameKey } from "@/features/chat/mentions";
 import { isRecord } from "@/features/config/schema";
 import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
@@ -1451,11 +1452,24 @@ export function home(
   };
 }
 
-type Shown = { name: string; kinds: string[]; parts?: string[]; aliases?: string[]; sensitive?: boolean };
+type Shown = { name: string; kinds: string[]; parts?: string[]; aliases?: string[] };
+
+/** The configured rule: a device is sensitive when what acts in it has a sensitive domain or name. */
+function sensitive(name: string, kinds: readonly string[]): boolean {
+  const rule = isRecord(document().home) ? (document().home as Record<string, unknown>).sensitive : null;
+  if (!isRecord(rule)) return false;
+  const list = (key: string) => (Array.isArray(rule[key]) ? (rule[key] as string[]) : []);
+  const acting = kinds.filter((k) => k !== "sensor" && k !== "binary_sensor");
+  const lower = name.toLowerCase();
+  return (
+    acting.length > 0 &&
+    (acting.some((k) => list("domains").includes(k)) || list("names").some((n) => lower.includes(n)))
+  );
+}
 
 /** What one Home Assistant device shows the assistant: no state, as the agent gets it. */
-function shown({ name, kinds, parts = [], aliases = [], sensitive = false }: Shown): HomeDevice {
-  return { name, kinds, parts, aliases, sensitive };
+function shown({ name, kinds, parts = [], aliases = [] }: Shown): HomeDevice {
+  return { id: `${kinds[0]}.${nameKey(name)}`, name, kinds, parts, aliases, sensitive: sensitive(name, kinds) };
 }
 
 /** What Home Assistant exposes to Assist in each room, and on which floor the room is. */
@@ -1474,7 +1488,6 @@ export const SHOWN: Record<string, { floor: string; devices: HomeDevice[] }> = {
         name: fr("Dishwasher", "Lave-vaisselle"),
         kinds: ["sensor", "binary_sensor"],
         parts: [fr("Phase", "Phase"), fr("Time remaining", "Temps restant"), fr("Door", "Porte")],
-        sensitive: true,
       }),
       shown({ name: fr("Kitchen", "Cuisine"), kinds: ["light"] }),
     ],
@@ -1485,7 +1498,7 @@ export const SHOWN: Record<string, { floor: string; devices: HomeDevice[] }> = {
   },
   [HALLWAY]: {
     floor: fr("Ground floor", "Rez-de-chaussée"),
-    devices: [shown({ name: fr("Front door", "Porte d'entrée"), kinds: ["lock"], sensitive: true })],
+    devices: [shown({ name: fr("Front door", "Porte d'entrée"), kinds: ["lock"] })],
   },
   [BEDROOM]: {
     floor: fr("Upstairs", "Étage"),

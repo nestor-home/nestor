@@ -166,12 +166,11 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
 
     async def confirm(self, call: ToolCall, context: ToolContext, *, about: str) -> ToolOutput:
         person = self.household.person(context.person) if context.person else None
-        here = context.live and context.exchange is not None
-        if person is None or (not here and person.reach is None):
+        here = context.exchange if context.live else None  # their conversation on their account: asked there
+        asked_in = context.address if here else person.reach if person else None
+        if person is None or asked_in is None:
             who = person.name if person else "nobody known"
             raise ToolFailed(f"{who} has no written channel to confirm on: it can only be done from their account")
-        asked_in = context.address if here else person.reach
-        assert asked_in is not None  # checked above
         request = ConfirmationRequested(
             source=self.name,
             session=asked_in.session,
@@ -180,7 +179,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
             tool=call.name,
             arguments=dict(call.arguments),
             origin=context.address,
-            turn=context.exchange.turn_id if here and context.exchange else None,
+            turn=here.turn_id if here else None,
             expires_at=self._clock() + timedelta(seconds=self.expires_after_s),
         )
         await self.journal.publish(request)
@@ -251,12 +250,13 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
         return (Tool(spec=spec, run=self._answer, risk=Risk.WRITE, timeout_s=30.0),)
 
     async def _answer(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        if context.speaker.by is not Identified.ACCOUNT or context.person is None:
-            raise ToolFailed("only its person may answer it, on their account")
+        # a message of theirs on their account carries the answer: never a turn Nestor opened by itself
+        if not context.live or context.person is None or context.exchange is None:
+            raise ToolFailed("only its person may answer it, in a message of theirs on their account")
         confirmation_id = str(arguments["confirmation_id"])
         try:
             found = self.waiting_for(confirmation_id)
-            if found.turn is not None and context.exchange is not None and context.exchange.turn_id == found.turn:
+            if found.turn == context.exchange.turn_id:
                 raise ToolFailed("they have not answered yet: ask them, and wait for their reply")
             answered = await self.answer(
                 confirmation_id, context.person, approved=arguments["approve"] is True, at=context.address

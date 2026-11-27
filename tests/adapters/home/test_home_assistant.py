@@ -642,10 +642,15 @@ async def test_the_home_shows_what_home_assistant_exposes_to_assist_by_room_and_
     home: FakeHomeAssistant, started: Any, tmp_path: Path
 ) -> None:
     """As Assist's own static context: what is exposed only, by its name and aliases, in its room or its device's, the
-    entities of one device as one device; without a state. A registry change (an entity exposed) is followed live."""
+    entities of one device in one room as one device; without a state; sensitive only for what acts. A registry change
+    (an entity exposed) is followed live."""
     home.floors = [{"floor_id": "ground", "name": "Ground floor", "aliases": [], "level": 0, "icon": None}]
     home.areas[1]["floor_id"] = "ground"
-    home.devices = [device("washer", "kitchen", "Washing Machine"), device("tv", "living_room", "TV")]
+    home.devices = [
+        device("washer", "kitchen", "Washing Machine"),
+        device("tv", "living_room", "TV"),
+        device("relay", "kitchen", "Dual relay"),
+    ]
     home.expose("sensor.washing_machine_phase", "rinse", device_id="washer", friendly_name="Washing Machine Phase")
     home.expose(
         "binary_sensor.washing_machine_door_lock", "on", device_id="washer", friendly_name="Washing Machine Door lock"
@@ -654,6 +659,8 @@ async def test_the_home_shows_what_home_assistant_exposes_to_assist_by_room_and_
     home.expose("media_player.tv", "off", device_id="tv", friendly_name="TV", device_class="tv")
     home.expose("light.kitchen", "on", area_id="kitchen", friendly_name="Kitchen light")
     home.expose("lock.front_door", "locked", friendly_name="Front door")
+    home.expose("light.relay_1", "off", device_id="relay", friendly_name="Pantry")
+    home.expose("light.relay_2", "off", device_id="relay", area_id="living_room", friendly_name="Garage door")
     home.aliases["media_player.tv"] = [None, "Télé"]
     home.sensor("sensor.washing_machine_energy", "2.1", device_class="energy", device_id="washer")  # not exposed
     raw = {"url": home.url, "token": TOKEN}
@@ -665,23 +672,43 @@ async def test_the_home_shows_what_home_assistant_exposes_to_assist_by_room_and_
     rooms = {room.id: room for room in overview.rooms}
     assert rooms["kitchen"].floor == "Ground floor" and rooms["living_room"].floor is None
     assert rooms["kitchen"].devices == (
-        Device(name="Kitchen light", kinds=("light",)),
+        Device(id="light.kitchen", name="Kitchen light", kinds=("light",)),
+        Device(id="light.relay_1", name="Pantry", kinds=("light",)),
         Device(
+            id="sensor.washing_machine_phase",
             name="Washing Machine",
             kinds=("sensor", "binary_sensor", "switch"),
-            parts=("Door lock", "Phase"),
-            sensitive=True,  # "door", one of the default sensitive names, is in "Door lock"
+            parts=("Door lock", "Phase"),  # a door-lock sensor only reports: nothing in it to confirm
         ),
     )
-    assert rooms["living_room"].devices == (Device(name="TV", kinds=("media_player",), aliases=("Télé",)),)
-    assert overview.devices == (Device(name="Front door", kinds=("lock",), sensitive=True),), "in no room"
+    assert rooms["living_room"].devices == (
+        Device(id="light.relay_2", name="Garage door", kinds=("light",), sensitive=True),  # its relay, set elsewhere
+        Device(id="media_player.tv", name="TV", kinds=("media_player",), aliases=("Télé",)),
+    )
+    assert overview.devices == (Device(id="lock.front_door", name="Front door", kinds=("lock",), sensitive=True),), (
+        "in no room"
+    )
 
     home.expose("light.office", "off", area_id="office", friendly_name="Desk lamp")
     await home.registry_updated("entity_registry_updated")  # then its first state, as Home Assistant does
     await home.change("light.office", "off", friendly_name="Desk lamp")
-    lamp = (Device(name="Desk lamp", kinds=("light",)),)
+    lamp = (Device(id="light.office", name="Desk lamp", kinds=("light",)),)
     await settle(lambda: any(r.id == "office" and r.devices == lamp for r in built.overview().rooms))
     assert home.attempts == 1, "followed on the same connection"
+
+
+async def test_a_home_assistant_that_will_not_say_what_it_exposes_keeps_its_presence_without_a_map(
+    home: FakeHomeAssistant, started: Any
+) -> None:
+    """An older version (no floors) or a token without the right to read what is exposed: presence goes on."""
+    home.state("person.alice", "home")
+    home.expose("light.kitchen", "on", area_id="kitchen", friendly_name="Kitchen light")
+    home.refused |= {"config/floor_registry/list", "homeassistant/expose_entity/list"}
+    source = await started(home.source(PresenceMapping(people={ALICE: "person.alice"})))
+    assert source.presence().of(ALICE) == Whereabouts(home=True)
+    overview = source.overview()
+    assert overview.connected and all(not r.devices and r.floor is None for r in overview.rooms)
+    assert home.attempts == 1
 
 
 async def test_a_home_assistant_that_does_not_answer_leaves_the_home_unavailable_and_says_how_it_is_tied(

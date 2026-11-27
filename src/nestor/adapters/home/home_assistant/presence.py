@@ -48,26 +48,24 @@ def _nobody(domain: str, device_class: str | None, name: str) -> bool:
 
 
 async def _registries(session: HomeAssistantSession) -> Registries:
-    """Every registry, what is exposed to Assist and the whole entries of what is."""
-    floors = parse(FLOORS, await session.command("config/floor_registry/list"), "floor registry")
+    """Every registry and what is exposed to Assist, each with its whole entry. Floors and what is exposed are only for
+    the map: a version without floors, or a token not allowed to read what is exposed, leaves it without them."""
     areas = parse(AREAS, await session.command("config/area_registry/list"), "area registry")
     devices = parse(DEVICES, await session.command("config/device_registry/list"), "device registry")
     entities = parse(ENTITIES, await session.command("config/entity_registry/list"), "entity registry")
-    exposed = parse(EXPOSURE, await session.command("homeassistant/expose_entity/list"), "exposed entities").to(
-        ASSISTANT
-    )
-    entries = (
-        parse(ENTRIES, await session.command("config/entity_registry/get_entries", entity_ids=exposed), "entries")
-        if exposed
-        else {}
-    )
+    floors = await session.ask("config/floor_registry/list")
+    exposure = await session.ask("homeassistant/expose_entity/list")
+    if exposure is None:
+        logger.warning("home: Home Assistant does not say what it exposes to Assist (an admin's token?): no devices")
+    exposed = parse(EXPOSURE, exposure, "exposed entities").to(ASSISTANT) if exposure is not None else []
+    entries = await session.ask("config/entity_registry/get_entries", entity_ids=exposed) if exposed else None
+    found = parse(ENTRIES, entries, "entries") if entries is not None else {}
     return Registries(
-        floors=tuple(floors),
+        floors=tuple(parse(FLOORS, floors, "floor registry")) if floors is not None else (),
         areas=tuple(areas),
         devices=tuple(devices),
         entities=tuple(entities),
-        exposed=tuple(exposed),
-        entries=entries,
+        exposed={entity: found.get(entity) for entity in exposed},
     )
 
 
@@ -84,8 +82,8 @@ class _Live:
         async for event in self.session.events():
             kind = event.get("event_type")
             if kind in REGISTRY_UPDATED:  # a burst of them (an integration reloading) is read once
+                self.session.drop_queued(REGISTRY_UPDATED)  # read below; what comes meanwhile is read again after
                 self.installation.relist(await _registries(self.session))
-                self.session.drop_queued(REGISTRY_UPDATED)
                 continue
             if kind != STATE_CHANGED:
                 continue
@@ -140,6 +138,9 @@ class HomeAssistantPresence(PresenceSource):
 
     @property
     def granularity(self) -> Granularity:
+        """The installation's, as its sensors are now; the last known while disconnected."""
+        if self._installation is not None:
+            self._granularity = self._installation.granularity
         return self._granularity
 
     def health(self) -> Health:

@@ -335,8 +335,8 @@ class AgentReply(Reply):
         finally:
             if not read:  # whoever read it went away (its channel stopped, Nestor restarts): the answer stops too
                 self._worker.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await self._worker
+                await asyncio.wait({self._worker})  # cancelled itself: the reader's own cancellation goes on
+                self._end_turn()
         if not self._interrupted:
             await self._worker  # surface a bug in the agent instead of ending silently
 

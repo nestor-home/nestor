@@ -82,9 +82,9 @@ class Toolbox(Component):
     async def call(
         self, call: ToolCall, context: ToolContext, *, confirmed: bool = False, wait_s: float | None = None
     ) -> Called:
-        """Run `call` for `context`; `confirmed`: the person agreed to it in writing already. `wait_s`: how long the
-        turn waits for it before it goes on in the background; `None`, until it ends. Files it made come with it,
-        or with its result when it went on in the background."""
+        """Run `call` for `context`; `confirmed`: the person already approved it (`InWriting.confirm`). `wait_s`: how
+        long the turn waits for it before it goes on in the background; `None`, until it ends. Files it made come with
+        it, or with its result when it went on in the background."""
         tool = self._tools().get(call.name)
         await self._journal.publish(
             ToolCalled(
@@ -195,7 +195,7 @@ class Toolbox(Component):
         missing = [name for name in _required(tool) if name not in call.arguments]
         if missing:
             raise ToolFailed(f"missing arguments: {', '.join(missing)}")
-        arguments = dict(call.arguments)
+        arguments = call.arguments
         if tool.owner is not None and context.person != tool.owner:
             who = "ask who is asking first" if context.person is None else f"only {tool.owner} may use it"
             raise ToolFailed(f"this belongs to {tool.owner}: {who}")

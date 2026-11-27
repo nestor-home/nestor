@@ -85,13 +85,24 @@ class HomeAssistantSession:
 
     async def command(self, kind: str, **fields: Any) -> Any:
         """Sends one command and returns its `result`; a refusal is a `SessionLost`."""
+        reply = await self._reply(kind, fields)
+        if not reply.get("success"):
+            raise SessionLost(f"{kind} refused: {reply.get('error')}")
+        return reply.get("result")
+
+    async def ask(self, kind: str, **fields: Any) -> Any | None:
+        """Sends one command and returns its `result`, `None` when Home Assistant refuses it (an older version, a
+        token without the right): for what Nestor can do without."""
+        reply = await self._reply(kind, fields)
+        return reply.get("result") if reply.get("success") else None
+
+    async def _reply(self, kind: str, fields: dict[str, Any]) -> dict[str, Any]:
+        """The result message of one command; events read meanwhile wait for `events()`."""
         message_id = await self._send({"type": kind, **fields})
         while True:
             message = await self._receive()
             if message.get("type") == "result" and message.get("id") == message_id:
-                if not message.get("success"):
-                    raise SessionLost(f"{kind} refused: {message.get('error')}")
-                return message.get("result")
+                return message
             if message.get("type") == "event":
                 self._pending.append(message)
 

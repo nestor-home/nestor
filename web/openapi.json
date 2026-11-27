@@ -16753,6 +16753,10 @@
       },
       "HomeDeviceOut": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -16785,6 +16789,7 @@
         },
         "type": "object",
         "required": [
+          "id",
           "name",
           "kinds",
           "parts",

@@ -90,38 +90,44 @@ HOME_ROOMS = (
         "salon",
         "Salon",
         devices=(
-            Device(name="Donut", kinds=("switch",)),
-            Device(name="HomePod Mini", kinds=("media_player",)),
-            Device(name="Salon", kinds=("light",)),
-            Device(name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",)),
+            Device(id="x.donut", name="Donut", kinds=("switch",)),
+            Device(id="x.homepod_mini", name="HomePod Mini", kinds=("media_player",)),
+            Device(id="x.salon", name="Salon", kinds=("light",)),
+            Device(id="x.tv_lg_c6", name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",)),
         ),
     ),
     Room(
         "cuisine",
         "Cuisine",
         devices=(
-            Device(name="Cuisine", kinds=("light",)),
+            Device(id="x.cuisine", name="Cuisine", kinds=("light",)),
             Device(
+                id="x.lave_linge",
                 name="Lave Linge",
                 kinds=("sensor", "binary_sensor", "switch"),
                 parts=("Door lock", "Phase", "Program", "Time remaining", "Washing machine"),
                 sensitive=True,
             ),
             Device(
+                id="x.lave_vaisselle",
                 name="Lave-vaisselle",
                 kinds=("sensor", "binary_sensor"),
                 parts=("état", "phase du cycle", "porte", "temps restant"),
             ),
-            Device(name="Porte du réfrigérateur", kinds=("binary_sensor",)),
+            Device(id="x.porte_du_r_frig_rateur", name="Porte du réfrigérateur", kinds=("binary_sensor",)),
         ),
     ),
-    Room("chambre", "Chambre", devices=(Device(name="Chambre", kinds=("light",)),)),
-    Room("salle-de-bain", "Salle de bain", devices=(Device(name="Salle de bain", kinds=("light",)),)),
+    Room("chambre", "Chambre", devices=(Device(id="x.chambre", name="Chambre", kinds=("light",)),)),
+    Room(
+        "salle-de-bain",
+        "Salle de bain",
+        devices=(Device(id="x.salle_de_bain", name="Salle de bain", kinds=("light",)),),
+    ),
 )
 HOME_ELSEWHERE = (
-    Device(name="Forecast Maison", kinds=("weather",)),
-    Device(name="Shopping list", kinds=("todo",)),
-    Device(name="Todo Mathis", kinds=("todo",)),
+    Device(id="x.forecast_maison", name="Forecast Maison", kinds=("weather",)),
+    Device(id="x.shopping_list", name="Shopping list", kinds=("todo",)),
+    Device(id="x.todo_mathis", name="Todo Mathis", kinds=("todo",)),
 )
 _TARGET = {
     "type": "object",
@@ -192,11 +198,16 @@ class Routing(Suite[None, RoutingKnobs]):
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
         called = [e for e in calls if isinstance(e, ToolCalled)]
         routes = [_route(e) for e in called]
-        route = routes[0] if routes else NONE
-        target = case.data.get("target")
-        if target and called and str(called[0].arguments.get("name", "")).casefold() != str(target).casefold():
-            route = f"{route}@{called[0].arguments.get('name', '')}"  # the right tool, on what the home does not know
-        return {"route": route, "calls": routes, "right": right, "said": said, "failed": failed}
+        target, named = case.data.get("target"), str(called[0].arguments.get("name", "")) if called else None
+        missed = bool(target) and named is not None and named.casefold() != str(target).casefold()
+        return {
+            "route": routes[0] if routes else NONE,
+            "calls": routes,
+            "right": right,
+            "named": named if missed else None,  # what it named instead of the target
+            "said": said,
+            "failed": failed,
+        }
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
         cases = {c.id: c for c in dataset.cases}
@@ -209,7 +220,7 @@ class Routing(Suite[None, RoutingKnobs]):
             failed += bool(output["failed"])
             expected = _kind(output["right"][0])
             counted[expected] += 1
-            if output["route"] in output["right"]:
+            if output["route"] in output["right"] and output.get("named") is None:
                 right += 1
                 continue
             taken = _kind(output["route"])
@@ -221,7 +232,8 @@ class Routing(Suite[None, RoutingKnobs]):
                 group = "bench-routing-missed-list"
             else:
                 group = "bench-routing-other-list"
-            wrong[group, result.case, output["route"]] += 1
+            named = output.get("named")
+            wrong[group, result.case, f"{output['route']} ({named})" if named is not None else output["route"]] += 1
 
         def share(group: str, whole: float) -> float | None:
             part = sum(n for (g, _, _), n in wrong.items() if g == group)
@@ -281,7 +293,7 @@ def _tiers(value: object) -> tuple[tuple[str, ...], ...] | None:
 
 def _kind(route: str) -> str:
     """What a route does: a tool, a task handed over (a new one or one going on), or nothing."""
-    kind = route.split("@", 1)[0].split(":", 1)[0]
+    kind = route.split(":", 1)[0]
     return "delegate" if kind == "continue" else kind
 
 

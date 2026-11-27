@@ -230,11 +230,17 @@ async def test_on_ones_account_it_is_asked_there_and_only_a_later_answer_confirm
     assert "the person confirms first" in spec.description and "confirmed" not in str(spec.parameters)
 
 
-async def test_an_alert_cannot_confirm_for_the_person_and_asks_in_writing() -> None:
+async def test_a_turn_nestor_opens_by_itself_neither_confirms_nor_approves_for_the_person() -> None:
+    """An alert asks in writing; the turn that writes that question, or any other notification, may not approve it:
+    only a message of theirs can."""
     home = Home("Confirmes-tu ?")
     async with home:
         asked = await home.call("turn_on", GARAGE, Speaker.account(MATHIS.id), at=CHAT, live=False)
+        [request] = await home.journal.history(ConfirmationRequested)
+        yes = {"confirmation_id": request.confirmation_id, "approve": True}
+        drafted = await home.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT, live=False)
     assert asked["status"] == "waiting for a confirmation in writing" and home.opened == []
+    assert "a message of theirs" in drafted["error"]
 
 
 async def test_someone_nobody_knows_or_without_a_written_channel_cannot_open_the_garage() -> None:

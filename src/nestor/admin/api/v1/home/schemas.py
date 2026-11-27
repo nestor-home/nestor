@@ -15,6 +15,7 @@ from nestor.runtime import Nestor, Plugged
 class HomeDeviceOut(BaseModel):
     """Something the home shows its assistant, as the agent knows it (no state)."""
 
+    id: str  # the home system's
     name: str
     kinds: list[str]  # what it is, in the home system's words (`light`, `media_player`)
     parts: list[str]  # what else it shows (`Phase`, `Time remaining`)
@@ -24,6 +25,7 @@ class HomeDeviceOut(BaseModel):
     @classmethod
     def of(cls, device: Device) -> "HomeDeviceOut":
         return cls(
+            id=device.id,
             name=device.name,
             kinds=list(device.kinds),
             parts=list(device.parts),

@@ -201,11 +201,11 @@ class Harness:
                     occupied=True,
                     aliases=("Séjour",),
                     floor="Rez-de-chaussée",
-                    devices=(Device(name="TV", kinds=("media_player",), aliases=("Télé",)),),
+                    devices=(Device(id="x.tv", name="TV", kinds=("media_player",), aliases=("Télé",)),),
                 ),
                 Room("cuisine", "Cuisine"),
             ],
-            devices=[Device(name="Liste de courses", kinds=("todo",))],
+            devices=[Device(id="x.liste_de_courses", name="Liste de courses", kinds=("todo",))],
             residents=[Resident("person.mathis", "Mathis", home=True), Resident("person.mathilde", "Mathilde")],
             people={"mathis": "person.mathis"},
         )

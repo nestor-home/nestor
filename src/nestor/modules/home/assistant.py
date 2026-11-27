@@ -34,7 +34,7 @@ class HomeContext(ContextProvider):
         if not overview.connected:
             return {}
         sections = {Layer.HOUSEHOLD: self._map(overview)}
-        if turn.speaker.private and (who := self._who()):
+        if turn.speaker.private and (who := self._who(overview)):
             sections[Layer.TURN] = who
         return sections
 
@@ -52,20 +52,11 @@ class HomeContext(ContextProvider):
         kept = brief[: self.limit - len(CUT) - 1].rsplit("\n", 1)[0]  # whole lines only, the note within the limit
         return f"{kept}\n{CUT}"
 
-    def _who(self) -> str | None:
+    def _who(self, overview: HomeOverview) -> str | None:
         presence = self.home.presence.presence()
-        lines = []
-        for person, where in presence.people.items():
-            name = self.household.name_of(person, person)
-            if where.home is None:
-                lines.append(f"- {name}: unknown")
-            elif not where.home:
-                lines.append(f"- {name}: away")
-            else:
-                room = next((r.name for r in self.home.overview().rooms if r.id == where.room), None)
-                lines.append(f"- {name}: home, in {room}" if room else f"- {name}: home")
+        lines = [f"- {self.household.name_of(p, p)}: {said}" for p, said in presence.told(overview.rooms).items()]
         if presence.granularity is Granularity.OCCUPIED_ROOMS:
-            names = [r.name for r in self.home.overview().rooms if r.id in presence.occupied_rooms]
+            names = [r.name for r in overview.rooms if r.id in presence.occupied_rooms]
             lines.append(f"Occupied rooms: {', '.join(names) or 'none'}")
         return "Who is home now:\n" + "\n".join(lines) if lines else None
 

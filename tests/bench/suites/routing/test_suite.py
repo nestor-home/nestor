@@ -49,13 +49,14 @@ def test_a_case_the_suite_cannot_score_is_refused(line: dict[str, object]) -> No
     assert raised.value.message.id == "bench-routing-bad-record"
 
 
-def routed(case: str, route: str, right: Sequence[str], failed: bool = False) -> CaseResult:
-    output = {"route": route, "calls": [route], "right": list(right), "said": "", "failed": failed}
+def routed(case: str, route: str, right: Sequence[str], failed: bool = False, named: str | None = None) -> CaseResult:
+    output = {"route": route, "calls": [route], "right": list(right), "named": named, "said": "", "failed": failed}
     return CaseResult(case=case, repetition=0, output=output)
 
 
 def test_scores_routes_and_names_each_wrong_one_by_what_went_wrong() -> None:
-    lines = [{"case": c, "said": c, "expected": []} for c in ("ok", "slow", "lost", "astray", "hello", "other")]
+    cases = ("ok", "slow", "lost", "astray", "hello", "other", "tv")
+    lines = [{"case": c, "said": c, "expected": []} for c in cases]
     dataset = suite.load([HEADER, *lines], suite.dataset())
     summary = suite.summarise(
         dataset,
@@ -66,17 +67,19 @@ def test_scores_routes_and_names_each_wrong_one_by_what_went_wrong() -> None:
             routed("astray", "delegate:codex", ["delegate:hermes"]),
             routed("hello", "none", ["none"]),
             routed("other", "tool:route", ["tool:find_place"], failed=True),
+            routed("tv", "tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"], named="télé"),
         ],
     )
     metrics = {m.id: m.value for m in summary.metrics}
-    assert metrics["accuracy"] == 2 / 6
+    assert metrics["accuracy"] == 2 / 7, "the right tool on a name the home does not know is wrong"
     assert (metrics["missed"], metrics["wrong-executor"]) == (0.5, 0.5), "of the two cases to hand over"
-    assert metrics["needless"] == 0.25, "of the four not to hand over"
+    assert metrics["needless"] == 0.2, "of the five not to hand over"
     assert metrics["failed"] == 1
     assert sorted((f.group, f.case) for f in summary.findings) == [
         ("bench-routing-missed-list", "lost"),
         ("bench-routing-needless-list", "slow"),
         ("bench-routing-other-list", "other"),
+        ("bench-routing-other-list", "tv"),
         ("bench-routing-wrong-executor-list", "astray"),
     ]
 
@@ -174,7 +177,8 @@ async def test_the_benchs_home_offers_assists_tools_and_with_its_map_says_what_i
     assert (mapped["route"], mapped["right"]) == ("tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"])
     assert "TV LG C6 (media_player, switch)" in turned.requests[0].messages[0].text, "the map, in its prompt"
     assert "TV LG C6" not in looked.requests[0].messages[0].text and blind["route"] not in blind["right"]
-    assert unknown["route"] == "tool:intent__HassTurnOn@télé" and unknown["route"] not in unknown["right"]
+    assert (unknown["route"], unknown["named"]) == ("tool:intent__HassTurnOn", "télé"), "the right tool, a wrong name"
+    assert mapped["named"] is None
     assert without["right"] == ["none"], "no home: nothing to turn on"
 
 

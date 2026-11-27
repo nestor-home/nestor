@@ -12,9 +12,9 @@ Reading rules (nothing is inferred beyond what Home Assistant states):
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
+from pydantic import BaseModel, BeforeValidator, ConfigDict, TypeAdapter, ValidationError
 
 from nestor.adapters.home.home_assistant.client import SessionLost
 from nestor.adapters.home.home_assistant.layout import Covers, Layout, Owner, Shown, lay_out
@@ -27,6 +27,10 @@ UNKNOWN_STATES = frozenset({"unknown", "unavailable"})
 
 class _Payload(BaseModel):
     model_config = ConfigDict(extra="ignore", frozen=True)
+
+
+# aliases as Home Assistant lists them, without the `None` that stands for the name itself
+type Aliases = Annotated[tuple[str, ...], BeforeValidator(lambda given: tuple(a for a in given or () if a))]
 
 
 class State(_Payload):
@@ -45,7 +49,7 @@ class Floor(_Payload):
 class Area(_Payload):
     area_id: str
     name: str
-    aliases: list[str | None] = []
+    aliases: Aliases = ()
     floor_id: str | None = None
 
 
@@ -65,7 +69,7 @@ class Entity(_Payload):
 class Entry(Entity):
     """An entity's whole registry entry (`config/entity_registry/get_entries`): its aliases and class too."""
 
-    aliases: list[str | None] = []  # `None` stands for the entity's own name
+    aliases: Aliases = ()
     device_class: str | None = None
     original_device_class: str | None = None
 
@@ -116,14 +120,13 @@ class PresenceMapping:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Registries:
     """What the registries say of the installation, read at connection time and again when one of them changes.
-    `entries`: the whole entries of the exposed entities, by entity id (`None`: an entity outside the registry)."""
+    `exposed`: what is exposed to Assist, each with its whole entry (`None`: an entity outside the registry)."""
 
     floors: tuple[Floor, ...] = ()
     areas: tuple[Area, ...] = ()
     devices: tuple[RegisteredDevice, ...] = ()
     entities: tuple[Entity, ...] = ()
-    exposed: tuple[str, ...] = ()
-    entries: Mapping[str, Entry | None] = field(default_factory=dict)
+    exposed: Mapping[str, Entry | None] = field(default_factory=dict)
 
 
 class Installation:
@@ -153,7 +156,13 @@ class Installation:
         }
         self._sensors = self._occupancy_sensors()
         self.granularity = self._granularity()
-        self._registries = registries
+        self._exposed = registries.exposed
+        self._owners = {
+            device.id: Owner(name=name, area_id=device.area_id)
+            for device in registries.devices
+            if (name := device.name_by_user or device.name)
+        }
+        self._layout = self._lay_out()
 
     @property
     def unplaced_sensors(self) -> list[str]:
@@ -170,6 +179,8 @@ class Installation:
         known = self._states.get(entity_id)
         if known is None or new_state.last_updated >= known.last_updated:
             self._states[entity_id] = new_state
+            if entity_id in self._exposed and (known is None or _shown_as(known) != _shown_as(new_state)):
+                self._layout = self._lay_out()  # a name or a class the map shows changed
 
     def presence(self) -> Presence:
         people = {person: self._whereabouts(person, entity) for person, entity in self._mapping.people.items()}
@@ -187,48 +198,42 @@ class Installation:
     def rooms(self) -> tuple[Room, ...]:
         """Every area, occupied or not when a sensor in it tells, with what it shows its assistant in it, in Home
         Assistant's order."""
-        watched, occupied, layout = set(self._sensors.values()), self._occupied(), self._lay_out()
+        watched, occupied = set(self._sensors.values()), self._occupied()
         return tuple(
             Room(
                 id=area.area_id,
                 name=area.name,
                 occupied=area.area_id in occupied if area.area_id in watched else None,
-                aliases=tuple(a for a in area.aliases if a),
+                aliases=area.aliases,
                 floor=self._floors.get(area.area_id),
-                devices=layout.rooms.get(area.area_id, ()),
+                devices=self._layout.rooms.get(area.area_id, ()),
             )
             for area in self._area_list
         )
 
     def devices(self) -> tuple[Device, ...]:
         """What it shows its assistant outside any room."""
-        return self._lay_out().elsewhere
+        return self._layout.elsewhere
 
     def _lay_out(self) -> Layout:
-        """Laid out from the registries and the names the states carry now: an entity exposed before its first state
-        arrives takes its name once it does."""
-        registries = self._registries
-        owners = {
-            device.id: Owner(name=name, area_id=device.area_id)
-            for device in registries.devices
-            if (name := device.name_by_user or device.name)
-        }
+        """Laid out from the registries and the names the states carry: kept until one of them changes (`relist`, or
+        an exposed entity's name or class in `apply`), so an entity exposed before its first state takes its name
+        once it arrives."""
         shown = []
-        for entity_id in registries.exposed:
-            entry, state = registries.entries.get(entity_id), self._states.get(entity_id)
-            attributes = state.attributes if state else {}
+        for entity_id, entry in self._exposed.items():
+            state = self._states.get(entity_id)
+            name, device_class = _shown_as(state) if state else (None, None)
             shown.append(
                 Shown(
                     entity_id=entity_id,
-                    name=str(attributes.get("friendly_name") or entity_id.split(".", 1)[-1]),
-                    aliases=tuple(a for a in entry.aliases if a) if entry else (),
+                    name=name or entity_id.split(".", 1)[-1],
+                    aliases=entry.aliases if entry else (),
                     device_id=entry.device_id if entry else None,
                     area_id=entry.area_id if entry else None,
-                    device_class=(entry.device_class or entry.original_device_class if entry else None)
-                    or attributes.get("device_class"),
+                    device_class=(entry.device_class or entry.original_device_class if entry else None) or device_class,
                 )
             )
-        return lay_out(shown, owners, (area.area_id for area in registries.areas), self._covers)
+        return lay_out(shown, self._owners, (area.area_id for area in self._area_list), self._covers)
 
     def residents(self) -> tuple[Resident, ...]:
         """The `person` entities, by their name in Home Assistant."""
@@ -286,8 +291,14 @@ class _AreaNames:
     def __init__(self, areas: Iterable[Area]) -> None:
         self._ids: dict[str, str] = {}
         for area in areas:
-            for label in (*(a for a in area.aliases if a), area.name, area.area_id):  # the id wins over a clash
+            for label in (*area.aliases, area.name, area.area_id):  # the id wins over a clashing name
                 self._ids[label.casefold()] = area.area_id
 
     def resolve(self, label: str | None) -> str | None:
         return None if label is None else self._ids.get(label.strip().casefold())
+
+
+def _shown_as(state: State) -> tuple[str | None, str | None]:
+    """What the map shows of an entity's state: its name and its class, never the state itself."""
+    name, device_class = state.attributes.get("friendly_name"), state.attributes.get("device_class")
+    return (str(name) if name else None, str(device_class) if device_class else None)

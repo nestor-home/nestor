@@ -12,8 +12,12 @@ from nestor.testing.home import StaticHome, StaticPresence
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),))
 MATHILDE = Person(id=PersonId("mathilde"), name="Mathilde")
 HOUSEHOLD = Household([MATHIS, MATHILDE])
-TV = Device(name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",), aliases=("Télé",))
-WASHER = Device(name="Lave Linge", kinds=("sensor", "switch"), parts=("Phase", "Time remaining"), sensitive=True)
+TV = Device(
+    id="x.tv_lg_c6", name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",), aliases=("Télé",)
+)
+WASHER = Device(
+    id="x.lave_linge", name="Lave Linge", kinds=("sensor", "switch"), parts=("Phase", "Time remaining"), sensitive=True
+)
 ROOMS = [
     Room("salon", "Salon", aliases=("Séjour",), floor="Rez-de-chaussée", devices=(TV,)),
     Room("cuisine", "Cuisine", floor="Rez-de-chaussée", devices=(WASHER,)),
@@ -27,7 +31,7 @@ def turn(speaker: Speaker) -> TurnContext:
 
 
 def home(presence: StaticPresence | None = None, *, connected: bool = True) -> StaticHome:
-    shared = (Device(name="Shopping list", kinds=("todo",)),)
+    shared = (Device(id="x.shopping_list", name="Shopping list", kinds=("todo",)),)
     return StaticHome(presence, rooms=ROOMS, devices=shared, connected=connected)
 
 

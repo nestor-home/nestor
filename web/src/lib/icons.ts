@@ -9,15 +9,18 @@ import {
   BellRing,
   BookMarked,
   Bot,
+  Box,
   CircleAlert,
   CircleArrowUp,
   CircleCheck,
   CircleDashed,
   CircleSlash,
+  CloudSun,
   Coins,
   Ear,
   Flag,
   FolderKanban,
+  Gauge,
   Hash,
   Heading,
   Hourglass,
@@ -27,6 +30,8 @@ import {
   KeyRound,
   Lightbulb,
   ListFilter,
+  ListTodo,
+  Lock,
   Megaphone,
   Merge,
   MessageSquareText,
@@ -42,6 +47,9 @@ import {
   Smile,
   Sparkles,
   Speech,
+  Thermometer,
+  ToggleRight,
+  Tv,
   UserRound,
   Users,
   Video,
@@ -155,3 +163,20 @@ export const RETIREMENT_ICON: Record<Retirement, LucideIcon> = {
   stale: Archive,
   ended: Flag,
 };
+
+/** What a device of the home is, by its home system's kinds (Home Assistant's domains): the first with a sign. */
+const HOME_KIND_ICON: Record<string, LucideIcon> = {
+  light: Lightbulb,
+  media_player: Tv,
+  switch: ToggleRight,
+  lock: Lock,
+  climate: Thermometer,
+  todo: ListTodo,
+  weather: CloudSun,
+  sensor: Gauge,
+  binary_sensor: Gauge,
+};
+
+export function homeKindIcon(kinds: readonly string[]): LucideIcon {
+  return kinds.map((k) => HOME_KIND_ICON[k]).find(Boolean) ?? Box;
+}

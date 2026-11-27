@@ -3,7 +3,7 @@
  * names in the text, whatever the channel, loosely (case and accents aside); here they are offered as people type and
  * shown as tags: a person's initial, a room's house, a vendor's mark, with its name.
  */
-import { House, Plug, Workflow } from "lucide-react";
+import { Box, House, Workflow } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Mention } from "@/api";
 import { useT } from "@/i18n";
@@ -104,12 +104,12 @@ export function MentionList({
   );
 }
 
-/** The sign of a mention: a vendor's mark, a room's house, a device's plug, a person's initial. */
+/** The sign of a mention: a vendor's mark, a room's house, a device's box, a person's initial. */
 function MentionMark({ mention }: { mention: Mention }) {
   const brand = vendorOf(mention);
   if (brand) return <BrandMark brand={brand} className="size-3.5" label={false} />;
   if (mention.kind === "room") return <House className="size-3.5 text-ink-muted" aria-hidden="true" />;
-  if (mention.kind === "device") return <Plug className="size-3.5 text-ink-muted" aria-hidden="true" />;
+  if (mention.kind === "device") return <Box className="size-3.5 text-ink-muted" aria-hidden="true" />;
   if (mention.kind === "task") return <Workflow className="size-3.5 text-kind-task" aria-hidden="true" />;
   return (
     <span className="font-serif text-meta leading-none text-ink" aria-hidden="true">

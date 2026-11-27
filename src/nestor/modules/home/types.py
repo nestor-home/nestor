@@ -1,6 +1,6 @@
 """Presence values: what is known about each person, and how finely."""
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -53,6 +53,19 @@ class Presence:
             return self.occupied_rooms
         return None
 
+    def told(self, rooms: Iterable["Room"]) -> dict[PersonId, str]:
+        """Where each person is, as a model is told: `unknown`, `away`, `home`, or `home, in <room>` by its name."""
+        names = {room.id: room.name for room in rooms}
+
+        def said(where: Whereabouts) -> str:
+            if where.home is None:
+                return "unknown"
+            if not where.home:
+                return "away"
+            return f"home, in {names[where.room]}" if where.room in names else "home"
+
+        return {person: said(where) for person, where in self.people.items()}
+
     def people_in(self, room: str) -> tuple[PersonId, ...]:
         """Who is known to be in this room: only a PERSON_ROOM source places people."""
         return tuple(person for person, whereabouts in self.people.items() if whereabouts.room == room)
@@ -65,8 +78,10 @@ class Device:
 
     `kinds`: what it is, in the home system's words (Home Assistant's domains: `light`, `media_player`…). `parts`:
     what else it shows, by name, its own name left out when theirs starts with it (a washing machine's `Phase`,
-    `Time remaining`). `sensitive`: acting on it waits for the person's go-ahead."""
+    `Time remaining`). `sensitive`: acting on it waits for the person's go-ahead. `id`: the home system's, to tell
+    two devices of one name apart."""
 
+    id: str
     name: str
     kinds: tuple[str, ...]
     parts: tuple[str, ...] = ()

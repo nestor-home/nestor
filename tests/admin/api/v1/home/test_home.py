@@ -28,7 +28,14 @@ async def test_the_home_shows_its_rooms_residents_ties_and_actions(tmp_path: Pat
             "people": [{"id": "mathis", "name": "Mathis"}],
             "satellites": ["mic"],  # its room named as the home names it, case aside
             "devices": [
-                {"name": "TV", "kinds": ["media_player"], "parts": [], "aliases": ["Télé"], "sensitive": False}
+                {
+                    "id": "x.tv",
+                    "name": "TV",
+                    "kinds": ["media_player"],
+                    "parts": [],
+                    "aliases": ["Télé"],
+                    "sensitive": False,
+                }
             ],
         },
         {

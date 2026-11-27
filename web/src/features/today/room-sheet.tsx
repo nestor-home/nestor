@@ -1,23 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  Box,
-  Camera,
-  CloudSun,
-  Eye,
-  Gauge,
-  Lightbulb,
-  ListTodo,
-  Lock,
-  type LucideIcon,
-  Phone,
-  RadioTower,
-  ShieldCheck,
-  Thermometer,
-  ToggleRight,
-  Tv,
-  Video,
-} from "lucide-react";
+import { Camera, Eye, Phone, RadioTower, ShieldCheck, Video } from "lucide-react";
 import { type HomeDevice, type JournalItem, type MediaDevice, mediaDevicesQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
@@ -32,6 +15,7 @@ import { SnapshotDialog } from "@/features/cameras/snapshot-dialog";
 import type { RoomNode } from "@/features/today/mind";
 import { useT } from "@/i18n";
 import { hourMinute } from "@/lib/dates";
+import { homeKindIcon } from "@/lib/icons";
 import { deviceName } from "@/lib/labels";
 import { say } from "@/lib/messages";
 import { useCan, useMe } from "@/lib/session";
@@ -180,9 +164,9 @@ export function HomeThings({ things, level, title }: { things: readonly HomeDevi
     <Section level={level} title={title ?? t("room-known", { assistant: me.assistant })} count={things.length}>
       <ul className="grid gap-2">
         {things.map((d) => (
-          <li key={d.name} className="surface px-4 py-3.5">
+          <li key={d.id} className="surface px-4 py-3.5">
             <CardHead
-              mark={<IconTile icon={kindIcon(d.kinds)} />}
+              mark={<IconTile icon={homeKindIcon(d.kinds)} />}
               title={d.name}
               line={[...d.aliases, ...d.parts].join(", ") || null}
               aside={d.sensitive ? <Tag icon={ShieldCheck}>{t("room-known-sensitive")}</Tag> : null}
@@ -192,23 +176,6 @@ export function HomeThings({ things, level, title }: { things: readonly HomeDevi
       </ul>
     </Section>
   );
-}
-
-const KIND_ICONS: Record<string, LucideIcon> = {
-  light: Lightbulb,
-  media_player: Tv,
-  switch: ToggleRight,
-  lock: Lock,
-  climate: Thermometer,
-  todo: ListTodo,
-  weather: CloudSun,
-  sensor: Gauge,
-  binary_sensor: Gauge,
-};
-
-/** What a device is, by the first of its kinds that has a sign. */
-function kindIcon(kinds: readonly string[]): LucideIcon {
-  return kinds.map((k) => KIND_ICONS[k]).find(Boolean) ?? Box;
 }
 
 /** What one may do through a device from here: watch, take a picture, call. Each opens over the room. */

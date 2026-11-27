@@ -2757,6 +2757,8 @@ export interface components {
          * @description Something the home shows its assistant, as the agent knows it (no state).
          */
         HomeDeviceOut: {
+            /** Id */
+            id: string;
             /** Name */
             name: string;
             /** Kinds */
