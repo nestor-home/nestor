@@ -13,9 +13,17 @@ Configuration (`home`, kind `home-assistant`):
                                                                    # `false`: presence only, no actions
 """
 
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveFloat,
+    ValidatorFunctionWrapHandler,
+    field_validator,
+    model_validator,
+)
 
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.adapters.home.home_assistant.home import HomeAssistant
@@ -73,12 +81,20 @@ class HomeAssistantSettings(AdapterSettings):
             raise ValueError(str(error)) from None
         return url
 
+    @field_validator("mcp", mode="wrap")
+    @classmethod
+    def _one_form(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        """A mapping is a server: its problems are said at its fields, not once per form it could have been."""
+        return handler(McpSettings.model_validate(value)) if isinstance(value, dict) else handler(value)
+
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if strangers := sorted(set(self.rooms) - set(self.people)):
             raise ValueError(f"room trackers for people without a person entity: {', '.join(strangers)}")
         if self.reconnect_max_s < self.reconnect_min_s:
             raise ValueError("reconnect_max_s must not be below reconnect_min_s")
+        if "tool_timeout_s" in self.model_fields_set and self.mcp is not None:
+            raise ValueError("tool_timeout_s is for Home Assistant's own server: set mcp.timeout_s instead")
         return self
 
 

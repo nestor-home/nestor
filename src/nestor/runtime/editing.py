@@ -13,7 +13,6 @@
 """
 
 import io
-import json
 import re
 import types
 import typing
@@ -150,7 +149,7 @@ def _variant_key(option: dict[str, Any]) -> str | None:
     if option.get("type") == "null":
         return "default"
     if "const" in option:
-        return json.dumps(option["const"])
+        return str(option["const"]).lower()
     if ref := option.get("$ref"):
         return str(ref).rsplit("/", 1)[-1].lower()
     return None

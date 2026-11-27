@@ -96,26 +96,28 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
         ) : null}
       </Section>
 
-      <Section level={3} title={t("house-actions")} count={home.tools.length}>
-        {home.tools.length ? (
-          <RowList>
-            {home.tools.map((tool) => (
-              <li key={tool.name} className="grid gap-2 px-4 py-3">
-                <span className="min-w-0">
-                  <span className="block font-mono text-meta text-ink">{tool.name}</span>
-                  <span className="block text-body text-ink-muted">{tool.description}</span>
-                </span>
-                <span className="flex flex-wrap gap-1.5">
-                  <RiskTag risk={tool.risk} />
-                  {tool.confirmed_when ? <Tag icon={ShieldCheck}>{t("house-action-confirmed-when")}</Tag> : null}
-                </span>
-              </li>
-            ))}
-          </RowList>
-        ) : (
-          <Empty hint={t("house-actions-empty-hint")}>{t("house-actions-empty")}</Empty>
-        )}
-      </Section>
+      {home.tools ? (
+        <Section level={3} title={t("house-actions")} count={home.tools.length}>
+          {home.tools.length ? (
+            <RowList>
+              {home.tools.map((tool) => (
+                <li key={tool.name} className="grid gap-2 px-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block font-mono text-meta text-ink">{tool.name}</span>
+                    <span className="block text-body text-ink-muted">{tool.description}</span>
+                  </span>
+                  <span className="flex flex-wrap gap-1.5">
+                    <RiskTag risk={tool.risk} />
+                    {tool.confirmed_when ? <Tag icon={ShieldCheck}>{t("house-action-confirmed-when")}</Tag> : null}
+                  </span>
+                </li>
+              ))}
+            </RowList>
+          ) : (
+            <Empty hint={t("house-actions-empty-hint")}>{t("house-actions-empty")}</Empty>
+          )}
+        </Section>
+      ) : null}
 
       {home.unplaced_sensors.length ? (
         <Panel className="p-4">

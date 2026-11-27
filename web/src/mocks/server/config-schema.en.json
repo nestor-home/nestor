@@ -13229,7 +13229,7 @@
                   }
                 ],
                 "title": "Actions server",
-                "help": "The MCP server the assistant acts on the home through. Actions to confirm apply whichever it is."
+                "help": "The MCP server the assistant acts on the home through. Actions to confirm apply to its calls that give a domain, device class or name; for other arguments, set its own calls to confirm."
               }
             }
           },

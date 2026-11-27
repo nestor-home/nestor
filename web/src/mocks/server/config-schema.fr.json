@@ -13229,7 +13229,7 @@
                   }
                 ],
                 "title": "Serveur d'actions",
-                "help": "Le serveur MCP par lequel l'assistant agit sur la maison. Les actions à confirmer valent quel qu'il soit."
+                "help": "Le serveur MCP par lequel l'assistant agit sur la maison. Les actions à confirmer valent pour ses appels qui donnent un domaine, une classe d'appareil ou un nom ; pour d'autres arguments, réglez ses propres appels à confirmer."
               }
             }
           },

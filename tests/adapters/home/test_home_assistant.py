@@ -650,6 +650,8 @@ def test_a_reverse_proxy_prefix_is_kept_in_the_websocket_url() -> None:
         ({"url": "homeassistant.local:8123"}, "http"),
         ({"rooms": {"bob": "sensor.bob_area"}}, "without a person entity: bob"),
         ({"reconnect_min_s": 10, "reconnect_max_s": 5}, "reconnect_max_s"),
+        ({"mcp": {"token": "t"}}, r"^[^;]*mcp\.url: Field required$"),  # said at its field, once
+        ({"tool_timeout_s": 5, "mcp": {"url": "https://mcp.example/mcp"}}, "set mcp.timeout_s instead"),
     ],
 )
 def test_the_plugin_rejects_an_inconsistent_configuration(tmp_path: Path, change: dict[str, Any], message: str) -> None:
