@@ -25,6 +25,7 @@ hs-system = Home system
 hs-people = The household
 hs-rooms = The rooms
 hs-rooms-empty = No room known yet: add a satellite or plug a home system.
+hs-roomless = Not in a room
 hs-media = Watch and call
 hs-room-events = { $count ->
     [one] once today

@@ -1,23 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Camera, Eye, Phone, RadioTower, Video } from "lucide-react";
-import { type JournalItem, type MediaDevice, mediaDevicesQuery } from "@/api";
+import { Camera, Eye, Phone, RadioTower, ShieldCheck, Video } from "lucide-react";
+import { type HomeDevice, type JournalItem, type MediaDevice, mediaDevicesQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
 import { Avatar, IconTile } from "@/components/marks";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Section } from "@/components/page";
 import { Empty } from "@/components/states";
-import { Status } from "@/components/status";
+import { Status, Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { LiveDialog } from "@/features/cameras/live-dialog";
 import { SnapshotDialog } from "@/features/cameras/snapshot-dialog";
 import type { RoomNode } from "@/features/today/mind";
 import { useT } from "@/i18n";
 import { hourMinute } from "@/lib/dates";
+import { homeKindIcon } from "@/lib/icons";
 import { deviceName } from "@/lib/labels";
 import { say } from "@/lib/messages";
-import { useCan } from "@/lib/session";
+import { useCan, useMe } from "@/lib/session";
 import { capital } from "@/lib/utils";
 
 /** A room, opened: who is there, its devices and what one can do through them, and its day. */
@@ -123,6 +124,8 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
         )}
       </Section>
 
+      {r.things.length ? <HomeThings level={3} things={r.things} /> : null}
+
       {r.journal ? (
         <Section
           level={3}
@@ -150,6 +153,28 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
         </Section>
       ) : null}
     </SheetPanel>
+  );
+}
+
+/** What the home system shows the assistant, as the assistant knows it: its names, never a state. */
+export function HomeThings({ things, level, title }: { things: readonly HomeDevice[]; level?: 2 | 3; title?: string }) {
+  const t = useT();
+  const me = useMe();
+  return (
+    <Section level={level} title={title ?? t("room-known", { assistant: me.assistant })} count={things.length}>
+      <ul className="grid gap-2">
+        {things.map((d) => (
+          <li key={d.id} className="surface px-4 py-3.5">
+            <CardHead
+              mark={<IconTile icon={homeKindIcon(d.kinds)} />}
+              title={d.name}
+              line={[...d.aliases, ...d.parts].join(", ") || null}
+              aside={d.sensitive ? <Tag icon={ShieldCheck}>{t("room-known-sensitive")}</Tag> : null}
+            />
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
 

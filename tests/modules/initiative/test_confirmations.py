@@ -1,6 +1,6 @@
-"""Sensitive actions and someone's own data, whoever asks: confirmed in place on one's account, in writing when
-asked aloud on a satellite; someone's own data serves them only, and what a voice nobody recognised asked for is
-written to them rather than said in the room."""
+"""Sensitive actions and someone's own data, whoever asks: asked in the conversation on one's account and confirmed by
+a later answer only, in writing when asked aloud on a satellite; someone's own data serves them only, and what a
+voice nobody recognised asked for is written to them rather than said in the room."""
 
 import asyncio
 import json
@@ -107,10 +107,16 @@ class Home:
             await part.__aexit__(None, None, None)
 
     async def call(
-        self, name: str, arguments: Mapping[str, object], speaker: Speaker, at: Address = SALON, live: bool = True
+        self,
+        name: str,
+        arguments: Mapping[str, object],
+        speaker: Speaker,
+        at: Address = SALON,
+        live: bool = True,
+        turn: str = "t",
     ) -> Any:
-        """`live`: in a conversation someone takes part in, not an alert."""
-        exchange = Exchange(conversation_id="c", turn_id="t") if live else None
+        """`live`: in a conversation someone takes part in (in its `turn`), not an alert."""
+        exchange = Exchange(conversation_id="c", turn_id=turn) if live else None
         context = ToolContext(address=at, speaker=speaker, exchange=exchange)
         output = (await self.toolbox.call(ToolCall("c", name, dict(arguments)), context)).output
         return json.loads(output) if output.startswith("{") else output
@@ -208,24 +214,33 @@ async def test_a_confirmation_still_waiting_when_nestor_stops_is_answered_after_
     assert "nothing waits" in again["error"], "an answered confirmation stays answered"
 
 
-async def test_on_ones_account_it_is_confirmed_in_the_conversation() -> None:
+async def test_on_ones_account_it_is_asked_there_and_only_a_later_answer_confirms_it() -> None:
+    """The model never confirms for the person: in the turn that asked, an approval is refused; the person's next
+    message carries it, and the action runs there without a second notice."""
     home = Home()
     async with home:
-        first = await home.call("turn_on", GARAGE, Speaker.account(MATHIS.id), at=CHAT)
-        then = await home.call("turn_on", {**GARAGE, "confirmed": True}, Speaker.account(MATHIS.id), at=CHAT)
-    assert "ask the person to confirm" in first["error"] and then == "ouvert"
-    assert await home.journal.history(ConfirmationRequested) == []
+        asked = await home.call("turn_on", GARAGE, Speaker.account(MATHIS.id), at=CHAT)
+        yes = {"confirmation_id": asked["confirmation_id"], "approve": True}
+        at_once = await home.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT)
+        assert home.opened == [] and "not answered yet" in at_once["error"]
+        answered = await home.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT, turn="t2")
+    assert asked["status"] == "waiting for Mathis to confirm" and answered["status"] == "done"
+    assert home.opened == [{**GARAGE, "by": MATHIS.id, "at": str(CHAT)}] and home.telegram.sent == []
     spec = next(s for s in home.toolbox.specs() if s.name == "turn_on")
-    properties = spec.parameters["properties"]
-    assert isinstance(properties, dict) and "confirmed" in properties
+    assert "the person confirms first" in spec.description and "confirmed" not in str(spec.parameters)
 
 
-async def test_a_wake_up_cannot_confirm_for_the_person_and_asks_in_writing() -> None:
+async def test_a_turn_nestor_opens_by_itself_neither_confirms_nor_approves_for_the_person() -> None:
+    """An alert asks in writing; the turn that writes that question, or any other notification, may not approve it:
+    only a message of theirs can."""
     home = Home("Confirmes-tu ?")
     async with home:
-        confirmed = {**GARAGE, "confirmed": True}
-        asked = await home.call("turn_on", confirmed, Speaker.account(MATHIS.id), at=CHAT, live=False)
+        asked = await home.call("turn_on", GARAGE, Speaker.account(MATHIS.id), at=CHAT, live=False)
+        [request] = await home.journal.history(ConfirmationRequested)
+        yes = {"confirmation_id": request.confirmation_id, "approve": True}
+        drafted = await home.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT, live=False)
     assert asked["status"] == "waiting for a confirmation in writing" and home.opened == []
+    assert "a message of theirs" in drafted["error"]
 
 
 async def test_someone_nobody_knows_or_without_a_written_channel_cannot_open_the_garage() -> None:

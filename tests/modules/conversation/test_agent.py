@@ -370,6 +370,30 @@ async def test_an_interruption_keeps_only_what_was_heard(make_agent: MakeAgent, 
     assert model.interrupted == 1
 
 
+async def test_a_reply_whose_reader_goes_away_stops_and_says_nothing_more(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
+    """A channel that stops (Nestor restarts) takes its answers with it: none goes on talking to a model or a journal
+    being closed, nor blames the model for it."""
+    model = ScriptedModel("Il était une fois un très long conte sans fin", word_delay_s=0.05)
+    reply = make_agent(model=model).respond(message("Raconte"))
+
+    async def read() -> None:
+        async for _ in reply:
+            pass
+
+    reading = asyncio.create_task(read())
+    while not await journal.history(UserTurn):
+        await asyncio.sleep(0.01)
+    reading.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await reading
+    await asyncio.sleep(0.5)  # longer than the rest of the answer would take
+
+    assert model.interrupted == 1, "the model's stream is closed"
+    assert await journal.history(AssistantTurn) == [] and await journal.history(FallbackSpoken) == []
+
+
 async def test_a_cut_after_the_answer_was_written_rewrites_the_history(make_agent: MakeAgent, journal: Journal) -> None:
     reply = make_agent("Une réponse entièrement écrite mais pas encore jouée.").respond(message("Dis", VOICE, "mic"))
     await reply.collect()

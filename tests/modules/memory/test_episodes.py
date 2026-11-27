@@ -136,33 +136,51 @@ async def test_a_conversation_is_summarized_once_its_silence_has_passed_and_its_
     assert "untrusted data" in asked.messages[0].content and "French" in asked.messages[0].content
 
 
-async def test_a_message_nestor_brought_is_summarized_with_what_it_was_about() -> None:
+async def notified(home: Home, conversation: str, text: str) -> None:
+    """Nestor brings something to Léa by itself (a task's result) and tells her."""
+    turn = Exchange(conversation_id=conversation, turn_id=new_id())
+    await home.journal.publish(
+        NotificationTurn(
+            source="test",
+            session=CHAT.session,
+            address=CHAT,
+            text=text,
+            about=About(Source.TASK, "t1", "completed"),
+            exchange=turn,
+            person=LEA.id,
+            at=START,
+        )
+    )
+    await home.journal.publish(
+        AssistantTurn(
+            source="test", session=CHAT.session, address=CHAT, text="Ta CI est rouge.", exchange=turn, at=START
+        )
+    )
+
+
+async def test_a_message_nestor_brought_is_summarized_with_what_was_said_about_it() -> None:
     home = Home(SUMMARY)
     async with home.consolidator:
-        turn = Exchange(conversation_id="c9", turn_id=new_id())
-        await home.journal.publish(
-            NotificationTurn(
-                source="test",
-                session=CHAT.session,
-                address=CHAT,
-                text="Result: CI red on main",
-                about=About(Source.TASK, "t1", "completed"),
-                exchange=turn,
-                person=LEA.id,
-                at=START,
-            )
-        )
-        await home.journal.publish(
-            AssistantTurn(
-                source="test", session=CHAT.session, address=CHAT, text="Ta CI est rouge.", exchange=turn, at=START
-            )
-        )
+        await notified(home, "c9", "Result: CI red on main")
+        await home.exchange("c9", "Relance-la.", "C'est relancé.", at=START)
         home.clock.now = START + timedelta(hours=2)
         assert await home.consolidator.consolidate_due() == 1
     (summarized,) = await home.journal.history(EpisodeSummarized)
     transcript = home.model.requests[0].messages[-1].content
-    assert summarized.participants == ("lea",), "whom Nestor told something took part"
+    assert summarized.participants == ("lea",)
     assert "(for Richie, task t1 completed): Result: CI red on main" in transcript and "Ta CI est rouge." in transcript
+
+
+async def test_what_nestor_told_with_nobody_answering_is_no_episode() -> None:
+    """Three dishwasher ends made three episodes, each a call to the model, and took the places of the latest
+    conversations in every turn: what was told stays where it came from (the task, the alert) and in the journal."""
+    home = Home(SUMMARY)
+    async with home.consolidator:
+        await notified(home, "c9", "Result: CI red on main")
+        home.clock.now = START + timedelta(hours=2)
+        assert await home.consolidator.consolidate_due() == 0
+        assert await home.consolidator.consolidate_due() == 0
+    assert await home.journal.history(EpisodeSummarized) == [] and home.model.requests == []
 
 
 async def test_a_restart_summarizes_what_ended_while_stopped_and_never_twice() -> None:

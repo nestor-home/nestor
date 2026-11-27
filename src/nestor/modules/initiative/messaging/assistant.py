@@ -73,7 +73,8 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
 
     async def _send(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         """Anyone at home may have a message passed on ("tell Léa dinner is ready"), signed by the room they spoke
-        in; a question needs to know whom its answer goes back to."""
+        in; a question needs to know whom its answer goes back to. A message to the person this answer already
+        reaches, the same way, is not sent twice."""
         sender = self.household.person(context.person) if context.person else None
         to = self._person(str(arguments["person"]))
         if sender is not None and not sender.may_write_to(to.id):
@@ -86,6 +87,8 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         answers = str(arguments["answers"]) if arguments.get("answers") else None
         if answers and not any(q.message_id == answers for q in self.book.open_questions()):
             raise ToolFailed(f"no open question {answers}")
+        if _answer_reaches(to, context, channel):
+            return {"status": f"not sent: this answer already reaches {to.name} here, write it in your answer"}
         message = await self.book.request(
             to.id,
             str(arguments["text"]),
@@ -117,3 +120,12 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         return (
             f"{mentioned.label} (person {mentioned.id}), of the household; what is for them goes through message_person"
         )
+
+
+def _answer_reaches(to: Person, context: ToolContext, channel: str | None) -> bool:
+    """Whether the answer being written already goes where the message would: it is for `to`, written in their own
+    conversation (their account there, or where they are reached), whoever opened the turn, and the message asks for no
+    other channel. A group conversation is not theirs: what is private goes to them alone."""
+    here = context.address
+    theirs = here in (to.address_on(here.channel), to.reach)
+    return context.person == to.id and theirs and channel in (None, here.channel)

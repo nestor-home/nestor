@@ -320,7 +320,7 @@ journal-voice-learning = { $learning ->
     [yes] Learning of { $person }'s voice turned on
    *[no] Learning of { $person }'s voice turned off
 }
-journal-confirmation-requested = Confirmation requested in writing from { $person }: { $tool }
+journal-confirmation-requested = Confirmation asked of { $person }: { $tool }
 journal-confirmation-answered = { $approved ->
     [yes] Confirmed in writing
    *[no] Refused in writing

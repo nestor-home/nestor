@@ -5,7 +5,17 @@ from datetime import datetime
 
 from nestor.core import PersonId, utc_now
 from nestor.modules.cognition.tools import Tool, ToolProvider
-from nestor.modules.home import Granularity, Home, HomeOverview, Presence, PresenceSource, Resident, Room, Whereabouts
+from nestor.modules.home import (
+    Device,
+    Granularity,
+    Home,
+    HomeOverview,
+    Presence,
+    PresenceSource,
+    Resident,
+    Room,
+    Whereabouts,
+)
 
 
 class StaticPresence(PresenceSource):
@@ -59,10 +69,13 @@ class StaticHome(Home):
         rooms: Sequence[Room] = (),
         residents: Sequence[Resident] = (),
         people: Mapping[str, str] | None = None,
+        devices: Sequence[Device] = (),
         connected: bool = True,
     ) -> None:
+        """`devices`: what it shows outside any room (a room's are in it)."""
         self._presence, self._tools = presence or StaticPresence(), StaticTools(tools)
         self.rooms, self.residents, self.connected = tuple(rooms), tuple(residents), connected
+        self.devices = tuple(devices)
         self.people = {PersonId(p): e for p, e in (people or {}).items()}
 
     @property
@@ -84,6 +97,7 @@ class StaticHome(Home):
             rooms=self.rooms if self.connected else (),
             residents=self.residents if self.connected else (),
             people=dict(self.people),
+            devices=self.devices if self.connected else (),
         )
 
 

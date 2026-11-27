@@ -7,7 +7,7 @@ import re
 import pytest
 
 from nestor.core import PersonId
-from nestor.modules.channels import Address, InboundMessage, Medium, Sender
+from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import SILENT, Agent, Attachments, ModelChoice, Persona
@@ -105,13 +105,19 @@ class Home:
             await asyncio.sleep(0.01)
         raise AssertionError("the messages were not delivered")
 
-    async def send(self, by: Person | None, at: Address = MATHIS_CHAT, /, **arguments: object) -> object:
-        return await self.run("message_person", by, at, **arguments)
+    async def send(
+        self, by: Person | None, at: Address = MATHIS_CHAT, live: bool = False, /, **arguments: object
+    ) -> object:
+        return await self.run("message_person", by, at, live, **arguments)
 
-    async def run(self, name: str, by: Person | None, at: Address = MATHIS_CHAT, /, **arguments: object) -> object:
+    async def run(
+        self, name: str, by: Person | None, at: Address = MATHIS_CHAT, live: bool = False, /, **arguments: object
+    ) -> object:
+        """`live`: in a turn of the conversation at `at`, theirs on their account."""
         tool = next(t for t in self.tools.tools() if t.name == name)
-        context = ToolContext(address=at, speaker=Speaker.account(by.id) if by else Speaker.unknown())
-        return await tool.run(arguments, context)
+        exchange = Exchange(conversation_id="c", turn_id="t") if live else None
+        speaker = Speaker.account(by.id) if by else Speaker.unknown()
+        return await tool.run(arguments, ToolContext(address=at, speaker=speaker, exchange=exchange))
 
 
 async def test_a_question_is_passed_on_and_its_answer_comes_back_to_whoever_asked() -> None:
@@ -181,7 +187,8 @@ async def test_a_message_asked_for_before_a_restart_is_delivered_once_after_it()
 async def test_a_channel_asked_for_is_where_it_is_written_whoever_is_home() -> None:
     home = Home("Les nouvelles du jour : …", presence=StaticPresence().set("mathis", home=True))
     async with home:
-        await home.send(MATHIS, person="mathis", text="Les nouvelles du jour.", channel="telegram")
+        salon = Address("voice", "salon")  # "send me the news on Telegram", said in the living room
+        await home.send(MATHIS, salon, person="mathis", text="Les nouvelles du jour.", channel="telegram")
         await home.settled(1)
     assert [a for a, _ in home.telegram.sent] == [MATHIS_CHAT] and home.voice.sent == []
 
@@ -247,3 +254,19 @@ async def test_anyone_may_have_a_message_written_to_themselves_whoever_else_they
     async with home:
         assert await home.send(JULES, person="jules", text="Pense au pain.") is not None
     assert [m.to for m in await home.journal.history(MessageRequested)] == ["jules"]
+
+
+async def test_a_message_to_whom_the_answer_already_reaches_is_not_sent_twice() -> None:
+    """Passing on a task's question to Mathis in his own conversation, Nestor also messaged him: he got it twice. In a
+    group, or on another channel, it still goes to him alone."""
+    home = Home("C'est noté.", "C'est noté.", "C'est noté.")
+    async with home:
+        here = await home.send(MATHIS, MATHIS_CHAT, False, person="mathis", text="Quel modèle ?")  # Nestor's own turn
+        web = Address("web", "mathis/1")
+        elsewhere = await home.send(MATHIS, web, True, person="mathis", text="Le lien", channel="telegram")
+        group = await home.send(MATHIS, Address("telegram", "-100"), True, person="mathis", text="Le code wifi")
+        to_her = await home.send(MATHIS, MATHIS_CHAT, True, person="mathilde", text="Dîner à 20 h.")
+        await home.settled(3)
+    assert here == {"status": "not sent: this answer already reaches Mathis here, write it in your answer"}
+    assert elsewhere is not None and group is not None and to_her is not None
+    assert [m.to for m in await home.journal.history(MessageRequested)] == ["mathis", "mathis", "mathilde"]

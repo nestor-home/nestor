@@ -6,9 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from nestor.bench import BenchError, CaseResult, Knobs, Trial
+from nestor.bench import BenchError, CaseResult, Trial
 from nestor.bench.runner import read_dataset
 from nestor.bench.suites.routing import suite
+from nestor.bench.suites.routing.suite import RoutingKnobs
 from nestor.bench.types import Case
 from nestor.bench.variants import load_variant
 from nestor.core import ProviderError
@@ -48,13 +49,14 @@ def test_a_case_the_suite_cannot_score_is_refused(line: dict[str, object]) -> No
     assert raised.value.message.id == "bench-routing-bad-record"
 
 
-def routed(case: str, route: str, right: Sequence[str], failed: bool = False) -> CaseResult:
-    output = {"route": route, "calls": [route], "right": list(right), "said": "", "failed": failed}
+def routed(case: str, route: str, right: Sequence[str], failed: bool = False, named: str | None = None) -> CaseResult:
+    output = {"route": route, "calls": [route], "right": list(right), "named": named, "said": "", "failed": failed}
     return CaseResult(case=case, repetition=0, output=output)
 
 
 def test_scores_routes_and_names_each_wrong_one_by_what_went_wrong() -> None:
-    lines = [{"case": c, "said": c, "expected": []} for c in ("ok", "slow", "lost", "astray", "hello", "other")]
+    cases = ("ok", "slow", "lost", "astray", "hello", "other", "tv")
+    lines = [{"case": c, "said": c, "expected": []} for c in cases]
     dataset = suite.load([HEADER, *lines], suite.dataset())
     summary = suite.summarise(
         dataset,
@@ -65,17 +67,19 @@ def test_scores_routes_and_names_each_wrong_one_by_what_went_wrong() -> None:
             routed("astray", "delegate:codex", ["delegate:hermes"]),
             routed("hello", "none", ["none"]),
             routed("other", "tool:route", ["tool:find_place"], failed=True),
+            routed("tv", "tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"], named="télé"),
         ],
     )
     metrics = {m.id: m.value for m in summary.metrics}
-    assert metrics["accuracy"] == 2 / 6
+    assert metrics["accuracy"] == 2 / 7, "the right tool on a name the home does not know is wrong"
     assert (metrics["missed"], metrics["wrong-executor"]) == (0.5, 0.5), "of the two cases to hand over"
-    assert metrics["needless"] == 0.25, "of the four not to hand over"
+    assert metrics["needless"] == 0.2, "of the five not to hand over"
     assert metrics["failed"] == 1
     assert sorted((f.group, f.case) for f in summary.findings) == [
         ("bench-routing-missed-list", "lost"),
         ("bench-routing-needless-list", "slow"),
         ("bench-routing-other-list", "other"),
+        ("bench-routing-other-list", "tv"),
         ("bench-routing-wrong-executor-list", "astray"),
     ]
 
@@ -106,11 +110,15 @@ def config(tmp_path: Path) -> NestorConfig:
 
 
 def trial(
-    config: NestorConfig, model: ScriptedModel, executors: Sequence[ScriptedExecutor], tools: Sequence[ToolProvider]
-) -> Trial[Knobs]:
+    config: NestorConfig,
+    model: ScriptedModel,
+    executors: Sequence[ScriptedExecutor],
+    tools: Sequence[ToolProvider],
+    knobs: RoutingKnobs | None = None,
+) -> Trial[RoutingKnobs]:
     return Trial(
         variant="richie",
-        knobs=Knobs(),
+        knobs=knobs or RoutingKnobs(),
         config=config,
         models={"written": model},
         repetition=0,
@@ -152,6 +160,26 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
 
     alone = await suite.run(WEATHER, None, trial(config, ScriptedModel("Je ne peux pas le savoir."), [], []))
     assert (alone["route"], alone["right"], alone["said"]) == ("none", ["none"], "Je ne peux pas le savoir.")
+
+
+async def test_the_benchs_home_offers_assists_tools_and_with_its_map_says_what_is_in_each_room(
+    config: NestorConfig,
+) -> None:
+    tv = Case("r38", {"said": "Allume la télé", "expected": [["tool:intent__HassTurnOn"]], "target": "TV LG C6"})
+    turned = ScriptedModel(ToolCall("c1", "intent__HassTurnOn", {"name": "TV LG C6"}))
+    mapped = await suite.run(tv, None, trial(config, turned, [], [], RoutingKnobs(home="map")))
+    looked = ScriptedModel(ToolCall("c1", "homeassistant__GetLiveContext", {}))
+    blind = await suite.run(tv, None, trial(config, looked, [], [], RoutingKnobs(home="tools")))
+    guessed = ScriptedModel(ToolCall("c1", "intent__HassTurnOn", {"name": "télé"}))
+    unknown = await suite.run(tv, None, trial(config, guessed, [], [], RoutingKnobs(home="tools")))
+    without = await suite.run(tv, None, trial(config, ScriptedModel("Je n'ai pas de télé."), [], []))
+
+    assert (mapped["route"], mapped["right"]) == ("tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"])
+    assert "TV LG C6 (media_player, switch)" in turned.requests[0].messages[0].text, "the map, in its prompt"
+    assert "TV LG C6" not in looked.requests[0].messages[0].text and blind["route"] not in blind["right"]
+    assert (unknown["route"], unknown["named"]) == ("tool:intent__HassTurnOn", "télé"), "the right tool, a wrong name"
+    assert mapped["named"] is None
+    assert without["right"] == ["none"], "no home: nothing to turn on"
 
 
 async def test_a_model_down_is_a_failed_turn(config: NestorConfig) -> None:

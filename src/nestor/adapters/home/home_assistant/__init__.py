@@ -33,6 +33,7 @@ from nestor.adapters.tools.mcp.provider import McpToolProvider
 from nestor.adapters.tools.mcp.settings import McpSettings, SensitiveCalls
 from nestor.adapters.tools.mcp.settings import build as mcp_provider
 from nestor.core import ContractError, PersonId
+from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
 from nestor.runtime.editing import Suggest
@@ -50,8 +51,15 @@ class SensitiveTargets(BaseModel):
     names: tuple[str, ...] = ("lock", "alarm", "garage", "gate", "door")
 
     def calls(self) -> SensitiveCalls:
-        targets = {"domain": self.domains, "device_class": self.device_classes, "name": self.names}
-        return SensitiveCalls(arguments={key: list(values) for key, values in targets.items() if values})
+        return SensitiveCalls(arguments={key: list(values) for key, values in self._targets().items() if values})
+
+    def covers(self, domain: str, device_class: str | None, name: str) -> bool:
+        """Whether acting on this entity needs the go-ahead, by the same rule as its calls."""
+        rule = SensitiveWhen(None, self._targets())
+        return rule.matches({"domain": domain, "device_class": device_class, "name": name})
+
+    def _targets(self) -> dict[str, tuple[str, ...]]:
+        return {"domain": self.domains, "device_class": self.device_classes, "name": self.names}
 
 
 class HomeAssistantSettings(AdapterSettings):
@@ -111,9 +119,14 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
         sync_timeout_s=settings.sync_timeout_s,
         reconnect_min_s=settings.reconnect_min_s,
         reconnect_max_s=settings.reconnect_max_s,
+        covers=settings.sensitive.covers if settings.mcp is not False else _nothing,  # no actions: nothing to confirm
     )
     presence.name = f"{name}-presence"
     return HomeAssistant(name, presence, _actions(settings, name, services))
+
+
+def _nothing(domain: str, device_class: str | None, name: str) -> bool:
+    return False
 
 
 def _actions(settings: HomeAssistantSettings, name: str, services: Services) -> McpToolProvider | None:

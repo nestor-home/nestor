@@ -22,12 +22,34 @@ async def test_the_home_shows_its_rooms_residents_ties_and_actions(tmp_path: Pat
         {
             "id": "salon",
             "name": "Salon",
+            "aliases": ["Séjour"],
+            "floor": "Rez-de-chaussée",
             "occupied": True,
             "people": [{"id": "mathis", "name": "Mathis"}],
             "satellites": ["mic"],  # its room named as the home names it, case aside
+            "devices": [
+                {
+                    "id": "x.tv",
+                    "name": "TV",
+                    "kinds": ["media_player"],
+                    "parts": [],
+                    "aliases": ["Télé"],
+                    "sensitive": False,
+                }
+            ],
         },
-        {"id": "cuisine", "name": "Cuisine", "occupied": None, "people": [], "satellites": []},
+        {
+            "id": "cuisine",
+            "name": "Cuisine",
+            "aliases": [],
+            "floor": None,
+            "occupied": None,
+            "people": [],
+            "satellites": [],
+            "devices": [],
+        },
     ]
+    assert [d["name"] for d in home["devices"]] == ["Liste de courses"], "what is in no room"
     assert home["residents"] == [
         {"entity": "person.mathis", "name": "Mathis", "home": True, "person": {"id": "mathis", "name": "Mathis"}},
         {"entity": "person.mathilde", "name": "Mathilde", "home": None, "person": None},

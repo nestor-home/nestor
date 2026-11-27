@@ -26,7 +26,7 @@ from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.core import ContractError, Health, PersonId, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.cognition.tools import Risk
-from nestor.modules.home import Granularity, Presence, Resident, Room, Whereabouts
+from nestor.modules.home import Device, Granularity, Presence, Resident, Room, Whereabouts
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
 from nestor.testing.i18n import EchoLocalizer
@@ -52,14 +52,14 @@ def area(area_id: str, name: str, *aliases: str) -> dict[str, Any]:
     }
 
 
-def device(device_id: str, area_id: str | None) -> dict[str, Any]:
+def device(device_id: str, area_id: str | None, name: str | None = None) -> dict[str, Any]:
     return {
         "area_id": area_id,
         "config_entries": ["01JCONFIGENTRY"],
         "id": device_id,
         "manufacturer": "Aqara",
         "model": "RTCGQ11LM",
-        "name": f"Device {device_id}",
+        "name": name or f"Device {device_id}",
         "name_by_user": None,
         "disabled_by": None,
     }
@@ -84,6 +84,7 @@ def entity(entity_id: str, *, area_id: str | None = None, device_id: str | None 
         "platform": "zha",
         "translation_key": None,
         "unique_id": f"uid-{entity_id}",
+        "options": {"conversation": {"should_expose": False}},
     }
 
 
@@ -94,18 +95,22 @@ class FakeHomeAssistant:
     def __init__(self) -> None:
         self.token = TOKEN
         self.areas = [area("living_room", "Living Room", "Salon"), area("kitchen", "Kitchen"), area("office", "Office")]
+        self.floors: list[dict[str, Any]] = []
         self.devices: list[dict[str, Any]] = []
         self.entities: list[dict[str, Any]] = []
+        self.exposed: dict[str, dict[str, bool]] = {}  # entity id → assistant → exposed
+        self.aliases: dict[str, list[str | None]] = {}  # entity id → its registry aliases
         self.states: dict[str, dict[str, Any]] = {}
         self.available = True  # False: connections are closed before the handshake
         self.silent = False  # True: connections are accepted but never answered
         self.refused: set[str] = set()  # commands answered with an error
+        self.refused_events: set[str] = set()  # event types it will not let a client subscribe to
         self.malformed: set[str] = set()  # commands answered with a payload that is not Home Assistant's
         self.before_snapshot: list[dict[str, Any]] = []  # events fired between `subscribe_events` and `get_states`
         self.chatter = False  # True: messages of unknown types are sent between replies
         self.attempts = 0
         self._clock = EPOCH
-        self._subscribers: dict[ServerConnection, int] = {}
+        self._subscribers: dict[ServerConnection, dict[str, int]] = {}  # connection → event type → subscription
         self._server: Server | None = None
 
     async def __aenter__(self) -> "FakeHomeAssistant":
@@ -156,8 +161,24 @@ class FakeHomeAssistant:
             self.states.pop(entity_id, None)
         else:
             new = self.state(entity_id, value, **{**(old or {}).get("attributes", {}), **attributes})
-        event = self.state_changed(entity_id, old, new)
-        for connection, subscription in list(self._subscribers.items()):
+        await self.fire(self.state_changed(entity_id, old, new))
+
+    def expose(
+        self, entity_id: str, value: str, *, area_id: str | None = None, device_id: str | None = None, **attributes: Any
+    ) -> None:
+        """An entity in the registry, exposed to Assist, with its state."""
+        self.entities.append(entity(entity_id, area_id=area_id, device_id=device_id))
+        self.exposed[entity_id] = {"conversation": True}
+        self.state(entity_id, value, **attributes)
+
+    async def registry_updated(self, kind: str) -> None:
+        """Notifies the subscribers that a registry changed (`entity_registry_updated`…)."""
+        await self.fire({"event_type": kind, "data": {"action": "update"}, "origin": "LOCAL"})
+
+    async def fire(self, event: dict[str, Any]) -> None:
+        for connection, subscriptions in list(self._subscribers.items()):
+            if (subscription := subscriptions.get(event["event_type"])) is None:
+                continue
             if self.chatter:
                 await connection.send(json.dumps({"type": "future_message", "payload": {}}))
             await connection.send(json.dumps({"id": subscription, "type": "event", "event": event}))
@@ -203,27 +224,37 @@ class FakeHomeAssistant:
         kind, message_id = message["type"], message["id"]
         if self.chatter:
             await connection.send(json.dumps({"type": "future_message", "payload": {}}))
-        if kind in self.refused:
+        if kind in self.refused or (kind == "subscribe_events" and message["event_type"] in self.refused_events):
             error = {"code": "unauthorized", "message": "Unauthorized"}
             await connection.send(json.dumps({"id": message_id, "type": "result", "success": False, "error": error}))
             return
         result: Any = None
         match kind:
+            case "config/floor_registry/list":
+                result = self.floors
             case "config/area_registry/list":
                 result = self.areas
             case "config/device_registry/list":
                 result = self.devices
             case "config/entity_registry/list":
                 result = self.entities
+            case "homeassistant/expose_entity/list":
+                result = {"exposed_entities": self.exposed}
+            case "config/entity_registry/get_entries":
+                entries = {e["entity_id"]: e for e in self.entities}
+                result = {
+                    eid: {**entries[eid], "aliases": self.aliases.get(eid, [None]), "device_class": None}
+                    if eid in entries
+                    else None
+                    for eid in message["entity_ids"]
+                }
             case "get_states":
                 result = list(self.states.values())
                 for event in self.before_snapshot:
-                    await connection.send(
-                        json.dumps({"id": self._subscribers[connection], "type": "event", "event": event})
-                    )
+                    subscription = self._subscribers[connection]["state_changed"]
+                    await connection.send(json.dumps({"id": subscription, "type": "event", "event": event}))
             case "subscribe_events":
-                assert message["event_type"] == "state_changed"
-                self._subscribers[connection] = message_id
+                self._subscribers.setdefault(connection, {})[message["event_type"]] = message_id
         if kind in self.malformed:
             result = [{"entity_id": 42}]
         await connection.send(json.dumps({"id": message_id, "type": "result", "success": True, "result": result}))
@@ -443,8 +474,9 @@ async def test_a_malformed_event_is_skipped_without_losing_the_connection(
 ) -> None:
     home.state("person.alice", "home")
     source = await started(home.source(PresenceMapping(people={ALICE: "person.alice"})))
-    for connection, subscription in home._subscribers.items():
-        await connection.send(json.dumps({"id": subscription, "type": "event", "event": {"data": {"entity_id": 1}}}))
+    malformed = {"event_type": "state_changed", "data": {"entity_id": 1}}
+    for connection, subscriptions in home._subscribers.items():
+        await connection.send(json.dumps({"id": subscriptions["state_changed"], "type": "event", "event": malformed}))
     await home.change("person.alice", "not_home")
     await settle(lambda: source.presence().of(ALICE) == Whereabouts(home=False))
     assert home.attempts == 1
@@ -594,7 +626,7 @@ async def test_the_plugin_builds_the_home_its_presence_and_its_overview_from_one
     assert overview.connected and overview.people == {ALICE: "person.alice"}
     assert overview.trackers == {ALICE: "sensor.alice_area"}
     assert overview.rooms == (
-        Room("living_room", "Living Room"),
+        Room("living_room", "Living Room", aliases=("Salon",)),
         Room("kitchen", "Kitchen", occupied=True),
         Room("office", "Office"),
     ), "occupied only where a sensor tells"
@@ -605,6 +637,88 @@ async def test_the_plugin_builds_the_home_its_presence_and_its_overview_from_one
     assert overview.unplaced_sensors == ("binary_sensor.hall_motion",)
     assert built.health() is Health.DEGRADED, "its MCP server does not answer here: presence alone"
     assert built.tools is not None and (await built.tools.endpoint())[0] == f"{home.url}/api/mcp", "its own, by default"
+
+
+async def test_the_home_shows_what_home_assistant_exposes_to_assist_by_room_and_device_and_follows_its_changes(
+    home: FakeHomeAssistant, started: Any, tmp_path: Path
+) -> None:
+    """As Assist's own static context: what is exposed only, by its name and aliases, in its room or its device's, the
+    entities of one device in one room as one device; without a state; sensitive only for what acts. A registry change
+    (an entity exposed) is followed live."""
+    home.floors = [{"floor_id": "ground", "name": "Ground floor", "aliases": [], "level": 0, "icon": None}]
+    home.areas[1]["floor_id"] = "ground"
+    home.devices = [
+        device("washer", "kitchen", "Washing Machine"),
+        device("tv", "living_room", "TV"),
+        device("relay", "kitchen", "Dual relay"),
+    ]
+    home.expose("sensor.washing_machine_phase", "rinse", device_id="washer", friendly_name="Washing Machine Phase")
+    home.expose(
+        "binary_sensor.washing_machine_door_lock", "on", device_id="washer", friendly_name="Washing Machine Door lock"
+    )
+    home.expose("switch.washing_machine", "off", device_id="washer", friendly_name="Washing Machine")
+    home.expose("media_player.tv", "off", device_id="tv", friendly_name="TV", device_class="tv")
+    home.expose("light.kitchen", "on", area_id="kitchen", friendly_name="Kitchen light")
+    home.expose("lock.front_door", "locked", friendly_name="Front door")
+    home.expose("light.relay_1", "off", device_id="relay", friendly_name="Pantry")
+    home.expose("light.relay_2", "off", device_id="relay", area_id="living_room", friendly_name="Garage door")
+    home.aliases["media_player.tv"] = [None, "Télé"]
+    home.sensor("sensor.washing_machine_energy", "2.1", device_class="energy", device_id="washer")  # not exposed
+    raw = {"url": home.url, "token": TOKEN}
+    built = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+    assert isinstance(built, HomeAssistant)
+    await started(built)
+
+    overview = built.overview()
+    rooms = {room.id: room for room in overview.rooms}
+    assert rooms["kitchen"].floor == "Ground floor" and rooms["living_room"].floor is None
+    assert rooms["kitchen"].devices == (
+        Device(id="light.kitchen", name="Kitchen light", kinds=("light",)),
+        Device(id="light.relay_1", name="Pantry", kinds=("light",)),
+        Device(
+            id="sensor.washing_machine_phase",
+            name="Washing Machine",
+            kinds=("sensor", "binary_sensor", "switch"),
+            parts=("Door lock", "Phase"),  # a door-lock sensor only reports: nothing in it to confirm
+        ),
+    )
+    assert rooms["living_room"].devices == (
+        Device(id="light.relay_2", name="Garage door", kinds=("light",), sensitive=True),  # its relay, set elsewhere
+        Device(id="media_player.tv", name="TV", kinds=("media_player",), aliases=("Télé",)),
+    )
+    assert overview.devices == (Device(id="lock.front_door", name="Front door", kinds=("lock",), sensitive=True),), (
+        "in no room"
+    )
+
+    home.expose("light.office", "off", area_id="office", friendly_name="Desk lamp")
+    await home.registry_updated("entity_registry_updated")  # then its first state, as Home Assistant does
+    await home.change("light.office", "off", friendly_name="Desk lamp")
+    lamp = (Device(id="light.office", name="Desk lamp", kinds=("light",)),)
+    await settle(lambda: any(r.id == "office" and r.devices == lamp for r in built.overview().rooms))
+    assert home.attempts == 1, "followed on the same connection"
+
+    home.available = False  # Home Assistant restarts: the house stays as last known, nobody placed in it
+    await home.drop()
+    await settle(lambda: not built.overview().connected)
+    gone = built.overview()
+    assert [r.devices for r in gone.rooms] == [r.devices for r in built.overview().rooms] and gone.devices
+    assert next(r for r in gone.rooms if r.id == "office").devices == lamp
+
+
+async def test_a_home_assistant_that_will_not_say_what_it_exposes_keeps_its_presence_without_a_map(
+    home: FakeHomeAssistant, started: Any
+) -> None:
+    """An older version (no floors) or a token without the right to read what is exposed or to follow the registries:
+    presence goes on."""
+    home.state("person.alice", "home")
+    home.expose("light.kitchen", "on", area_id="kitchen", friendly_name="Kitchen light")
+    home.refused |= {"config/floor_registry/list", "homeassistant/expose_entity/list"}
+    home.refused_events |= {"floor_registry_updated", "entity_registry_updated"}
+    source = await started(home.source(PresenceMapping(people={ALICE: "person.alice"})))
+    assert source.presence().of(ALICE) == Whereabouts(home=True)
+    overview = source.overview()
+    assert overview.connected and all(not r.devices and r.floor is None for r in overview.rooms)
+    assert home.attempts == 1
 
 
 async def test_a_home_assistant_that_does_not_answer_leaves_the_home_unavailable_and_says_how_it_is_tied(

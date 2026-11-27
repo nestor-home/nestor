@@ -13,6 +13,7 @@ import type {
   Connector,
   Executors,
   Home,
+  HomeDevice,
   Invitation,
   Memory,
   Messages,
@@ -36,6 +37,7 @@ import type {
   Voice,
 } from "@/api";
 import { scopeValues, shelfValues } from "@/api/schema.gen";
+import { nameKey } from "@/features/chat/mentions";
 import { isRecord } from "@/features/config/schema";
 import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
@@ -1420,6 +1422,9 @@ export function home(
     rooms: ROOMS.map(([id, name, occupied]) => ({
       id,
       name,
+      aliases: [],
+      floor: SHOWN[id]?.floor ?? null,
+      devices: SHOWN[id]?.devices ?? [],
       occupied,
       people: crowd.filter((p) => p.presence?.room === id).map((p) => ref(p.id)),
       satellites: satellites.filter((s) => s.room === id).map((s) => s.id),
@@ -1439,9 +1444,67 @@ export function home(
       presence: entity(p.id) && p.presence ? p.presence : { home: null, room: null, since: null },
     })),
     unplaced_sensors: ["binary_sensor.garage_motion"],
+    devices: [
+      shown({ name: fr("Home forecast", "Météo maison"), kinds: ["weather"] }),
+      shown({ name: fr("Shopping list", "Liste de courses"), kinds: ["todo"] }),
+    ],
     tools: homeTools(),
   };
 }
+
+type Shown = { name: string; kinds: string[]; parts?: string[]; aliases?: string[] };
+
+/** The configured rule: a device is sensitive when what acts in it has a sensitive domain or name. */
+function sensitive(name: string, kinds: readonly string[]): boolean {
+  const rule = isRecord(document().home) ? (document().home as Record<string, unknown>).sensitive : null;
+  if (!isRecord(rule)) return false;
+  const list = (key: string) => (Array.isArray(rule[key]) ? (rule[key] as string[]) : []);
+  const acting = kinds.filter((k) => k !== "sensor" && k !== "binary_sensor");
+  const lower = name.toLowerCase();
+  return (
+    acting.length > 0 &&
+    (acting.some((k) => list("domains").includes(k)) || list("names").some((n) => lower.includes(n)))
+  );
+}
+
+/** What one Home Assistant device shows the assistant: no state, as the agent gets it. */
+function shown({ name, kinds, parts = [], aliases = [] }: Shown): HomeDevice {
+  return { id: `${kinds[0]}.${nameKey(name)}`, name, kinds, parts, aliases, sensitive: sensitive(name, kinds) };
+}
+
+/** What Home Assistant exposes to Assist in each room, and on which floor the room is. */
+export const SHOWN: Record<string, { floor: string; devices: HomeDevice[] }> = {
+  [LIVING_ROOM]: {
+    floor: fr("Ground floor", "Rez-de-chaussée"),
+    devices: [
+      shown({ name: fr("Living room lamp", "Lampe du salon"), kinds: ["light"] }),
+      shown({ name: "TV", kinds: ["media_player"], aliases: [fr("Telly", "Télé")] }),
+    ],
+  },
+  [KITCHEN]: {
+    floor: fr("Ground floor", "Rez-de-chaussée"),
+    devices: [
+      shown({
+        name: fr("Dishwasher", "Lave-vaisselle"),
+        kinds: ["sensor", "binary_sensor"],
+        parts: [fr("Phase", "Phase"), fr("Time remaining", "Temps restant"), fr("Door", "Porte")],
+      }),
+      shown({ name: fr("Kitchen", "Cuisine"), kinds: ["light"] }),
+    ],
+  },
+  [OFFICE]: {
+    floor: fr("Ground floor", "Rez-de-chaussée"),
+    devices: [shown({ name: fr("Office radiator", "Radiateur du bureau"), kinds: ["climate"] })],
+  },
+  [HALLWAY]: {
+    floor: fr("Ground floor", "Rez-de-chaussée"),
+    devices: [shown({ name: fr("Front door", "Porte d'entrée"), kinds: ["lock"] })],
+  },
+  [BEDROOM]: {
+    floor: fr("Upstairs", "Étage"),
+    devices: [shown({ name: fr("Bedside lamp", "Lampe de chevet"), kinds: ["light"] })],
+  },
+};
 
 /** What Jules teaches Richie during the day. */
 export const HANDBALL = fr(

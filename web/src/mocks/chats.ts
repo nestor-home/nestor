@@ -4,7 +4,7 @@
  */
 import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
 import { find, NAMED, nameKey } from "@/features/chat/mentions";
-import { connections, minutes, ROOMS, ref, services, tasks } from "./fixtures";
+import { connections, minutes, ROOMS, ref, SHOWN, services, tasks } from "./fixtures";
 import { fr } from "./french";
 import { document, household, plugged } from "./instance";
 
@@ -275,6 +275,10 @@ function mentions(): Mention[] {
   return [
     ...household(doc).map((p) => mention("person", p.id, p.name)),
     ...ROOMS.map(([id, name]) => mention("room", id.replaceAll(" ", "-"), name)),
+    // what Home Assistant shows the assistant in those rooms
+    ...Object.values(SHOWN).flatMap(({ devices }) =>
+      devices.map((d) => mention("device", nameKey(d.name), d.name, { aliases: [d.name, ...d.aliases] })),
+    ),
     // his own tasks, those not put away, by their title
     ...tasks()
       .filter((task) => task.owner?.id === ME && task.state !== "archived")

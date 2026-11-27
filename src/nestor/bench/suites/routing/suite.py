@@ -10,6 +10,8 @@ Its dataset (`cases.jsonl`) starts with a header, then requests with the routes 
      "codex", "question": "Quelle marque ?"}], "expected": [["continue:dish"]]}
 
 A route is `tool:<name>`, `delegate:<executor>`, `continue:<task>` or `none` (no tool: it answers, or says it cannot).
+`target`, when given, is what the first call must name (its `name` argument, ignoring case): the TV as the home names
+it, not a word of the request it may not know.
 `tasks` are the person's tasks already there, ready or (with a `question`) waiting on them, each with its executor.
 `expected` is a list of tiers; the right routes are those of the first tier the variant can take (its tool is offered,
 its executor plugged), `none` when it can take none. So a weather question is right with the weather tool where there
@@ -20,15 +22,20 @@ Each request is one written turn of the household's first person, answered by th
 prompt layers, delegation, alerts over a mailbox and a dishwasher's webhook, messages, and the variant's `executors`
 and `tools`) with the variant's written model, for one round: what is measured is the first decision. No tool runs
 and no executor is reached.
+
+The knob `home` plugs the bench's home (`home.json`), as Home Assistant serves it: `tools`, its actions only
+(Assist's tools, by their names on its MCP server); `map`, its actions and the map of what it shows in each room;
+`none` (the default), no home.
 """
 
+import json
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite, Trial
@@ -40,20 +47,24 @@ from nestor.modules.cognition import TurnStatus
 from nestor.modules.cognition.delegation import TaskCreated, TurnEnded
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
-from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
+from nestor.modules.cognition.model import ToolSpec
+from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
 from nestor.modules.conversation import (
     Agent,
     AgentSettings,
     Attachments,
+    ContextProvider,
     FallbackSpoken,
     ModelChoice,
     Persona,
 )
+from nestor.modules.home import Device, HomeContext, Room
 from nestor.modules.household import Household
 from nestor.modules.initiative import AlertBook, AlertTools, MessageBook, MessageTools
 from nestor.modules.journal import Journal
 from nestor.modules.system.selfmap import AboutNestor
 from nestor.runtime.app import offered_tools
+from nestor.testing.home import StaticHome
 from nestor.testing.initiative import QueuedSource
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -70,12 +81,54 @@ SOURCES = (
 )
 
 
-class Routing(Suite[None, Knobs]):
-    """The variant's persona, written model, executors and tools say how it routes: no knobs of its own."""
+class RoutingKnobs(Knobs):
+    home: Literal["none", "tools", "map"] = "none"  # the bench's home: none, its actions, or its actions and its map
+
+
+def bench_home() -> StaticHome:
+    """The bench's home (`home.json`), as a Home Assistant exposes it to Assist: by room, with no state."""
+    data = json.loads((files(__package__ or __name__) / "home.json").read_text(encoding="utf-8"))
+    return StaticHome(
+        rooms=tuple(Room(r["id"], r["name"], devices=tuple(_device(d) for d in r["devices"])) for r in data["rooms"]),
+        devices=tuple(_device(d) for d in data["elsewhere"]),
+    )
+
+
+def _device(d: Mapping[str, Any]) -> Device:
+    return Device(
+        id=d["id"],
+        name=d["name"],
+        kinds=tuple(d["kinds"]),
+        parts=tuple(d.get("parts", ())),
+        sensitive=d.get("sensitive", False),
+    )
+
+
+_TARGET = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "area": {"type": "string"},
+        "domain": {"type": "array", "items": {"type": "string"}},
+    },
+}
+# Assist's tools, as Home Assistant's MCP server names them
+HOME_TOOLS = (
+    ("homeassistant__GetLiveContext", "Provides real-time information about the current state of devices.", Risk.READ),
+    ("intent__HassTurnOn", "Turns on/opens/presses a device or entity.", Risk.WRITE),
+    ("intent__HassTurnOff", "Turns off/closes a device or entity.", Risk.WRITE),
+    ("light__HassLightSet", "Sets the brightness or color of a light.", Risk.WRITE),
+    ("media_player__HassSetVolume", "Sets the volume percentage of a media player.", Risk.WRITE),
+    ("todo__HassListAddItem", "Add item to a todo list.", Risk.WRITE),
+)
+
+
+class Routing(Suite[None, RoutingKnobs]):
+    """The variant's persona, written model, executors and tools say how it routes; `home`, the home it has."""
 
     name = NAME
     description = "bench-routing-description"
-    knobs = Knobs
+    knobs = RoutingKnobs
     models = ("written",)
     components = True
 
@@ -96,7 +149,7 @@ class Routing(Suite[None, Knobs]):
             cases.append(Case(id=str(record["case"]), data=record))
         return Dataset(version=records[0]["version"], cases=tuple(cases), shared=None)
 
-    async def run(self, case: Case, shared: None, trial: Trial[Knobs]) -> Mapping[str, Any]:
+    async def run(self, case: Case, shared: None, trial: Trial[RoutingKnobs]) -> Mapping[str, Any]:
         agent, tasks = _agent(trial)
         person = agent.household.people[0]
         seeded = [await _seed(agent.journal, task, person.id) for task in case.data.get("tasks", [])]
@@ -118,8 +171,18 @@ class Routing(Suite[None, Knobs]):
         events.close()
         calls = [event async for event in events]
         failed = any(isinstance(e, FallbackSpoken) for e in calls)
-        routes = [_route(e) for e in calls if isinstance(e, ToolCalled)]
-        return {"route": routes[0] if routes else NONE, "calls": routes, "right": right, "said": said, "failed": failed}
+        called = [e for e in calls if isinstance(e, ToolCalled)]
+        routes = [_route(e) for e in called]
+        target, named = case.data.get("target"), str(called[0].arguments.get("name", "")) if called else None
+        missed = bool(target) and named is not None and named.casefold() != str(target).casefold()
+        return {
+            "route": routes[0] if routes else NONE,
+            "calls": routes,
+            "right": right,
+            "named": named if missed else None,  # what it named instead of the target
+            "said": said,
+            "failed": failed,
+        }
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
         cases = {c.id: c for c in dataset.cases}
@@ -132,7 +195,7 @@ class Routing(Suite[None, Knobs]):
             failed += bool(output["failed"])
             expected = _kind(output["right"][0])
             counted[expected] += 1
-            if output["route"] in output["right"]:
+            if output["route"] in output["right"] and output.get("named") is None:
                 right += 1
                 continue
             taken = _kind(output["route"])
@@ -144,7 +207,8 @@ class Routing(Suite[None, Knobs]):
                 group = "bench-routing-missed-list"
             else:
                 group = "bench-routing-other-list"
-            wrong[group, result.case, output["route"]] += 1
+            named = output.get("named")
+            wrong[group, result.case, f"{output['route']} ({named})" if named is not None else output["route"]] += 1
 
         def share(group: str, whole: float) -> float | None:
             part = sum(n for (g, _, _), n in wrong.items() if g == group)
@@ -253,7 +317,7 @@ async def _seed(journal: Journal, task: Mapping[str, Any], owner: PersonId) -> s
     return task_id
 
 
-def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
+def _agent(trial: Trial[RoutingKnobs]) -> tuple[Agent, TaskManager]:
     """The agent as the runtime builds it, with the variant's persona, written model, executors and tools, for one
     round, its tools never run; and its task manager, to start once the case's tasks are seeded."""
     config, localizer = trial.config, trial.localizer
@@ -268,6 +332,11 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
     about = [AboutNestor(trial.made_of)] if trial.made_of is not None else []  # never reads the docs: no tool runs
     providers: Sequence[ToolProvider] = (delegation, messages, alerts, *about, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
+    home: list[ContextProvider] = []
+    if trial.knobs.home != "none":
+        tools += [Tool(spec=ToolSpec(n, d, _TARGET), run=_dry, risk=r) for n, d, r in HOME_TOOLS]
+    if trial.knobs.home == "map":
+        home.append(HomeContext(bench_home(), household))
     persona = config.persona
     agent = Agent(
         models=ModelChoice.single(trial.model("written")),
@@ -276,7 +345,7 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
         journal=journal,
         household=household,
         toolbox=Toolbox(journal, tools=tools),
-        context=[delegation, messages, alerts, *about],
+        context=[*home, delegation, messages, alerts, *about],
         attachments=Attachments(MemoryBlobStore()),
         settings=AgentSettings(max_tool_rounds=1),
     )
