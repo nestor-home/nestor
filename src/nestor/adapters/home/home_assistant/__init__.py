@@ -21,11 +21,10 @@ from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.adapters.home.home_assistant.home import HomeAssistant
 from nestor.adapters.home.home_assistant.installation import PresenceMapping
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
-from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
-from nestor.adapters.tools.mcp.settings import McpSettings
+from nestor.adapters.tools.mcp.provider import McpToolProvider
+from nestor.adapters.tools.mcp.settings import McpSettings, SensitiveCalls
 from nestor.adapters.tools.mcp.settings import build as mcp_provider
 from nestor.core import ContractError, PersonId
-from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.modules.system.selfmap import Card, Need
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
 from nestor.runtime.editing import Suggest
@@ -42,9 +41,9 @@ class SensitiveTargets(BaseModel):
     device_classes: tuple[str, ...] = ("garage", "gate", "door")
     names: tuple[str, ...] = ("lock", "alarm", "garage", "gate", "door")
 
-    def rule(self) -> SensitiveWhen:
+    def calls(self) -> SensitiveCalls:
         targets = {"domain": self.domains, "device_class": self.device_classes, "name": self.names}
-        return SensitiveWhen(None, {key: values for key, values in targets.items() if values})
+        return SensitiveCalls(arguments={key: list(values) for key, values in targets.items() if values})
 
 
 class HomeAssistantSettings(AdapterSettings):
@@ -102,19 +101,18 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
 
 
 def _actions(settings: HomeAssistantSettings, name: str, services: Services) -> McpToolProvider | None:
-    """The server of the home's actions, the household's sensitive targets applying to whichever it is."""
-    rule = settings.sensitive.rule()
+    """The server of the home's actions, Home Assistant's own by default, the household's sensitive targets applying to
+    whichever it is."""
     if settings.mcp is False:
         return None
-    if settings.mcp is not None:
-        return mcp_provider(settings.mcp, name, services, sensitive=[rule])
-    return McpToolProvider(
-        f"{settings.url.rstrip('/')}/api/mcp",
-        name=name,
-        auth=BearerToken(settings.token.get_secret_value()),
+    server = settings.mcp or McpSettings(
+        url=f"{settings.url.rstrip('/')}/api/mcp",
+        token=settings.token,
         timeout_s=settings.tool_timeout_s,
-        sensitive=[rule],
         negotiation="legacy",  # Home Assistant's server answers the classic handshake only
+    )
+    return mcp_provider(
+        server.model_copy(update={"sensitive": [*server.sensitive, settings.sensitive.calls()]}), name, services
     )
 
 

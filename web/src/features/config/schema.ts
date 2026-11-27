@@ -49,8 +49,8 @@ export interface JsonSchema {
 /** One form of a setting that is one of several: `default` when unset, a constant (`false`), a nested model. */
 export interface Variant {
   key: string;
-  title?: string;
-  help?: string | null;
+  title: string;
+  help: string | null;
 }
 
 /**
@@ -219,16 +219,13 @@ export function controlOf(node: JsonSchema, root: JsonSchema, field = "", value?
   return "json";
 }
 
-/** The option of a setting that is one of several which its value takes: unset, a constant, or an object. */
+/** The option of a setting that is one of several which its value takes: unset, a constant, or an object; -1 for
+ * none of them. */
 export function variantOf(node: JsonSchema, root: JsonSchema, value: unknown): number {
   const options = (node.anyOf ?? []).map((o) => deref(o, root));
-  return options.findIndex((o) =>
-    value === undefined || value === null
-      ? o.type === "null"
-      : o.const !== undefined
-        ? o.const === value
-        : isRecord(value) && o.type !== "null",
-  );
+  if (value === undefined || value === null) return options.findIndex((o) => o.type === "null");
+  if (!isRecord(value)) return options.findIndex((o) => o.const === value);
+  return options.findIndex((o) => o.type !== "null" && o.const === undefined);
 }
 
 /** The value a setting takes when a person picks one of its options: unset, the constant, or the object it has. */

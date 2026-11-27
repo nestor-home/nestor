@@ -633,7 +633,7 @@ async def test_a_home_assistant_that_does_not_answer_leaves_the_home_unavailable
 def test_by_default_locks_the_alarm_and_doors_need_a_go_ahead_whatever_the_tool_not_lights(
     arguments: dict[str, Any], sensitive: bool
 ) -> None:
-    rule = HomeAssistantSettings(url="http://ha.local:8123", token=TOKEN).sensitive.rule()
+    rule = HomeAssistantSettings(url="http://ha.local:8123", token=TOKEN).sensitive.calls().rule()
     assert rule.applies_to("intent__HassTurnOff", Risk.WRITE) and rule.applies_to("light__HassLightSet", Risk.WRITE)
     assert not rule.applies_to("homeassistant__GetLiveContext", Risk.READ), "a rule never makes a read sensitive"
     assert rule.matches(arguments) is sensitive
