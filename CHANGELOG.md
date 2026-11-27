@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.18.0](https://github.com/nestor-home/nestor/compare/v0.17.0...v0.18.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* one alert for watches and wake-ups, rung for a written reason ([#247](https://github.com/nestor-home/nestor/issues/247))
+* memory filed by place, kept tidy every night, and episodes that miss nothing ([#250](https://github.com/nestor-home/nestor/issues/250))
+* nestor knows what it is made of, what it could use and where it is documented ([#246](https://github.com/nestor-home/nestor/issues/246))
+* durable tasks, a thread shared by the person, Nestor and the executor ([#235](https://github.com/nestor-home/nestor/issues/235))
+* what every call to a model costs, on whose behalf and why, and the admin's costs page ([#220](https://github.com/nestor-home/nestor/issues/220))
+
+### Features
+
+* a map of the house for the agent, sensitive actions confirmed by the person, replies stop with their reader ([#259](https://github.com/nestor-home/nestor/issues/259)) ([8965261](https://github.com/nestor-home/nestor/commit/8965261fd6277a3a8ba78900b8df5627ca734d18))
+* durable tasks, a thread shared by the person, Nestor and the executor ([#235](https://github.com/nestor-home/nestor/issues/235)) ([02080e1](https://github.com/nestor-home/nestor/commit/02080e1cc458fafdd0244f2708e2087fd593c750))
+* memory filed by place, kept tidy every night, and episodes that miss nothing ([#250](https://github.com/nestor-home/nestor/issues/250)) ([eeeda2b](https://github.com/nestor-home/nestor/commit/eeeda2b8d1e6faec0000fec783bd2e89894b3534))
+* nestor knows what it is made of, what it could use and where it is documented ([#246](https://github.com/nestor-home/nestor/issues/246)) ([04be48c](https://github.com/nestor-home/nestor/commit/04be48cd81c784fa2bf980a8435ee444a1701655))
+* one alert for watches and wake-ups, rung for a written reason ([#247](https://github.com/nestor-home/nestor/issues/247)) ([eacb522](https://github.com/nestor-home/nestor/commit/eacb522a2be44d60c8941cd853afadf88b63d635))
+* the home's actions come from any MCP server, or none ([#255](https://github.com/nestor-home/nestor/issues/255)) ([83d4c70](https://github.com/nestor-home/nestor/commit/83d4c70a0e3ac2b40b5f3c354179243454e64529))
+* what every call to a model costs, on whose behalf and why, and the admin's costs page ([#220](https://github.com/nestor-home/nestor/issues/220)) ([7aa0285](https://github.com/nestor-home/nestor/commit/7aa0285434b74c2b4c877e504722e0b2ac0100e9))
+
+
+### Bug Fixes
+
+* a household alert never reads someone's own mail ([#254](https://github.com/nestor-home/nestor/issues/254)) ([c12b021](https://github.com/nestor-home/nestor/commit/c12b0213566aa8db6a465e55b8203157ccad8648))
+* **deps:** update dependency @lobehub/icons-static-svg to v1.105.0 ([#219](https://github.com/nestor-home/nestor/issues/219)) ([88c12ed](https://github.com/nestor-home/nestor/commit/88c12edd35e1b997a32ce002e9905e39009018e2))
+* **deps:** update dependency @lobehub/icons-static-svg to v1.106.0 ([#224](https://github.com/nestor-home/nestor/issues/224)) ([a34fe26](https://github.com/nestor-home/nestor/commit/a34fe2663e3ae38dc0ae3dd797828238d53be826))
+* **deps:** update dependency @tanstack/react-query to v5.108.1 ([#209](https://github.com/nestor-home/nestor/issues/209)) ([7f62146](https://github.com/nestor-home/nestor/commit/7f62146b592d2623287880b1ad29be96c7b66515))
+* **deps:** update dependency @tanstack/react-query to v5.108.2 ([#213](https://github.com/nestor-home/nestor/issues/213)) ([71d3c30](https://github.com/nestor-home/nestor/commit/71d3c300dab9262f4cb341cee0b226bfacc2039c))
+* **deps:** update dependency @tanstack/react-query to v5.108.3 ([#223](https://github.com/nestor-home/nestor/issues/223)) ([1c01397](https://github.com/nestor-home/nestor/commit/1c013978b2d8141e5d4ce2a8296ef7d89c266380))
+* **deps:** update dependency @tanstack/react-query to v5.108.4 ([#237](https://github.com/nestor-home/nestor/issues/237)) ([7f5adf4](https://github.com/nestor-home/nestor/commit/7f5adf4ac48c10f45f4fba93369de1527423f16f))
+* **deps:** update dependency aiortc to v1.17.0 ([#251](https://github.com/nestor-home/nestor/issues/251)) ([2c507a6](https://github.com/nestor-home/nestor/commit/2c507a6bd3b1ddd496e7c07f63a05c6d7483d47c))
+* **deps:** update dependency lucide-react to v1.76.0 ([#206](https://github.com/nestor-home/nestor/issues/206)) ([90e797f](https://github.com/nestor-home/nestor/commit/90e797fa45575167f76a205f9cc40f0d541d305a))
+* **deps:** update dependency lucide-react to v1.77.0 ([#212](https://github.com/nestor-home/nestor/issues/212)) ([229749a](https://github.com/nestor-home/nestor/commit/229749a4791f56ec837b4e926a8be552fa18d118))
+* **deps:** update dependency lucide-react to v1.78.0 ([#225](https://github.com/nestor-home/nestor/issues/225)) ([5949b4a](https://github.com/nestor-home/nestor/commit/5949b4ab025c51c415e58d4b523f9e1aae8003e1))
+* **deps:** update dependency lucide-react to v1.80.0 ([#252](https://github.com/nestor-home/nestor/issues/252)) ([2688c65](https://github.com/nestor-home/nestor/commit/2688c650e5555f413daf603d1cdbdf50bc327934))
+* **deps:** update dependency lucide-react to v1.81.0 ([#258](https://github.com/nestor-home/nestor/issues/258)) ([868674e](https://github.com/nestor-home/nestor/commit/868674e473f24d24587f3ba7524d05868b0da799))
+* **deps:** update dependency pipecat-ai to v1.17.0 ([#217](https://github.com/nestor-home/nestor/issues/217)) ([85c6c32](https://github.com/nestor-home/nestor/commit/85c6c327497f1da1fa5d17c3fc70093ead1b686f))
+* **deps:** update dependency sherpa-onnx to v2.0.3 ([#215](https://github.com/nestor-home/nestor/issues/215)) ([57c259b](https://github.com/nestor-home/nestor/commit/57c259bfe4a2c57bb0966a34969c72b485046b5f))
+* **deps:** update dependency simple-icons to v16.38.1 ([#218](https://github.com/nestor-home/nestor/issues/218)) ([6c72894](https://github.com/nestor-home/nestor/commit/6c728946f40f8ee7dcf1feec7601402a24c93065))
+* **deps:** update dependency streamdown to v2.8.1 ([#249](https://github.com/nestor-home/nestor/issues/249)) ([987602a](https://github.com/nestor-home/nestor/commit/987602a11228599525dc41d58ae89cb96b02264f))
+* **deps:** update dependency tailwind-merge to v3.7.1 ([#211](https://github.com/nestor-home/nestor/issues/211)) ([170634f](https://github.com/nestor-home/nestor/commit/170634f5b9a650902f52b0722c12a7700d03f2df))
+* **deps:** update tiptap monorepo to v3.35.0 ([#214](https://github.com/nestor-home/nestor/issues/214)) ([6aa574f](https://github.com/nestor-home/nestor/commit/6aa574fa273050b07be8f4222eb2a42cf400c02e))
+* received files known by content and name, answers in voice while the person speaks by voice, outages told once ([#233](https://github.com/nestor-home/nestor/issues/233)) ([e564cb8](https://github.com/nestor-home/nestor/commit/e564cb89627b904084d8e0cddc84b2e646b3795d))
+
 ## [0.17.0](https://github.com/nestor-home/nestor/compare/v0.16.1...v0.17.0) (2026-11-19)
 
 
