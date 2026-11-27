@@ -31,10 +31,10 @@ class HomeContext(ContextProvider):
 
     async def context(self, turn: TurnContext) -> Sections:
         overview = self.home.overview()
-        if not overview.connected:
-            return {}
-        sections = {Layer.HOUSEHOLD: self._map(overview)}
-        if turn.speaker.private and (who := self._who(overview)):
+        if not overview.rooms and not overview.devices:
+            return {}  # never connected: nothing known of the house
+        sections = {Layer.HOUSEHOLD: self._map(overview)}  # the last known while it reconnects: the house is the same
+        if overview.connected and turn.speaker.private and (who := self._who(overview)):
             sections[Layer.TURN] = who
         return sections
 

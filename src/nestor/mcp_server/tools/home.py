@@ -15,4 +15,5 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
         await access.task(ctx, task, "home_state")
         presence, rooms = source.presence(), nestor.home.overview().rooms if nestor.home else ()
         people = {nestor.household.person(person).name: said for person, said in presence.told(rooms).items()}
-        return {"people": people, "occupied_rooms": sorted(presence.occupied_rooms)}
+        occupied = sorted(next((r.name for r in rooms if r.id == room), room) for room in presence.occupied_rooms)
+        return {"people": people, "occupied_rooms": occupied}

@@ -104,6 +104,7 @@ class FakeHomeAssistant:
         self.available = True  # False: connections are closed before the handshake
         self.silent = False  # True: connections are accepted but never answered
         self.refused: set[str] = set()  # commands answered with an error
+        self.refused_events: set[str] = set()  # event types it will not let a client subscribe to
         self.malformed: set[str] = set()  # commands answered with a payload that is not Home Assistant's
         self.before_snapshot: list[dict[str, Any]] = []  # events fired between `subscribe_events` and `get_states`
         self.chatter = False  # True: messages of unknown types are sent between replies
@@ -223,7 +224,7 @@ class FakeHomeAssistant:
         kind, message_id = message["type"], message["id"]
         if self.chatter:
             await connection.send(json.dumps({"type": "future_message", "payload": {}}))
-        if kind in self.refused:
+        if kind in self.refused or (kind == "subscribe_events" and message["event_type"] in self.refused_events):
             error = {"code": "unauthorized", "message": "Unauthorized"}
             await connection.send(json.dumps({"id": message_id, "type": "result", "success": False, "error": error}))
             return
@@ -696,14 +697,23 @@ async def test_the_home_shows_what_home_assistant_exposes_to_assist_by_room_and_
     await settle(lambda: any(r.id == "office" and r.devices == lamp for r in built.overview().rooms))
     assert home.attempts == 1, "followed on the same connection"
 
+    home.available = False  # Home Assistant restarts: the house stays as last known, nobody placed in it
+    await home.drop()
+    await settle(lambda: not built.overview().connected)
+    gone = built.overview()
+    assert [r.devices for r in gone.rooms] == [r.devices for r in built.overview().rooms] and gone.devices
+    assert next(r for r in gone.rooms if r.id == "office").devices == lamp
+
 
 async def test_a_home_assistant_that_will_not_say_what_it_exposes_keeps_its_presence_without_a_map(
     home: FakeHomeAssistant, started: Any
 ) -> None:
-    """An older version (no floors) or a token without the right to read what is exposed: presence goes on."""
+    """An older version (no floors) or a token without the right to read what is exposed or to follow the registries:
+    presence goes on."""
     home.state("person.alice", "home")
     home.expose("light.kitchen", "on", area_id="kitchen", friendly_name="Kitchen light")
     home.refused |= {"config/floor_registry/list", "homeassistant/expose_entity/list"}
+    home.refused_events |= {"floor_registry_updated", "entity_registry_updated"}
     source = await started(home.source(PresenceMapping(people={ALICE: "person.alice"})))
     assert source.presence().of(ALICE) == Whereabouts(home=True)
     overview = source.overview()

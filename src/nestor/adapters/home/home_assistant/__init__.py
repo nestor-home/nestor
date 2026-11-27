@@ -119,10 +119,14 @@ def build(settings: HomeAssistantSettings, name: str, services: Services) -> Hom
         sync_timeout_s=settings.sync_timeout_s,
         reconnect_min_s=settings.reconnect_min_s,
         reconnect_max_s=settings.reconnect_max_s,
-        covers=settings.sensitive.covers,
+        covers=settings.sensitive.covers if settings.mcp is not False else _nothing,  # no actions: nothing to confirm
     )
     presence.name = f"{name}-presence"
     return HomeAssistant(name, presence, _actions(settings, name, services))
+
+
+def _nothing(domain: str, device_class: str | None, name: str) -> bool:
+    return False
 
 
 def _actions(settings: HomeAssistantSettings, name: str, services: Services) -> McpToolProvider | None:

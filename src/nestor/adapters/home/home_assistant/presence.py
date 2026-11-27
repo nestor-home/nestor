@@ -3,7 +3,7 @@
 import asyncio
 import contextlib
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from pydantic import ValidationError
 
@@ -133,6 +133,7 @@ class HomeAssistantPresence(PresenceSource):
         )
         self._granularity = Granularity.HOME
         self._installation: Installation | None = None
+        self._last: Installation | None = None  # the last one connected: its rooms and devices, while it reconnects
         self._task: asyncio.Task[None] | None = None
         self._availability = Availability(logger, lambda: self.name, "presence unknown until it answers")
 
@@ -151,11 +152,20 @@ class HomeAssistantPresence(PresenceSource):
         return None if self._installation is not None else Message.of("health-home-assistant-disconnected")
 
     def overview(self) -> HomeOverview:
-        """What the live view shows of the installation; disconnected, only how the household is tied to it."""
+        """What the live view shows of the installation; disconnected, how the household is tied to it and the rooms
+        and devices last known (Home Assistant restarting does not empty the house), nobody placed in them."""
         installation = self._installation
         people, trackers = dict(self._mapping.people), dict(self._mapping.rooms)
         if installation is None:
-            return HomeOverview(connected=False, granularity=self._granularity, people=people, trackers=trackers)
+            last = self._last
+            return HomeOverview(
+                connected=False,
+                granularity=self._granularity,
+                rooms=tuple(replace(room, occupied=None) for room in last.rooms()) if last else (),
+                devices=last.devices() if last else (),
+                people=people,
+                trackers=trackers,
+            )
         return HomeOverview(
             connected=True,
             granularity=installation.granularity,
@@ -208,7 +218,7 @@ class HomeAssistantPresence(PresenceSource):
                     raise
         except TimeoutError:
             raise SessionLost(f"no answer within {self._sync_timeout_s}s") from None
-        self._installation, self._granularity = installation, installation.granularity
+        self._installation, self._last, self._granularity = installation, installation, installation.granularity
         if unplaced := installation.unplaced_sensors:
             logger.warning("%s: occupancy sensors without an area, ignored: %s", self.name, ", ".join(unplaced))
         if not self._availability.back(f"presence granularity {self._granularity}"):
@@ -216,8 +226,9 @@ class HomeAssistantPresence(PresenceSource):
         return _Live(session, installation)
 
     async def _sync(self, session: HomeAssistantSession) -> Installation:
-        for kind in (*sorted(REGISTRY_UPDATED), STATE_CHANGED):  # before reading, so no change falls in between
-            await session.subscribe(kind)
+        await session.subscribe(STATE_CHANGED)  # before reading, so no change falls in between
+        for kind in sorted(REGISTRY_UPDATED):  # only for the map: a token or a version that refuses one goes without
+            await session.ask("subscribe_events", event_type=kind)
         registries = await _registries(session)
         states = parse(STATES, await session.command("get_states"), "states")
         return Installation(self._mapping, registries, states=states, covers=self._covers)
