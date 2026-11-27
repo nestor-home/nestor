@@ -23,11 +23,12 @@ prompt layers, delegation, alerts over a mailbox and a dishwasher's webhook, mes
 and `tools`) with the variant's written model, for one round: what is measured is the first decision. No tool runs
 and no executor is reached.
 
-The knob `home` plugs a home of the bench, as Home Assistant serves it: `tools`, its actions only (Assist's tools,
-by their names on its MCP server); `map`, its actions and the map of what it shows in each room; `none` (the default),
-no home.
+The knob `home` plugs the bench's home (`home.json`), as Home Assistant serves it: `tools`, its actions only
+(Assist's tools, by their names on its MCP server); `map`, its actions and the map of what it shows in each room;
+`none` (the default), no home.
 """
 
+import json
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -84,51 +85,25 @@ class RoutingKnobs(Knobs):
     home: Literal["none", "tools", "map"] = "none"  # the bench's home: none, its actions, or its actions and its map
 
 
-# the bench's home, as a Home Assistant exposes it to Assist: by room, with no state
-HOME_ROOMS = (
-    Room(
-        "salon",
-        "Salon",
-        devices=(
-            Device(id="x.donut", name="Donut", kinds=("switch",)),
-            Device(id="x.homepod_mini", name="HomePod Mini", kinds=("media_player",)),
-            Device(id="x.salon", name="Salon", kinds=("light",)),
-            Device(id="x.tv_lg_c6", name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",)),
-        ),
-    ),
-    Room(
-        "cuisine",
-        "Cuisine",
-        devices=(
-            Device(id="x.cuisine", name="Cuisine", kinds=("light",)),
-            Device(
-                id="x.lave_linge",
-                name="Lave Linge",
-                kinds=("sensor", "binary_sensor", "switch"),
-                parts=("Door lock", "Phase", "Program", "Time remaining", "Washing machine"),
-                sensitive=True,
-            ),
-            Device(
-                id="x.lave_vaisselle",
-                name="Lave-vaisselle",
-                kinds=("sensor", "binary_sensor"),
-                parts=("état", "phase du cycle", "porte", "temps restant"),
-            ),
-            Device(id="x.porte_du_r_frig_rateur", name="Porte du réfrigérateur", kinds=("binary_sensor",)),
-        ),
-    ),
-    Room("chambre", "Chambre", devices=(Device(id="x.chambre", name="Chambre", kinds=("light",)),)),
-    Room(
-        "salle-de-bain",
-        "Salle de bain",
-        devices=(Device(id="x.salle_de_bain", name="Salle de bain", kinds=("light",)),),
-    ),
-)
-HOME_ELSEWHERE = (
-    Device(id="x.forecast_maison", name="Forecast Maison", kinds=("weather",)),
-    Device(id="x.shopping_list", name="Shopping list", kinds=("todo",)),
-    Device(id="x.todo_mathis", name="Todo Mathis", kinds=("todo",)),
-)
+def bench_home() -> StaticHome:
+    """The bench's home (`home.json`), as a Home Assistant exposes it to Assist: by room, with no state."""
+    data = json.loads((files(__package__ or __name__) / "home.json").read_text(encoding="utf-8"))
+    return StaticHome(
+        rooms=tuple(Room(r["id"], r["name"], devices=tuple(_device(d) for d in r["devices"])) for r in data["rooms"]),
+        devices=tuple(_device(d) for d in data["elsewhere"]),
+    )
+
+
+def _device(d: Mapping[str, Any]) -> Device:
+    return Device(
+        id=d["id"],
+        name=d["name"],
+        kinds=tuple(d["kinds"]),
+        parts=tuple(d.get("parts", ())),
+        sensitive=d.get("sensitive", False),
+    )
+
+
 _TARGET = {
     "type": "object",
     "properties": {
@@ -361,7 +336,7 @@ def _agent(trial: Trial[RoutingKnobs]) -> tuple[Agent, TaskManager]:
     if trial.knobs.home != "none":
         tools += [Tool(spec=ToolSpec(n, d, _TARGET), run=_dry, risk=r) for n, d, r in HOME_TOOLS]
     if trial.knobs.home == "map":
-        home.append(HomeContext(StaticHome(rooms=HOME_ROOMS, devices=HOME_ELSEWHERE), household))
+        home.append(HomeContext(bench_home(), household))
     persona = config.persona
     agent = Agent(
         models=ModelChoice.single(trial.model("written")),

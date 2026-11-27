@@ -1,0 +1,142 @@
+{
+  "rooms": [
+    {
+      "id": "salon",
+      "name": "Salon",
+      "devices": [
+        {
+          "id": "x.donut",
+          "name": "Donut",
+          "kinds": [
+            "switch"
+          ]
+        },
+        {
+          "id": "x.homepod_mini",
+          "name": "HomePod Mini",
+          "kinds": [
+            "media_player"
+          ]
+        },
+        {
+          "id": "x.salon",
+          "name": "Salon",
+          "kinds": [
+            "light"
+          ]
+        },
+        {
+          "id": "x.tv_lg_c6",
+          "name": "TV LG C6",
+          "kinds": [
+            "media_player",
+            "switch"
+          ],
+          "parts": [
+            "Écran TV LG C6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cuisine",
+      "name": "Cuisine",
+      "devices": [
+        {
+          "id": "x.cuisine",
+          "name": "Cuisine",
+          "kinds": [
+            "light"
+          ]
+        },
+        {
+          "id": "x.lave_linge",
+          "name": "Lave Linge",
+          "kinds": [
+            "sensor",
+            "binary_sensor",
+            "switch"
+          ],
+          "parts": [
+            "Door lock",
+            "Phase",
+            "Program",
+            "Time remaining",
+            "Washing machine"
+          ],
+          "sensitive": true
+        },
+        {
+          "id": "x.lave_vaisselle",
+          "name": "Lave-vaisselle",
+          "kinds": [
+            "sensor",
+            "binary_sensor"
+          ],
+          "parts": [
+            "état",
+            "phase du cycle",
+            "porte",
+            "temps restant"
+          ]
+        },
+        {
+          "id": "x.porte_du_r_frig_rateur",
+          "name": "Porte du réfrigérateur",
+          "kinds": [
+            "binary_sensor"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chambre",
+      "name": "Chambre",
+      "devices": [
+        {
+          "id": "x.chambre",
+          "name": "Chambre",
+          "kinds": [
+            "light"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "salle-de-bain",
+      "name": "Salle de bain",
+      "devices": [
+        {
+          "id": "x.salle_de_bain",
+          "name": "Salle de bain",
+          "kinds": [
+            "light"
+          ]
+        }
+      ]
+    }
+  ],
+  "elsewhere": [
+    {
+      "id": "x.forecast_maison",
+      "name": "Forecast Maison",
+      "kinds": [
+        "weather"
+      ]
+    },
+    {
+      "id": "x.shopping_list",
+      "name": "Shopping list",
+      "kinds": [
+        "todo"
+      ]
+    },
+    {
+      "id": "x.todo_mathis",
+      "name": "Todo Mathis",
+      "kinds": [
+        "todo"
+      ]
+    }
+  ]
+}
