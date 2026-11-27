@@ -4,7 +4,18 @@
  * the home renders it.
  */
 
-import type { Alert, Component, Connection, Home, JournalItem, Person, PersonRef, Satellite, Task } from "@/api";
+import type {
+  Alert,
+  Component,
+  Connection,
+  Home,
+  HomeDevice,
+  JournalItem,
+  Person,
+  PersonRef,
+  Satellite,
+  Task,
+} from "@/api";
 import type { FigureState } from "@/components/agent-figure";
 import { is } from "@/lib/events";
 
@@ -20,6 +31,7 @@ export interface RoomNode {
   satellites: Satellite[];
   occupied: boolean | null; // what the home system's sensors say; null: no sensor, or no home system
   active: number; // events in this room today
+  things: HomeDevice[]; // what the home system shows the assistant here
 }
 
 export interface MindInput {
@@ -34,7 +46,16 @@ export interface MindInput {
 export function roomsOf({ people, satellites, items, home }: MindInput, limit = 6): RoomNode[] {
   const rooms = new Map<string, RoomNode>();
   const node = (key: string, room: string, journal: string | null): RoomNode => {
-    const found = rooms.get(key) ?? { key, room, journal, people: [], satellites: [], occupied: null, active: 0 };
+    const found = rooms.get(key) ?? {
+      key,
+      room,
+      journal,
+      people: [],
+      satellites: [],
+      occupied: null,
+      active: 0,
+      things: [],
+    };
     rooms.set(key, found);
     return found;
   };
@@ -46,6 +67,7 @@ export function roomsOf({ people, satellites, items, home }: MindInput, limit = 
     const found = node(room ? `room:${room}` : `area:${area.id}`, area.name, room);
     named.set(area.name.toLowerCase(), found);
     found.occupied = area.occupied;
+    found.things = area.devices;
     found.people = people.filter((p) => area.people.some((q) => q.id === p.id));
     for (const s of here) placed.set(s.room, found);
   }

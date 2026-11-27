@@ -2752,6 +2752,22 @@ export interface components {
             /** Size */
             size: number;
         };
+        /**
+         * HomeDeviceOut
+         * @description Something the home shows its assistant, as the agent knows it (no state).
+         */
+        HomeDeviceOut: {
+            /** Name */
+            name: string;
+            /** Kinds */
+            kinds: string[];
+            /** Parts */
+            parts: string[];
+            /** Aliases */
+            aliases: string[];
+            /** Sensitive */
+            sensitive: boolean;
+        };
         /** HomeOut */
         HomeOut: {
             component: components["schemas"]["ComponentOut"];
@@ -2760,6 +2776,8 @@ export interface components {
             granularity: components["schemas"]["Granularity"];
             /** Rooms */
             rooms: components["schemas"]["RoomOut"][];
+            /** Devices */
+            devices: components["schemas"]["HomeDeviceOut"][];
             /** Residents */
             residents: components["schemas"]["ResidentOut"][];
             /** People */
@@ -3209,7 +3227,7 @@ export interface components {
          * @description What a message can name with `@`.
          * @enum {string}
          */
-        MentionKind: "person" | "room" | "executor" | "connection" | "task";
+        MentionKind: "person" | "room" | "device" | "executor" | "connection" | "task";
         /**
          * MentionOut
          * @description What a message can name with `@handle`: someone of the household, a room, an executor, a connected account.
@@ -3736,12 +3754,18 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Aliases */
+            aliases: string[];
+            /** Floor */
+            floor: string | null;
             /** Occupied */
             occupied: boolean | null;
             /** People */
             people: components["schemas"]["PersonRef"][];
             /** Satellites */
             satellites: string[];
+            /** Devices */
+            devices: components["schemas"]["HomeDeviceOut"][];
         };
         /** SatelliteOut */
         SatelliteOut: {
@@ -14764,7 +14788,7 @@ export const intervalValues: ReadonlyArray<FlattenedDeepRequired<components>["sc
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
 export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "alert", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "usage", "other"];
 export const mediumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Medium"]> = ["spoken", "written"];
-export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection", "task"];
+export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "device", "executor", "connection", "task"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
 export const nestorToolsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NestorTools"]> = ["none", "passed", "configured"];
 export const offValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Off"]> = ["switched_off", "quiet_hours", "someone_home"];

@@ -123,6 +123,7 @@ class MentionKind(StrEnum):
 
     PERSON = "person"  # someone of the household
     ROOM = "room"  # a room of the home
+    DEVICE = "device"  # something of the home, as its system names it
     EXECUTOR = "executor"  # an executor, to hand work to
     CONNECTION = "connection"  # a connected account (a mailbox, a calendar), to use
     TASK = "task"  # a task of whoever writes, to direct

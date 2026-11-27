@@ -58,13 +58,33 @@ class Presence:
         return tuple(person for person, whereabouts in self.people.items() if whereabouts.room == room)
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Device:
+    """Something of the home its system shows its assistant, as it names it: what the agent may speak of or act on,
+    without its state (read with the home's tools when it matters).
+
+    `kinds`: what it is, in the home system's words (Home Assistant's domains: `light`, `media_player`…). `parts`:
+    what else it shows, by name, its own name left out when theirs starts with it (a washing machine's `Phase`,
+    `Time remaining`). `sensitive`: acting on it waits for the person's go-ahead."""
+
+    name: str
+    kinds: tuple[str, ...]
+    parts: tuple[str, ...] = ()
+    aliases: tuple[str, ...] = ()
+    sensitive: bool = False
+
+
 @dataclass(frozen=True, slots=True)
 class Room:
-    """An area of the home system. `occupied` is `None` when nothing in it tells (no occupancy sensor)."""
+    """An area of the home system. `occupied` is `None` when nothing in it tells (no occupancy sensor); `floor`, the
+    floor it is on when the home has floors; `devices`, what the home shows its assistant in it."""
 
     id: str
     name: str
     occupied: bool | None = None
+    aliases: tuple[str, ...] = ()
+    floor: str | None = None
+    devices: tuple[Device, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,8 +98,9 @@ class Resident:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class HomeOverview:
-    """What the home system can show of itself: whether it answers, how finely it places people, its rooms, who it
-    knows, how the household is tied to it, and what it could not use. Served from the live view, never fetched."""
+    """What the home system can show of itself: whether it answers, how finely it places people, its rooms and what is
+    in them, who it knows, how the household is tied to it, and what it could not use. Served from the live view, never
+    fetched."""
 
     connected: bool
     granularity: Granularity
@@ -88,3 +109,4 @@ class HomeOverview:
     people: Mapping[PersonId, str] = field(default_factory=dict)  # household person → resident entity
     trackers: Mapping[PersonId, str] = field(default_factory=dict)  # household person → room tracker entity
     unplaced_sensors: tuple[str, ...] = ()  # occupancy sensors it ignores: no room in the home system
+    devices: tuple[Device, ...] = ()  # what it shows its assistant outside any room (the weather, shared lists)

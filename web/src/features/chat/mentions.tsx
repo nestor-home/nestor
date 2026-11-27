@@ -1,9 +1,9 @@
 /**
- * `@name` in a message: someone of the household, a room, a task, an executor, a connected account. The server reads the
+ * `@name` in a message: someone of the household, a room, a device, a task, an executor, a connected account. The server reads the
  * names in the text, whatever the channel, loosely (case and accents aside); here they are offered as people type and
  * shown as tags: a person's initial, a room's house, a vendor's mark, with its name.
  */
-import { House, Workflow } from "lucide-react";
+import { House, Plug, Workflow } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Mention } from "@/api";
 import { useT } from "@/i18n";
@@ -11,7 +11,7 @@ import { BrandMark, brandColour, brandOf } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 
 export const NAMED = /(?<![\w@])(@[\p{L}\p{N}_-]*[\p{L}\p{N}_])/gu;
-const ORDER: Mention["kind"][] = ["person", "room", "task", "executor", "connection"];
+const ORDER: Mention["kind"][] = ["person", "room", "device", "task", "executor", "connection"];
 
 /** A name as the server compares it: no case, no accents, words joined by hyphens (`Salle à manger` → `salle-a-manger`). */
 export function nameKey(name: string): string {
@@ -104,11 +104,12 @@ export function MentionList({
   );
 }
 
-/** The sign of a mention: a vendor's mark, a room's house, a person's initial. */
+/** The sign of a mention: a vendor's mark, a room's house, a device's plug, a person's initial. */
 function MentionMark({ mention }: { mention: Mention }) {
   const brand = vendorOf(mention);
   if (brand) return <BrandMark brand={brand} className="size-3.5" label={false} />;
   if (mention.kind === "room") return <House className="size-3.5 text-ink-muted" aria-hidden="true" />;
+  if (mention.kind === "device") return <Plug className="size-3.5 text-ink-muted" aria-hidden="true" />;
   if (mention.kind === "task") return <Workflow className="size-3.5 text-kind-task" aria-hidden="true" />;
   return (
     <span className="font-serif text-meta leading-none text-ink" aria-hidden="true">

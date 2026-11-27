@@ -16,19 +16,59 @@ from nestor.adapters.home.home_assistant.client import (
 )
 from nestor.adapters.home.home_assistant.installation import (
     AREAS,
+    ASSISTANT,
     DEVICES,
     ENTITIES,
+    ENTRIES,
+    EXPOSURE,
+    FLOORS,
     STATES,
     Installation,
     PresenceMapping,
+    Registries,
     StateChanged,
     parse,
 )
+from nestor.adapters.home.home_assistant.layout import Covers
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.home import Granularity, HomeOverview, Presence, PresenceSource, Whereabouts
 
 logger = logging.getLogger(__name__)
+
+STATE_CHANGED = "state_changed"
+# what changes the rooms, what sits in them or what is shown to the assistant (an exposure is an entity's option)
+REGISTRY_UPDATED = frozenset(
+    {"floor_registry_updated", "area_registry_updated", "device_registry_updated", "entity_registry_updated"}
+)
+
+
+def _nobody(domain: str, device_class: str | None, name: str) -> bool:
+    return False
+
+
+async def _registries(session: HomeAssistantSession) -> Registries:
+    """Every registry, what is exposed to Assist and the whole entries of what is."""
+    floors = parse(FLOORS, await session.command("config/floor_registry/list"), "floor registry")
+    areas = parse(AREAS, await session.command("config/area_registry/list"), "area registry")
+    devices = parse(DEVICES, await session.command("config/device_registry/list"), "device registry")
+    entities = parse(ENTITIES, await session.command("config/entity_registry/list"), "entity registry")
+    exposed = parse(EXPOSURE, await session.command("homeassistant/expose_entity/list"), "exposed entities").to(
+        ASSISTANT
+    )
+    entries = (
+        parse(ENTRIES, await session.command("config/entity_registry/get_entries", entity_ids=exposed), "entries")
+        if exposed
+        else {}
+    )
+    return Registries(
+        floors=tuple(floors),
+        areas=tuple(areas),
+        devices=tuple(devices),
+        entities=tuple(entities),
+        exposed=tuple(exposed),
+        entries=entries,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,8 +79,16 @@ class _Live:
     installation: Installation
 
     async def follow(self) -> None:
-        """Applies `state_changed` events until the session breaks (`SessionLost`)."""
+        """Applies `state_changed` events, and reads the registries again when one changes, until the session breaks
+        (`SessionLost`)."""
         async for event in self.session.events():
+            kind = event.get("event_type")
+            if kind in REGISTRY_UPDATED:  # a burst of them (an integration reloading) is read once
+                self.installation.relist(await _registries(self.session))
+                self.session.drop_queued(REGISTRY_UPDATED)
+                continue
+            if kind != STATE_CHANGED:
+                continue
             try:
                 change = StateChanged.model_validate(event)
             except ValidationError:
@@ -60,8 +108,9 @@ class HomeAssistantPresence(PresenceSource):
     delay from `reconnect_min_s` up to `reconnect_max_s`; a token refused on reconnection stops the
     retries (Home Assistant may ban an address after repeated failed logins).
 
-    Registries are read once per connection: an area or entity added later is seen after the next
-    reconnection.
+    Registries are read at each connection and again whenever one of them changes (a room renamed, a device moved,
+    an entity exposed to Assist or no longer): the rooms and what the installation shows its assistant stay current.
+    `covers`: whether acting on an entity needs the person's go-ahead, to mark the devices that do.
     """
 
     name = "home-assistant"
@@ -76,8 +125,9 @@ class HomeAssistantPresence(PresenceSource):
         sync_timeout_s: float = 30.0,
         reconnect_min_s: float = 1.0,
         reconnect_max_s: float = 60.0,
+        covers: Covers = _nobody,
     ) -> None:
-        self._url, self._token, self._mapping = websocket_url(base_url), token, mapping
+        self._url, self._token, self._mapping, self._covers = websocket_url(base_url), token, mapping, covers
         self._sync_timeout_s, self._reconnect_min_s, self._reconnect_max_s = (
             sync_timeout_s,
             reconnect_min_s,
@@ -113,6 +163,7 @@ class HomeAssistantPresence(PresenceSource):
             people=people,
             trackers=trackers,
             unplaced_sensors=tuple(installation.unplaced_sensors),
+            devices=installation.devices(),
         )
 
     def room_of(self, label: str) -> str | None:
@@ -164,12 +215,11 @@ class HomeAssistantPresence(PresenceSource):
         return _Live(session, installation)
 
     async def _sync(self, session: HomeAssistantSession) -> Installation:
-        areas = parse(AREAS, await session.command("config/area_registry/list"), "area registry")
-        devices = parse(DEVICES, await session.command("config/device_registry/list"), "device registry")
-        entities = parse(ENTITIES, await session.command("config/entity_registry/list"), "entity registry")
-        await session.subscribe("state_changed")  # before the snapshot, so no change falls in between
+        for kind in (*sorted(REGISTRY_UPDATED), STATE_CHANGED):  # before reading, so no change falls in between
+            await session.subscribe(kind)
+        registries = await _registries(session)
         states = parse(STATES, await session.command("get_states"), "states")
-        return Installation(self._mapping, areas=areas, devices=devices, entities=entities, states=states)
+        return Installation(self._mapping, registries, states=states, covers=self._covers)
 
     async def _run(self, live: _Live | None) -> None:
         delay = self._reconnect_min_s

@@ -57,7 +57,7 @@ from nestor.modules.conversation import (
     RunningNotes,
     Speakers,
 )
-from nestor.modules.home import Home, PresenceSource, RoomMentions
+from nestor.modules.home import Home, HomeContext, HomeMentions, PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
@@ -376,6 +376,7 @@ class Nestor:
                 c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s, c.sends) for c in self.channels
             },
             context=[
+                *([HomeContext(self.home, self.household, self._satellites)] if self.home else []),
                 delegation,
                 memory,
                 alert_tools,
@@ -390,7 +391,7 @@ class Nestor:
             ],
             speakers=self.speakers,
             mentions=Mentions(
-                [message_tools, *([RoomMentions(self.home)] if self.home else []), delegation, *connector_tools]
+                [message_tools, *([HomeMentions(self.home)] if self.home else []), delegation, *connector_tools]
             ),
             attachments=Attachments(
                 self.blobs,
@@ -546,6 +547,10 @@ class Nestor:
             *([self.upkeep] if self.upkeep else []),
             *updates,
         ]
+
+    def _satellites(self) -> Iterable[tuple[str, str]]:
+        """Each paired satellite: the room it is in, as named at pairing, and its name."""
+        return ((s.room, s.name or s.model) for s in self.pairing.satellites())
 
     async def __aenter__(self) -> Self:
         try:

@@ -20,6 +20,10 @@ Each request is one written turn of the household's first person, answered by th
 prompt layers, delegation, alerts over a mailbox and a dishwasher's webhook, messages, and the variant's `executors`
 and `tools`) with the variant's written model, for one round: what is measured is the first decision. No tool runs
 and no executor is reached.
+
+The knob `home` plugs a home of the bench, as Home Assistant serves it: `tools`, its actions only (Assist's tools,
+by their names on its MCP server); `map`, its actions and the map of what it shows in each room; `none` (the default),
+no home.
 """
 
 from collections import Counter
@@ -28,7 +32,7 @@ from dataclasses import replace
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite, Trial
@@ -40,20 +44,24 @@ from nestor.modules.cognition import TurnStatus
 from nestor.modules.cognition.delegation import TaskCreated, TurnEnded
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
-from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
+from nestor.modules.cognition.model import ToolSpec
+from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
 from nestor.modules.conversation import (
     Agent,
     AgentSettings,
     Attachments,
+    ContextProvider,
     FallbackSpoken,
     ModelChoice,
     Persona,
 )
+from nestor.modules.home import Device, HomeContext, Room
 from nestor.modules.household import Household
 from nestor.modules.initiative import AlertBook, AlertTools, MessageBook, MessageTools
 from nestor.modules.journal import Journal
 from nestor.modules.system.selfmap import AboutNestor
 from nestor.runtime.app import offered_tools
+from nestor.testing.home import StaticHome
 from nestor.testing.initiative import QueuedSource
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -70,12 +78,74 @@ SOURCES = (
 )
 
 
-class Routing(Suite[None, Knobs]):
-    """The variant's persona, written model, executors and tools say how it routes: no knobs of its own."""
+class RoutingKnobs(Knobs):
+    home: Literal["none", "tools", "map"] = "none"  # the bench's home: none, its actions, or its actions and its map
+
+
+# the bench's home, as a Home Assistant exposes it to Assist: by room, with no state
+HOME_ROOMS = (
+    Room(
+        "salon",
+        "Salon",
+        devices=(
+            Device(name="Donut", kinds=("switch",)),
+            Device(name="HomePod Mini", kinds=("media_player",)),
+            Device(name="Salon", kinds=("light",)),
+            Device(name="TV LG C6", kinds=("media_player", "switch"), parts=("Écran TV LG C6",)),
+        ),
+    ),
+    Room(
+        "cuisine",
+        "Cuisine",
+        devices=(
+            Device(name="Cuisine", kinds=("light",)),
+            Device(
+                name="Lave Linge",
+                kinds=("sensor", "binary_sensor", "switch"),
+                parts=("Door lock", "Phase", "Program", "Time remaining", "Washing machine"),
+                sensitive=True,
+            ),
+            Device(
+                name="Lave-vaisselle",
+                kinds=("sensor", "binary_sensor"),
+                parts=("état", "phase du cycle", "porte", "temps restant"),
+            ),
+            Device(name="Porte du réfrigérateur", kinds=("binary_sensor",)),
+        ),
+    ),
+    Room("chambre", "Chambre", devices=(Device(name="Chambre", kinds=("light",)),)),
+    Room("salle-de-bain", "Salle de bain", devices=(Device(name="Salle de bain", kinds=("light",)),)),
+)
+HOME_ELSEWHERE = (
+    Device(name="Forecast Maison", kinds=("weather",)),
+    Device(name="Shopping list", kinds=("todo",)),
+    Device(name="Todo Mathis", kinds=("todo",)),
+)
+_TARGET = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "area": {"type": "string"},
+        "domain": {"type": "array", "items": {"type": "string"}},
+    },
+}
+# Assist's tools, as Home Assistant's MCP server names them
+HOME_TOOLS = (
+    ("homeassistant__GetLiveContext", "Provides real-time information about the current state of devices.", Risk.READ),
+    ("intent__HassTurnOn", "Turns on/opens/presses a device or entity.", Risk.WRITE),
+    ("intent__HassTurnOff", "Turns off/closes a device or entity.", Risk.WRITE),
+    ("light__HassLightSet", "Sets the brightness or color of a light.", Risk.WRITE),
+    ("media_player__HassSetVolume", "Sets the volume percentage of a media player.", Risk.WRITE),
+    ("todo__HassListAddItem", "Add item to a todo list.", Risk.WRITE),
+)
+
+
+class Routing(Suite[None, RoutingKnobs]):
+    """The variant's persona, written model, executors and tools say how it routes; `home`, the home it has."""
 
     name = NAME
     description = "bench-routing-description"
-    knobs = Knobs
+    knobs = RoutingKnobs
     models = ("written",)
     components = True
 
@@ -96,7 +166,7 @@ class Routing(Suite[None, Knobs]):
             cases.append(Case(id=str(record["case"]), data=record))
         return Dataset(version=records[0]["version"], cases=tuple(cases), shared=None)
 
-    async def run(self, case: Case, shared: None, trial: Trial[Knobs]) -> Mapping[str, Any]:
+    async def run(self, case: Case, shared: None, trial: Trial[RoutingKnobs]) -> Mapping[str, Any]:
         agent, tasks = _agent(trial)
         person = agent.household.people[0]
         seeded = [await _seed(agent.journal, task, person.id) for task in case.data.get("tasks", [])]
@@ -253,7 +323,7 @@ async def _seed(journal: Journal, task: Mapping[str, Any], owner: PersonId) -> s
     return task_id
 
 
-def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
+def _agent(trial: Trial[RoutingKnobs]) -> tuple[Agent, TaskManager]:
     """The agent as the runtime builds it, with the variant's persona, written model, executors and tools, for one
     round, its tools never run; and its task manager, to start once the case's tasks are seeded."""
     config, localizer = trial.config, trial.localizer
@@ -268,6 +338,11 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
     about = [AboutNestor(trial.made_of)] if trial.made_of is not None else []  # never reads the docs: no tool runs
     providers: Sequence[ToolProvider] = (delegation, messages, alerts, *about, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
+    home: list[ContextProvider] = []
+    if trial.knobs.home != "none":
+        tools += [Tool(spec=ToolSpec(n, d, _TARGET), run=_dry, risk=r) for n, d, r in HOME_TOOLS]
+    if trial.knobs.home == "map":
+        home.append(HomeContext(StaticHome(rooms=HOME_ROOMS, devices=HOME_ELSEWHERE), household))
     persona = config.persona
     agent = Agent(
         models=ModelChoice.single(trial.model("written")),
@@ -276,7 +351,7 @@ def _agent(trial: Trial[Knobs]) -> tuple[Agent, TaskManager]:
         journal=journal,
         household=household,
         toolbox=Toolbox(journal, tools=tools),
-        context=[delegation, messages, alerts, *about],
+        context=[*home, delegation, messages, alerts, *about],
         attachments=Attachments(MemoryBlobStore()),
         settings=AgentSettings(max_tool_rounds=1),
     )

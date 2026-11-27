@@ -67,6 +67,7 @@ export type ToolSettings = S["ConnectionSettingsIn"];
 // -- the home -------------------------------------------------------------------------------------
 
 export type Home = S["HomeOut"];
+export type HomeDevice = S["HomeDeviceOut"];
 export type Granularity = S["Granularity"];
 export type Suggest = S["Suggest"];
 

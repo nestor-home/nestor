@@ -6,9 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from nestor.bench import BenchError, CaseResult, Knobs, Trial
+from nestor.bench import BenchError, CaseResult, Trial
 from nestor.bench.runner import read_dataset
 from nestor.bench.suites.routing import suite
+from nestor.bench.suites.routing.suite import RoutingKnobs
 from nestor.bench.types import Case
 from nestor.bench.variants import load_variant
 from nestor.core import ProviderError
@@ -106,11 +107,15 @@ def config(tmp_path: Path) -> NestorConfig:
 
 
 def trial(
-    config: NestorConfig, model: ScriptedModel, executors: Sequence[ScriptedExecutor], tools: Sequence[ToolProvider]
-) -> Trial[Knobs]:
+    config: NestorConfig,
+    model: ScriptedModel,
+    executors: Sequence[ScriptedExecutor],
+    tools: Sequence[ToolProvider],
+    knobs: RoutingKnobs | None = None,
+) -> Trial[RoutingKnobs]:
     return Trial(
         variant="richie",
-        knobs=Knobs(),
+        knobs=knobs or RoutingKnobs(),
         config=config,
         models={"written": model},
         repetition=0,
@@ -152,6 +157,22 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
 
     alone = await suite.run(WEATHER, None, trial(config, ScriptedModel("Je ne peux pas le savoir."), [], []))
     assert (alone["route"], alone["right"], alone["said"]) == ("none", ["none"], "Je ne peux pas le savoir.")
+
+
+async def test_the_benchs_home_offers_assists_tools_and_with_its_map_says_what_is_in_each_room(
+    config: NestorConfig,
+) -> None:
+    tv = Case("r38", {"said": "Allume la télé", "expected": [["tool:intent__HassTurnOn"]]})
+    turned = ScriptedModel(ToolCall("c1", "intent__HassTurnOn", {"name": "TV LG C6"}))
+    mapped = await suite.run(tv, None, trial(config, turned, [], [], RoutingKnobs(home="map")))
+    looked = ScriptedModel(ToolCall("c1", "homeassistant__GetLiveContext", {}))
+    blind = await suite.run(tv, None, trial(config, looked, [], [], RoutingKnobs(home="tools")))
+    without = await suite.run(tv, None, trial(config, ScriptedModel("Je n'ai pas de télé."), [], []))
+
+    assert (mapped["route"], mapped["right"]) == ("tool:intent__HassTurnOn", ["tool:intent__HassTurnOn"])
+    assert "TV LG C6 (media_player, switch)" in turned.requests[0].messages[0].text, "the map, in its prompt"
+    assert "TV LG C6" not in looked.requests[0].messages[0].text and blind["route"] not in blind["right"]
+    assert without["right"] == ["none"], "no home: nothing to turn on"
 
 
 async def test_a_model_down_is_a_failed_turn(config: NestorConfig) -> None:

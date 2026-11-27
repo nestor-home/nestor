@@ -16751,6 +16751,49 @@
         ],
         "title": "HistoryEntryOut"
       },
+      "HomeDeviceOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "parts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Parts"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "sensitive": {
+            "type": "boolean",
+            "title": "Sensitive"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kinds",
+          "parts",
+          "aliases",
+          "sensitive"
+        ],
+        "title": "HomeDeviceOut",
+        "description": "Something the home shows its assistant, as the agent knows it (no state)."
+      },
       "HomeOut": {
         "properties": {
           "component": {
@@ -16769,6 +16812,13 @@
             },
             "type": "array",
             "title": "Rooms"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/HomeDeviceOut"
+            },
+            "type": "array",
+            "title": "Devices"
           },
           "residents": {
             "items": {
@@ -16812,6 +16862,7 @@
           "connected",
           "granularity",
           "rooms",
+          "devices",
           "residents",
           "people",
           "unplaced_sensors",
@@ -18079,6 +18130,7 @@
         "enum": [
           "person",
           "room",
+          "device",
           "executor",
           "connection",
           "task"
@@ -19535,6 +19587,24 @@
             "type": "string",
             "title": "Name"
           },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
           "occupied": {
             "anyOf": [
               {
@@ -19559,15 +19629,25 @@
             },
             "type": "array",
             "title": "Satellites"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/HomeDeviceOut"
+            },
+            "type": "array",
+            "title": "Devices"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
+          "aliases",
+          "floor",
           "occupied",
           "people",
-          "satellites"
+          "satellites",
+          "devices"
         ],
         "title": "RoomOut"
       },

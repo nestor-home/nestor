@@ -25,6 +25,7 @@ hs-system = Système domotique
 hs-people = Le foyer
 hs-rooms = Les pièces
 hs-rooms-empty = Aucune pièce connue : ajoutez un satellite ou reliez un système domotique.
+hs-roomless = Hors des pièces
 hs-media = Voir et appeler
 hs-room-events = { $count ->
     [one] 1 fois aujourd'hui

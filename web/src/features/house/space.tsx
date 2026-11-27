@@ -25,7 +25,7 @@ import { HealthStatus, Status } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
 import { AddSatelliteButton } from "@/features/satellites/add-satellite";
 import { type RoomNode, roomsOf } from "@/features/today/mind";
-import { RoomSheet, Through } from "@/features/today/room-sheet";
+import { HomeThings, RoomSheet, Through } from "@/features/today/room-sheet";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
 import { startOfToday } from "@/lib/dates";
@@ -141,6 +141,10 @@ export function HouseSpace() {
             <Empty>{t("hs-rooms-empty")}</Empty>
           )}
         </Section>
+
+        {home.data?.connected && home.data.devices.length ? (
+          <HomeThings things={home.data.devices} title={t("hs-roomless")} />
+        ) : null}
 
         {media.data && !media.data.available ? (
           <Section title={t("hs-media")}>

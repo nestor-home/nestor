@@ -35,3 +35,9 @@
 {"case": "r34", "said": "Où en est le lave-vaisselle ?", "expected": [["tool:GetLiveContext", "tool:homeassistant__GetLiveContext"], ["tool:about_nestor", "none"]], "label": "maison"}
 {"case": "r35", "said": "Préviens-moi quand le lave-vaisselle dit qu'il a fini", "expected": [["tool:create_alert"]], "label": "alerte sur un événement"}
 {"case": "r36", "said": "Dis-moi dès que l'action Nvidia passe sous 135 $", "expected": [["tool:create_alert"]], "label": "alerte sous condition"}
+{"case": "r38", "said": "Allume la télé", "expected": [["tool:intent__HassTurnOn"]], "label": "maison, une cible connue"}
+{"case": "r39", "said": "Éteins la lumière de la cuisine", "expected": [["tool:intent__HassTurnOff"]], "label": "maison, une cible connue"}
+{"case": "r40", "said": "Mets le son du HomePod à 30", "expected": [["tool:media_player__HassSetVolume"]], "label": "maison, une cible connue"}
+{"case": "r41", "said": "Ajoute du lait à la liste de courses", "expected": [["tool:todo__HassListAddItem"]], "label": "maison, une cible connue"}
+{"case": "r42", "said": "J'ai une lampe dans la chambre ?", "expected": [["none"]], "label": "maison, ce qui existe"}
+{"case": "r43", "said": "Il reste combien de temps au lave-linge ?", "expected": [["tool:homeassistant__GetLiveContext"]], "label": "maison, un état"}
