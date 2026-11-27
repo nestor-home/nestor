@@ -73,7 +73,8 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
 
     async def _send(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         """Anyone at home may have a message passed on ("tell Léa dinner is ready"), signed by the room they spoke
-        in; a question needs to know whom its answer goes back to."""
+        in; a question needs to know whom its answer goes back to. A message to the person this answer already
+        reaches, the same way, is not sent twice."""
         sender = self.household.person(context.person) if context.person else None
         to = self._person(str(arguments["person"]))
         if sender is not None and not sender.may_write_to(to.id):
@@ -83,6 +84,8 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         channel = str(arguments["channel"]) if arguments.get("channel") else None
         if channel and to.address_on(channel) is None:
             raise ToolFailed(f"{to.name} has no account on {channel}")
+        if _answer_reaches(to, context, channel, in_writing=arguments.get("in_writing") is True):
+            return {"status": f"not sent: this answer already reaches {to.name} here, write it in your answer"}
         answers = str(arguments["answers"]) if arguments.get("answers") else None
         if answers and not any(q.message_id == answers for q in self.book.open_questions()):
             raise ToolFailed(f"no open question {answers}")
@@ -117,3 +120,10 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         return (
             f"{mentioned.label} (person {mentioned.id}), of the household; what is for them goes through message_person"
         )
+
+
+def _answer_reaches(to: Person, context: ToolContext, channel: str | None, *, in_writing: bool) -> bool:
+    """Whether the answer being written already tells `to` what the message would: it is for them, in their
+    conversation on their account (one they write in, or one Nestor opened for them), and the message asks for no other
+    channel nor for writing."""
+    return context.live and context.person == to.id and not in_writing and channel in (None, context.address.channel)

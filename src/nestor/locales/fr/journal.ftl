@@ -322,7 +322,7 @@ journal-voice-learning = { $learning ->
     [yes] Apprentissage de la voix de { $person } activé
    *[no] Apprentissage de la voix de { $person } désactivé
 }
-journal-confirmation-requested = Confirmation demandée par écrit à { $person } : { $tool }
+journal-confirmation-requested = Confirmation demandée à { $person } : { $tool }
 journal-confirmation-answered = { $approved ->
     [yes] Confirmé par écrit
    *[no] Refusé par écrit

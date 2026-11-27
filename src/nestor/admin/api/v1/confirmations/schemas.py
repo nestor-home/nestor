@@ -14,7 +14,7 @@ class ConfirmationOut(BaseModel):
     person: PersonRef  # who must confirm, on their own account
     tool: str
     arguments: dict[str, Any]
-    origin: OriginOut  # where it was asked (a room, aloud)
+    origin: OriginOut  # where it was asked: a room aloud, or a conversation
     expires_at: datetime
     yours: bool  # the caller is that person: they may answer here
 

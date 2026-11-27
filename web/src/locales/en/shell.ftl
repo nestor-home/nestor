@@ -37,7 +37,7 @@ attention-connection-error = { $account } no longer answers
 attention-tools-hidden = Its tools are paused.
 attention-reconnect = Reconnect
 attention-confirmation = { $tool } waits for your go-ahead
-attention-confirmation-detail = Asked aloud; dropped at { $at } without an answer.
+attention-confirmation-detail = Dropped at { $at } without an answer.
 attention-answer = Answer
 attention-home = { $health ->
     [unavailable] The home system does not answer

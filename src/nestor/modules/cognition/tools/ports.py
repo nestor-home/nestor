@@ -18,13 +18,14 @@ class ToolProvider(Component, ABC):
 
 class InWriting(ABC):
     """The person's own written channel, which their account authenticates: what a shared device cannot settle
-    goes there. A sensitive action asked aloud is confirmed there; what belongs to someone, asked by a voice nobody
+    goes there. A sensitive action waits there for their answer; what belongs to someone, asked by a voice nobody
     recognised, is written to them there."""
 
     @abstractmethod
     async def confirm(self, call: ToolCall, context: ToolContext, *, about: str) -> ToolOutput:
-        """Ask `context.person` to confirm `call` (`about`: what the tool does) in writing; once they do, it runs
-        where it was asked. Returns what the agent tells the room meanwhile."""
+        """Have `context.person` confirm `call` (`about`: what the tool does): asked in the conversation when it is
+        on their account (`ToolContext.live`), in writing on it otherwise. Once they approve, it runs where it was
+        asked. Returns what the agent says meanwhile."""
 
     @abstractmethod
     async def send(self, call: ToolCall, output: str, context: ToolContext) -> ToolOutput:

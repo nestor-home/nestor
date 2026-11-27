@@ -7,7 +7,7 @@ from enum import StrEnum
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.identity import Speaker
+from nestor.modules.identity import Identified, Speaker
 
 type ToolOutput = str | Mapping[str, object] | list[object]
 
@@ -47,6 +47,11 @@ class ToolContext:
     @property
     def person(self) -> PersonId | None:
         return self.speaker.person
+
+    @property
+    def live(self) -> bool:
+        """A conversation the person takes part in on their own account: what they write there is theirs."""
+        return self.speaker.by is Identified.ACCOUNT and self.person is not None and self.exchange is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,5 +151,5 @@ class Tool:
 
     @property
     def may_need_confirming(self) -> bool:
-        """Whether the model may be asked to call it again with `confirmed`: never when their account vouches."""
+        """Whether a call may wait for the person's confirmation: never when their account vouches for it."""
         return (self.risk is Risk.SENSITIVE or self.assess is not None) and not self.account_vouches

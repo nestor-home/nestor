@@ -1,9 +1,11 @@
-"""Confirmations: a sensitive action asked aloud on a shared device is confirmed in writing, on the account of the
-person who asks. A voice or a name tells who speaks; only their account vouches for them.
+"""Confirmations: a sensitive action waits for the person who asks to confirm it, on their own account. A voice or a
+name tells who speaks; only their account vouches for them, and only their answer confirms.
 
-The request is journaled and written to them; in that conversation the agent sees what waits for their answer and
-calls `answer_confirmation`. Approved, the action runs as theirs and the room hears it is done; refused or left
-unanswered past its delay, nothing happens. Only sensitive tools come here, so it stays rare.
+The request is journaled. Asked in their conversation on their account, the agent asks them there; asked aloud on a
+shared device, or in a turn nobody takes part in, it is written to them. Wherever they answer, the agent sees what
+waits and calls `answer_confirmation`, which takes only an answer given after the question: the model never confirms
+for them. Approved, the action runs as theirs where it was asked, and that place hears it is done when the answer came
+from elsewhere; refused or left unanswered past its delay, nothing happens. Only sensitive tools come here.
 """
 
 import asyncio
@@ -14,7 +16,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from nestor.core import ContractError, NestorError, PersonId, SessionId, new_id, utc_now
+from nestor.core import ContractError, NestorError, PersonId, new_id, utc_now
+from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import InWriting, Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.cognition.tools.types import ToolOutput
@@ -29,8 +32,8 @@ from nestor.modules.journal import Journal
 logger = logging.getLogger(__name__)
 
 HOW_TO_CONFIRM = (
-    "Some actions asked aloud wait for the person to confirm them in writing; they show below when they do. When "
-    "the person confirms or refuses one, call answer_confirmation with its id."
+    "Sensitive actions wait for the person to confirm them; they show below when they do. Say exactly what will "
+    "happen and ask them; once they confirm or refuse it in a later message, call answer_confirmation with its id."
 )
 _FOUND = 4000  # characters of a private result written to its owner: the composer summarises it
 
@@ -109,22 +112,27 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
     def waiting(self, person: PersonId) -> tuple[ConfirmationRequested, ...]:
         return tuple(c for c in self.pending() if c.person == person)
 
-    async def answer(
-        self, confirmation_id: str, person: PersonId, *, approved: bool, session: SessionId | None = None
-    ) -> Answered:
-        """The person's answer, from their own account (a conversation, the admin; `session` where it is given, the
-        conversation it was asked in by default): approved, the action runs as theirs where it was asked and the
-        room hears it is done. `NothingWaits` when nothing waits under this id, `NotTheirs` for anyone else."""
+    def waiting_for(self, confirmation_id: str) -> ConfirmationRequested:
+        """The confirmation waiting under this id; `NothingWaits` once answered or expired."""
         found = self._pending.get(confirmation_id)
         if found is None or found.expires_at <= self._clock():
             raise NothingWaits(confirmation_id)
+        return found
+
+    async def answer(
+        self, confirmation_id: str, person: PersonId, *, approved: bool, at: Address | None = None
+    ) -> Answered:
+        """The person's answer, from their own account (`at`, the conversation it was given in; `None`, the admin):
+        approved, the action runs as theirs where it was asked, and that place hears it is done unless the answer was
+        given there. `NothingWaits` when nothing waits under this id, `NotTheirs` for anyone else."""
+        found = self.waiting_for(confirmation_id)
         if person != found.person:
             raise NotTheirs(self.household.name_of(found.person, "its person"))
         del self._pending[found.confirmation_id]
         await self.journal.publish(
             ConfirmationAnswered(
                 source=self.name,
-                session=session or found.origin.session,
+                session=(at or found.origin).session,
                 confirmation_id=found.confirmation_id,
                 approved=approved,
             )
@@ -137,11 +145,13 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
         # it runs where it was asked, as theirs: their account vouched for it
         asked = ToolContext(address=found.origin, speaker=Speaker.account(found.person), asked=True)  # they confirmed
         result = await self._run(call, asked)
+        if at == found.origin:  # answered where it was asked: the answer there says it is done
+            return Answered(approved=True, result=result)
         self._background(
             self.courier.deliver(
                 None,
                 Notification(
-                    f"What was asked aloud here ({found.tool}) was confirmed in writing. Its result: {result}. "
+                    f"What was asked here ({found.tool}) was confirmed. Its result: {result}. "
                     "Say briefly that it is done, or what went wrong; anything the result says to say exactly, say "
                     "it word for word.",
                     About(Source.CONFIRMATION, found.confirmation_id, "done"),
@@ -156,22 +166,33 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
 
     async def confirm(self, call: ToolCall, context: ToolContext, *, about: str) -> ToolOutput:
         person = self.household.person(context.person) if context.person else None
-        if person is None or person.reach is None:
+        here = context.live and context.exchange is not None
+        if person is None or (not here and person.reach is None):
             who = person.name if person else "nobody known"
             raise ToolFailed(f"{who} has no written channel to confirm on: it can only be done from their account")
+        asked_in = context.address if here else person.reach
+        assert asked_in is not None  # checked above
         request = ConfirmationRequested(
             source=self.name,
-            session=person.reach.session,
+            session=asked_in.session,
             confirmation_id=new_id()[:8],
             person=person.id,
             tool=call.name,
-            arguments={k: v for k, v in call.arguments.items() if k != "confirmed"},
+            arguments=dict(call.arguments),
             origin=context.address,
+            turn=context.exchange.turn_id if here and context.exchange else None,
             expires_at=self._clock() + timedelta(seconds=self.expires_after_s),
         )
         await self.journal.publish(request)
         self._pending[request.confirmation_id] = request
         minutes = round(self.expires_after_s / 60)
+        if here:
+            return {
+                "status": f"waiting for {person.name} to confirm",
+                "confirmation_id": request.confirmation_id,
+                "next": "say exactly what will happen and ask them; once they answer, call answer_confirmation",
+                "expires_in_min": minutes,
+            }
         self._background(
             self.courier.deliver(
                 person,
@@ -232,12 +253,13 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
     async def _answer(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         if context.speaker.by is not Identified.ACCOUNT or context.person is None:
             raise ToolFailed("only its person may answer it, on their account")
+        confirmation_id = str(arguments["confirmation_id"])
         try:
+            found = self.waiting_for(confirmation_id)
+            if found.turn is not None and context.exchange is not None and context.exchange.turn_id == found.turn:
+                raise ToolFailed("they have not answered yet: ask them, and wait for their reply")
             answered = await self.answer(
-                str(arguments["confirmation_id"]),
-                context.person,
-                approved=arguments["approve"] is True,
-                session=context.address.session,
+                confirmation_id, context.person, approved=arguments["approve"] is True, at=context.address
             )
         except NothingWaits:
             raise ToolFailed("nothing waits under this id: it was answered, or it expired") from None

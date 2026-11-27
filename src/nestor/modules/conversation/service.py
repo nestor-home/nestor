@@ -287,7 +287,8 @@ class Agent(Assistant):
 
 class AgentReply(Reply):
     """One answer to what opens a turn: a person's message, or a notification of Nestor's. Produced in the background
-    and streamed through a queue so that a channel can interrupt it from another task at any time.
+    and streamed through a queue so that a channel can interrupt it from another task at any time; it lives as long as
+    someone reads it: a reader that goes away stops it, before what it uses closes.
 
     The answer to a message is the conversation's as it goes: each round of the model that writes something is a message
     of its own, logged as soon as it ends, before the tools it asked for run, so the journal keeps the order the user
@@ -326,8 +327,16 @@ class AgentReply(Reply):
         if self._worker is not None:
             raise ContractError("a reply can only be read once")
         self._worker = asyncio.create_task(self._produce(), name=f"reply {self._address}")
-        while (chunk := await self._chunks.get()) is not None:
-            yield chunk
+        read = False
+        try:
+            while (chunk := await self._chunks.get()) is not None:
+                yield chunk
+            read = True
+        finally:
+            if not read:  # whoever read it went away (its channel stopped, Nestor restarts): the answer stops too
+                self._worker.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._worker
         if not self._interrupted:
             await self._worker  # surface a bug in the agent instead of ending silently
 

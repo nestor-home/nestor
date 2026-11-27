@@ -1,6 +1,8 @@
 """Consolidation: when a conversation is over (its channel's silence has passed), a small model writes its episode
 (what it was about, for whoever took part) and the lasting facts `remember` missed, outside of any conversation.
-As Mem0 and ChatGPT do: summarize cold, recall hot, and keep the original at hand in the journal.
+As Mem0 and ChatGPT do: summarize cold, recall hot, and keep the original at hand in the journal. A conversation where
+nobody spoke, only Nestor telling something (an alert, a task's result), is no episode: what it told stays with what
+it came from and in the journal.
 """
 
 import asyncio
@@ -59,6 +61,7 @@ class _Open:
     last_at: datetime
     medium: Medium = Medium.WRITTEN
     participants: set[PersonId] = field(default_factory=set)
+    spoken: bool = False  # someone of the household said something in it, not only Nestor
     failures: int = 0
 
 
@@ -130,6 +133,10 @@ class Consolidator(Component):
             for conversation, seen in self._open.items()
             if seen.failures < ATTEMPTS and now - seen.last_at > timedelta(seconds=self._over_after_s(seen.address))
         ]
+        for conversation in [c for c in due if not self._open[c].spoken]:
+            del self._open[conversation]
+            self._done.add(conversation)
+        due = [c for c in due if c in self._open]
         if not due:
             return 0
         known = (
@@ -170,7 +177,7 @@ class Consolidator(Component):
         seen.started_at = min(seen.started_at, event.at)  # a turn published after a later one
         seen.last_at = max(seen.last_at, event.at)
         if isinstance(event, UserTurn):
-            seen.medium = event.medium
+            seen.medium, seen.spoken = event.medium, True
         if isinstance(event, UserTurn | NotificationTurn) and event.person is not None:
             seen.participants.add(event.person)  # who spoke, or whom Nestor told something
 

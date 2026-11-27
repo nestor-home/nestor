@@ -184,19 +184,16 @@ async def test_writing_tools_wait_for_the_persons_consent_and_serve_their_owner_
     await setup.connect()
     toolbox = Toolbox(setup.journal, providers=[ConnectorTools(setup.connections)])
     [spec] = [s for s in toolbox.specs() if s.name == "mailbox_send"]
-    properties = spec.parameters["properties"]
-    assert isinstance(properties, dict) and "confirmed" in properties
+    assert "the person confirms first" in spec.description
 
     chatting = replace(CONTEXT, exchange=Exchange(conversation_id="c", turn_id="t"))  # in a live conversation
     asked = (await toolbox.call(ToolCall("c1", "mailbox_send", {"to": "maman"}), chatting)).output
-    assert "ask the person to confirm" in asked and setup.mail.sent == []
+    assert "cannot be confirmed from here" in asked and setup.mail.sent == [], "nothing goes without their answer"
     other = ToolContext(address=Address("telegram", "7"), speaker=Speaker.account(PersonId("mathilde")))
-    refused = (await toolbox.call(ToolCall("c2", "mailbox_send", {"to": "maman", "confirmed": True}), other)).output
+    refused = (await toolbox.call(ToolCall("c2", "mailbox_send", {"to": "maman"}), other, confirmed=True)).output
     assert "only mathis may use it" in refused and setup.mail.sent == []
-    assert (
-        await toolbox.call(ToolCall("c3", "mailbox_send", {"to": "maman", "confirmed": True}), chatting)
-    ).output == "sent"
-    assert setup.mail.sent == [{"to": "maman"}]
+    approved = await toolbox.call(ToolCall("c3", "mailbox_send", {"to": "maman"}), chatting, confirmed=True)
+    assert approved.output == "sent" and setup.mail.sent == [{"to": "maman"}], "once they approved, it runs"
 
 
 async def test_tools_can_be_disabled_per_connection_and_survive_a_restart() -> None:

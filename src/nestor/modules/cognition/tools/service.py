@@ -20,8 +20,6 @@ from nestor.modules.journal import BlobStore, FileRef, Journal
 
 logger = logging.getLogger(__name__)
 
-CONFIRMED = {"type": "boolean", "description": "true only once the person explicitly agreed to this exact action"}
-
 
 @dataclass(frozen=True, slots=True)
 class Called:
@@ -44,9 +42,10 @@ class Toolbox(Component):
     tool makes (`Made`) go to `blobs`, and with the answer.
 
     It is also where who asked matters, the same for every tool:
-    - a sensitive call is confirmed by the person who asks: in the conversation on their own account (the model
-      calls again with `confirmed`, unless that account is enough: `account_vouches`), in writing on that account when
-      asked aloud on a shared device or in a turn nobody takes part in (an alert);
+    - a sensitive call waits for the person who asks to confirm it (`InWriting.confirm`): in the conversation when it
+      is on their own account, in writing on that account when asked aloud on a shared device or in a turn nobody
+      takes part in (an alert); a tool whose call their account is enough for (`account_vouches`) runs at once in
+      such a conversation. The model never confirms anything itself: it asks, and the person answers;
     - a tool on someone's own data (`owner`) serves them only, and what it finds for a voice nobody recognised is
       written to them rather than said in the room.
     """
@@ -196,22 +195,14 @@ class Toolbox(Component):
         missing = [name for name in _required(tool) if name not in call.arguments]
         if missing:
             raise ToolFailed(f"missing arguments: {', '.join(missing)}")
-        arguments = {k: v for k, v in call.arguments.items() if k != "confirmed"}
+        arguments = dict(call.arguments)
         if tool.owner is not None and context.person != tool.owner:
             who = "ask who is asking first" if context.person is None else f"only {tool.owner} may use it"
             raise ToolFailed(f"this belongs to {tool.owner}: {who}")
         if tool.vouched and (context.speaker.by is not Identified.ACCOUNT or context.person is None):
             raise ToolFailed(f"{tool.name} needs to know for sure who asks: they ask from their own account")
-        if tool.risk_of(arguments) is Risk.SENSITIVE and not confirmed:
-            # in place only in a live conversation on their account: aloud on a satellite, or in a turn nobody
-            # takes part in (an alert), the person confirms in writing
-            if context.speaker.by is not Identified.ACCOUNT or context.exchange is None:
-                return Made(await self._confirm_in_writing(call, tool, context))
-            if not tool.account_vouches and call.arguments.get("confirmed") is not True:
-                raise ToolFailed(
-                    f"{tool.name} is sensitive: describe exactly what you will do, ask the person to confirm, "
-                    "then call it again with confirmed=true"
-                )
+        if tool.risk_of(arguments) is Risk.SENSITIVE and not confirmed and not (tool.account_vouches and context.live):
+            return Made(await self._confirm(call, tool, context))
         try:
             async with asyncio.timeout(tool.timeout_s):
                 ran = await tool.run(arguments, context)
@@ -222,9 +213,9 @@ class Toolbox(Component):
             return Made(await self.in_writing.send(call, _text(made.output), context))
         return made
 
-    async def _confirm_in_writing(self, call: ToolCall, tool: Tool, context: ToolContext) -> ToolOutput:
+    async def _confirm(self, call: ToolCall, tool: Tool, context: ToolContext) -> ToolOutput:
         if context.person is None:
-            raise ToolFailed("this is sensitive: ask who is asking, then they confirm it in writing")
+            raise ToolFailed("this is sensitive: ask who is asking, then they confirm it on their account")
         if self.in_writing is None:
             raise ToolFailed("this is sensitive and cannot be confirmed from here: it needs the person's own account")
         return await self.in_writing.confirm(call, context, about=tool.spec.description)
@@ -239,14 +230,11 @@ class Toolbox(Component):
 
 
 def _spec(tool: Tool) -> ToolSpec:
-    """What the model sees of a tool: one that may need confirming takes `confirmed`."""
+    """What the model sees of a tool: one that may need confirming says so."""
     if not tool.may_need_confirming:
         return tool.spec
-    parameters = dict(tool.spec.parameters)
-    existing = parameters.get("properties")
-    parameters["properties"] = {**(existing if isinstance(existing, dict) else {}), "confirmed": CONFIRMED}
     description = f"{tool.spec.description} Sensitive: the person confirms first."
-    return ToolSpec(tool.spec.name, description, parameters)
+    return ToolSpec(tool.spec.name, description, tool.spec.parameters)
 
 
 async def _kept(blobs: BlobStore, files: tuple[Attachment, ...]) -> tuple[FileRef, ...]:
