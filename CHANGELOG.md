@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/nestor-home/nestor/compare/v0.18.0...v0.18.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.82.0 ([#261](https://github.com/nestor-home/nestor/issues/261)) ([e57bba2](https://github.com/nestor-home/nestor/commit/e57bba2adb28260b8af64e39dc6d418b99fad73e))
+
 ## [0.18.0](https://github.com/nestor-home/nestor/compare/v0.17.0...v0.18.0) (2026-11-27)
 
 
